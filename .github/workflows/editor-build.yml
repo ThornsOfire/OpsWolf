@@ -13,6 +13,8 @@ jobs:
     timeout-minutes: 30
     env:
       CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: -C target-feature=+crt-static
+      CARGO_PROFILE_RELEASE_LTO: 'false'
+      CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,6 +25,13 @@ jobs:
       - run: rustup update stable --no-self-update
       - run: npm --prefix packages/explorer-ui ci
       - run: npm --prefix packages/explorer-ui run build
+      - name: Use an unambiguous native test temp directory
+        shell: pwsh
+        run: |
+          $testTemp = Join-Path $env:RUNNER_TEMP 'code-codex-native-tests'
+          New-Item -ItemType Directory -Path $testTemp -Force | Out-Null
+          "TEMP=$testTemp" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          "TMP=$testTemp" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - name: Native file and transport tests
         shell: pwsh
         run: |
