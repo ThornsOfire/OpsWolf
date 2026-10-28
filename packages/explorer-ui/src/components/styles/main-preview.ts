@@ -5,6 +5,7 @@ import { backgroundPreviewSurfaceStyles } from './background-surfaces';
 export const mainPreviewStyles = String.raw`
   :host([data-home-suspended]) { display: none !important; }
   :host {
+    --cle-preview-tab-height: 32px;
     --cle-main-bg: #ffffff;
     --cle-main-bar: #f7f7f5;
     --cle-main-raised: #fbfbfa;
@@ -32,6 +33,7 @@ export const mainPreviewStyles = String.raw`
     position: absolute;
     z-index: 31;
     inset: 0;
+    top: var(--cle-editor-pane-top, 0px);
     display: block;
     min-width: 0;
     min-height: 0;
@@ -148,7 +150,8 @@ export const mainPreviewStyles = String.raw`
 
   .surface {
     display: grid;
-    grid-template-rows: 46px minmax(0, 1fr);
+    grid-template-rows: var(--cle-preview-tab-height) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) auto;
     width: 100%;
     height: 100%;
     min-width: 0;
@@ -157,11 +160,13 @@ export const mainPreviewStyles = String.raw`
   }
 
   .tab-strip {
+    grid-row: 1;
+    grid-column: 1;
     position: relative;
     display: flex;
     align-items: stretch;
     min-width: 0;
-    height: 46px;
+    height: var(--cle-preview-tab-height);
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
@@ -174,8 +179,8 @@ export const mainPreviewStyles = String.raw`
 
   .tab-strip::-webkit-scrollbar { display: none; }
 
-  .editor-pane-actions { position: absolute; right: 8px; top: 7px; z-index: 3; display: flex; gap: 4px; pointer-events: auto; -webkit-app-region: no-drag; }
-  .editor-pane-actions button { border: 1px solid var(--cle-main-line); border-radius: 5px; background: var(--cle-main-bar); padding: 4px 8px; cursor: pointer; }
+  .editor-pane-actions { position: relative; grid-row: 1; grid-column: 2; display: flex; justify-content: flex-end; align-items: center; gap: 3px; padding: 2px 5px; min-width: 0; background: var(--cle-main-bar); pointer-events: auto; -webkit-app-region: no-drag; }
+  .editor-pane-actions button { border: 1px solid var(--cle-main-line); border-radius: 4px; background: var(--cle-main-bar); padding: 2px 6px; font-size: 12px; line-height: 18px; cursor: pointer; }
   .editor-pane-toggle[aria-pressed="true"] { background: var(--cle-main-hover); }
   .editor-pane-close, .editor-pane-resizer { display: none; }
   :host([data-editor-pane-open]) { left: auto !important; right: 0 !important; width: var(--cle-editor-pane-width); border-left: 1px solid var(--cle-main-line); background: var(--cle-main-bg); }
@@ -184,28 +189,25 @@ export const mainPreviewStyles = String.raw`
   :host([data-editor-pane]:not([data-editor-pane-open])) .tab-strip { visibility: hidden; }
   :host([data-editor-pane-open]) .editor-pane-resizer { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 4; cursor: col-resize; pointer-events: auto; touch-action: none; }
   .editor-pane-resizer:focus-visible { outline: 2px solid var(--cle-main-focus); outline-offset: -2px; }
-  :host([data-editor-pane-open]) .tab-strip { width: 100% !important; padding-right: 205px; }
-  :host(:not([data-editor-pane])) .tab-strip { padding-right: 165px; }
+  .editor-pane-toggle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Native title-bar controls retain their own hit targets above our pane.
-   * Keep actions and scrolling tabs in separate grid rows, never overlays. */
+   * Actions and scrolling tabs share one compact row in separate columns. */
   :host([data-editor-pane]) { top: var(--cle-editor-pane-top, 48px) !important; }
   :host([data-editor-pane]) .surface,
-  :host([data-editor-pane][data-clipped-layout="true"]) .surface { grid-template-rows: 36px 42px minmax(0, 1fr); }
-  :host([data-editor-pane]) .editor-pane-actions { position: relative; top: auto; right: auto; grid-row: 1; justify-content: flex-end; align-items: center; padding: 3px 8px; min-width: 0; background: var(--cle-main-bar); }
+  :host([data-editor-pane][data-clipped-layout="true"]) .surface { grid-template-rows: var(--cle-preview-tab-height) minmax(0, 1fr); }
   :host([data-editor-pane]) .editor-pane-toggle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  :host([data-editor-pane]) .tab-strip { grid-row: 2; width: 100% !important; height: 42px; padding-right: 0; }
-  :host([data-editor-pane]) .panel-mount { grid-row: 3; }
+  :host([data-editor-pane]) .tab-strip { width: 100% !important; padding-right: 0; }
 
   :host([data-clipped-layout="true"]) .surface {
-    --cle-preview-header-height: 42px;
-    grid-template-rows: var(--cle-preview-header-height) minmax(0, 1fr);
+    --cle-preview-header-height: var(--cle-preview-tab-height);
+    grid-template-rows: var(--cle-preview-tab-height) minmax(0, 1fr);
   }
 
   :host([data-clipped-layout="true"]) .tab-strip {
     height: var(--cle-preview-header-height);
     align-self: start;
-    width: calc(100% - 124px);
+    width: 100%;
     background: var(--cle-main-bg);
   }
 
@@ -225,7 +227,7 @@ export const mainPreviewStyles = String.raw`
     gap: 8px;
     min-width: 0;
     width: 100%;
-    height: 45px;
+    height: calc(var(--cle-preview-tab-height) - 1px);
     padding: 0 13px;
     border: 0;
     border-radius: 0;
@@ -246,7 +248,7 @@ export const mainPreviewStyles = String.raw`
     background: var(--cle-main-bar);
   }
   :host([data-clipped-layout="true"]) .preview-tab {
-    height: 41px;
+    height: calc(var(--cle-preview-tab-height) - 1px);
     gap: 6px;
     padding-inline: 10px;
     font-size: 13px;
@@ -340,6 +342,8 @@ export const mainPreviewStyles = String.raw`
   .tab-close:hover { background: var(--cle-main-hover); color: var(--cle-main-text); }
 
   .panel-mount {
+    grid-row: 2;
+    grid-column: 1 / -1;
     width: 100%;
     height: 100%;
     min-width: 0;

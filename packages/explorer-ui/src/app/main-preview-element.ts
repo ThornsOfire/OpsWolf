@@ -8,7 +8,7 @@ import { usesClippedMainLayout } from "../adapters/codex-layout-version";
 import { getBootstrapConfig } from "../bridge";
 import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { mainPreviewStyles } from "../components/styles/main-preview";
-import { EDITOR_PANE_KEY, EditorPaneLayout, readEditorPanePreference } from "../features/preview/editor-pane";
+import { EDITOR_PANE_KEY, EditorPaneLayout, nativeHeaderInset, readEditorPanePreference } from "../features/preview/editor-pane";
 import { CONVERSATION_ICON,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,MAIN_PREVIEW_ACTIVATE_EVENT,MAIN_PREVIEW_CLOSE_EVENT,MAIN_PREVIEW_DRAFT_EVENT,MAIN_PREVIEW_RELOAD_EVENT,MAIN_PREVIEW_SAVE_EVENT,MAIN_PREVIEW_TAG,MARKDOWN_PREVIEWER_ID } from "../core/preview/configuration";
 import { cloneView,firstVisibleLineOffset,formatBytes,isCsvPreviewPath,isDiagramPreviewPath,isMarkdownPreviewPath,isMediaPreviewView,normalizeState,officeDocumentKind,previewerIdForMediaKind,previewMethod,previewPackageId,restoreAttribute,selectionOffsetWithin,sourceLineCount,textPositionAtOffset,unsupportedCopy } from "../features/preview/view-state";
 import type { DiagramPreviewJob,DocxBlockSplitResult,DocxPaginationClock,FocusSnapshot,MainPreviewActivateDetail,MainPreviewActivateEvent,MainPreviewCloseDetail,MainPreviewCloseEvent,MainPreviewDraftDetail,MainPreviewDraftEvent,MainPreviewEditorState,MainPreviewEmptyView,MainPreviewFileView,MainPreviewGitDiffView,MainPreviewMediaView,MainPreviewModelView,MainPreviewPathDetail,MainPreviewReloadEvent,MainPreviewSaveEvent,MainPreviewState,MainPreviewTextView,ModelMemoryCacheScope,ModelPreviewJob,ModelPreviewSourceInspection,NotebookCellModel,NotebookMimeBundle,NotebookModel,NotebookOutputModel,NotebookPreviewJob,NotebookRenderBudget,OfficeDomBudget,OfficePreviewJob,ParsedXlsxWorksheet,PdfPreviewJob,SuppressedAttributes,XlsxSharedStrings,XlsxStyleTable,XlsxWorksheetMeta } from "../file-preview/contracts";
@@ -1845,8 +1845,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _syncSuppression(): void {
-    const paneActive = this._connected && !this._suspended && this._panePreference.docked && this._state.activePath !== null && this._state.tabs.length > 0;
-    this.toggleAttribute('data-editor-pane', this._panePreference.docked);
+    const hasNativeSurface = this.parentElement?.matches(MAIN_SURFACE_SELECTOR) === true;
+    const paneActive = hasNativeSurface && this._connected && !this._suspended && this._panePreference.docked && this._state.activePath !== null && this._state.tabs.length > 0;
+    this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
     this._required('.editor-pane-toggle').setAttribute('aria-pressed', String(this._panePreference.docked));
     if (this._panePreference.docked && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) {
@@ -1854,10 +1855,14 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       this._syncNativeViewportBounds(this.parentElement, null);
       this._nativeTitleObserver?.disconnect(); this._nativeTitleObserverRoot = null;
       if (paneActive) this._editorPane.apply(this.parentElement, this._panePreference.width);
-      else this._editorPane.restore();
+      else {
+        this._editorPane.restore();
+        this.style.setProperty('--cle-editor-pane-top', `${nativeHeaderInset(this.parentElement)}px`);
+      }
       return;
     }
     this._editorPane.restore();
+    if (this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) this.style.setProperty('--cle-editor-pane-top', `${nativeHeaderInset(this.parentElement)}px`);
     const parent = this._connected && !this._suspended && this._state.tabs.length > 0 && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)
       ? this.parentElement
       : null;
@@ -1887,7 +1892,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       '[data-testid="app-shell-header-context-menu-surface"]',
     ) ?? nativeHeader;
     const desired = new Set<Element>();
-    if (nativeHeaderSubject) desired.add(nativeHeaderSubject);
+    // A title subject may be hidden, but never suppress the whole native toolbar.
+    if (nativeHeaderSubject && nativeHeaderSubject !== nativeHeader) desired.add(nativeHeaderSubject);
 
     if (this._clippedLayout) {
       const titleRoot = parent.closest('[data-app-shell-active-page="true"]') ?? document;

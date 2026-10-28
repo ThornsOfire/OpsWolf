@@ -30,7 +30,7 @@ try {
   await check('Real pointer switches document tabs beneath native header', `state.activePath==='second.ts'`);
   await clickSelector('button[data-close-path="second.ts"]');
   await check('Real pointer closes document tab', `state.tabs.length===1&&state.activePath==='example.ts'`);
-  await check('Custom controls and tabs sit below native controls', `q('.editor-pane-actions').getBoundingClientRect().top>=document.querySelector('header').getBoundingClientRect().bottom&&q('.tab-strip').getBoundingClientRect().top>=q('.editor-pane-actions').getBoundingClientRect().bottom`);
+  await check('Custom controls and tabs sit below native controls', `q('.editor-pane-actions').getBoundingClientRect().top>=document.querySelector('header').getBoundingClientRect().bottom&&q('.tab-strip').getBoundingClientRect().right<=q('.editor-pane-actions').getBoundingClientRect().left+1`);
   await check('Editor content retains its full remaining height', `q('.panel-mount').getBoundingClientRect().height>400&&q('.panel-mount').getBoundingClientRect().top>=q('.tab-strip').getBoundingClientRect().bottom`);
   await ev(`(()=>{const r=document.querySelector('#native-control').getBoundingClientRect();window.nativePoint={x:r.x+r.width/2,y:r.y+r.height/2}})()`);
   const nativePoint=await ev('nativePoint');
@@ -38,8 +38,17 @@ try {
   await browser.command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...nativePoint});
   await check('Native toolbar buttons remain clickable', `nativeClicks===1`);
   await check('Fresh custom build defaults to right pane and has a visible build label', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-pane-toggle').textContent.includes('custom')&&!document.querySelector('#chat').hasAttribute('inert')`);
-  await ev(`q('.editor-pane-toggle').click()`);
+  await ev(`document.querySelector('header').setAttribute('data-app-shell-header-edge-scroll','');q('.editor-pane-toggle').click()`);
   await check('Conversation tabs remain available', `!viewer.hasAttribute('data-editor-pane')&&document.querySelector('#chat').hasAttribute('inert')`);
+  await check('Expanded toolbar and tabs stay below native controls', `q('.editor-pane-actions').getBoundingClientRect().top>=document.querySelector('header').getBoundingClientRect().bottom&&q('.tab-strip').getBoundingClientRect().right<=q('.editor-pane-actions').getBoundingClientRect().left+1&&!document.querySelector('header').hasAttribute('inert')`);
+  await ev(`state.tabs.push({...file,path:'expanded.ts',name:'expanded.ts'});show()`);
+  await clickSelector('[role="tab"][data-path="expanded.ts"]');
+  await check('Expanded document tabs respond to real pointer input', `state.activePath==='expanded.ts'`);
+  await clickSelector('button[data-close-path="expanded.ts"]');
+  await check('Expanded document close button responds to real pointer input', `state.tabs.length===1&&state.activePath==='example.ts'`);
+  await browser.command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...nativePoint});
+  await browser.command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...nativePoint});
+  await check('Expanded view retains native control click targets', `nativeClicks===2`);
   await ev(`q('.editor-pane-toggle').click()`); await delay(80);
   await check('Docking restores interactive chat and header', `viewer.hasAttribute('data-editor-pane-open')&&!document.querySelector('#chat').hasAttribute('inert')&&!document.querySelector('header').hasAttribute('inert')&&getComputedStyle(document.querySelector('#chat')).opacity==='1'`);
   await check('Chat and editor occupy separate rectangles', `(()=>{let c=document.querySelector('#chat').getBoundingClientRect(),p=viewer.getBoundingClientRect();return c.right<=p.left+1&&p.width>=260&&p.width<900})()`);
