@@ -12,7 +12,7 @@ const clearDetachedEditDraft=() => detachedDrafts.clear();
 import { ExplorerBridgeError } from "../../bridge";
 import { type BootstrapConfig } from "../../contracts/bridge";
 import { type NormalizedPreview } from "../../contracts/explorer-model";
-import { DETACHED_EDIT_TTL_MS } from "../../core/configuration/explorer";
+import { DETACHED_EDIT_TTL_MS, MAX_PREVIEW_TEXT_UNITS } from "../../core/configuration/explorer";
 import { type MainPreviewFileView } from "../../file-preview/contracts";
 import { recordCaughtRuntimeError } from "../../runtime-operations";
 import { editSaveError,encodeBase64,normalizePreview,restoreLineEndings } from "../preview/responses";
@@ -132,8 +132,8 @@ export class PreviewEditingController {
 
     const content=restoreLineEndings(this.drafts.text,tab.view.lineEnding);
     const encoded=new TextEncoder().encode(content);
-    if(encoded.byteLength>64*1024) {
-      this.drafts.error="This draft is larger than the 64 KB editing limit.";
+    if(encoded.byteLength>MAX_PREVIEW_TEXT_UNITS) {
+      this.drafts.error="This draft is larger than the 512 KB editing limit. Your complete draft has been kept.";
       this.host.syncMainPreview();
       return;
     }

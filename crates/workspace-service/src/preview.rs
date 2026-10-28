@@ -14,7 +14,8 @@ use crate::path_guard::{
     validate_relative,
 };
 
-pub const MAX_PREVIEW_BYTES: usize = 64 * 1024;
+// Complete documents only. Larger files are rejected explicitly, never sliced.
+pub const MAX_PREVIEW_BYTES: usize = 512 * 1024;
 // Two MiB keeps the base64-encoded bridge response comfortably below the
 // CDP message ceiling while bounding a 128-MiB preview to 64 chunks.
 pub const MEDIA_CHUNK_BYTES: usize = 2 * 1024 * 1024;
@@ -863,6 +864,12 @@ impl Workspace {
             ));
         }
 
+        if truncated {
+            return Err(WorkspaceError::ContentTooLarge);
+        }
+        if size_bytes != bytes.len() as u64 {
+            return Err(WorkspaceError::Conflict);
+        }
         let text = match std::str::from_utf8(&bytes) {
             Ok(text) => text.to_owned(),
             Err(error) if truncated && error.error_len().is_none() => {
@@ -1940,20 +1947,13 @@ mod tests {
     }
 
     #[test]
-    fn bounds_reads_and_preserves_a_valid_utf8_prefix_at_the_cutoff() {
+    fn oversized_utf8_never_returns_a_partial_prefix() {
         let (directory, workspace) = fixture();
         let mut contents = vec![b'a'; MAX_PREVIEW_BYTES - 1];
         contents.extend_from_slice("é-tail".as_bytes());
         fs::write(directory.path().join("large.txt"), &contents).expect("large text");
 
-        let preview = workspace.preview("large.txt").expect("large preview");
-        assert_eq!(preview.kind, PreviewKind::Text);
-        assert_eq!(
-            preview.text.as_deref().map(str::len),
-            Some(MAX_PREVIEW_BYTES - 1)
-        );
-        assert_eq!(preview.size_bytes, contents.len() as u64);
-        assert!(preview.truncated);
+        assert_eq!(workspace.preview("large.txt").expect_err("no partial preview").code(), crate::ErrorCode::ContentTooLarge);
     }
 
     #[test]
@@ -1977,12 +1977,7 @@ mod tests {
         assert!(exact.editable);
         assert!(exact.version.is_some());
 
-        let over = workspace.preview("over.txt").expect("over preview");
-        assert_eq!(over.text.as_deref().map(str::len), Some(MAX_PREVIEW_BYTES));
-        assert_eq!(over.size_bytes, (MAX_PREVIEW_BYTES + 1) as u64);
-        assert!(over.truncated);
-        assert!(!over.editable);
-        assert!(over.version.is_none());
+        assert_eq!(workspace.preview("over.txt").expect_err("oversized file").code(), crate::ErrorCode::ContentTooLarge);
     }
 
     #[test]
@@ -1996,14 +1991,7 @@ mod tests {
         file.set_len(HUGE_SIZE).expect("extend huge file");
         drop(file);
 
-        let preview = workspace.preview("huge.txt").expect("huge preview");
-        assert_eq!(preview.kind, PreviewKind::Text);
-        assert_eq!(
-            preview.text.as_deref().map(str::len),
-            Some(MAX_PREVIEW_BYTES)
-        );
-        assert_eq!(preview.size_bytes, HUGE_SIZE);
-        assert!(preview.truncated);
+        assert_eq!(workspace.preview("huge.txt").expect_err("no partial huge file").code(), crate::ErrorCode::ContentTooLarge);
     }
 
     #[test]
@@ -2083,14 +2071,26 @@ mod tests {
 
         let incomplete_result = workspace
             .preview("potentially-incomplete.txt")
-            .expect("potentially incomplete result");
-        assert_eq!(incomplete_result.kind, PreviewKind::Text);
-        assert_eq!(
-            incomplete_result.text.as_deref().map(str::len),
-            Some(MAX_PREVIEW_BYTES - 1)
-        );
-        assert!(incomplete_result.truncated);
-        assert!(incomplete_result.reason.is_none());
+            .expect_err("no incomplete UTF-8 prefix");
+        assert_eq!(incomplete_result.code(), crate::ErrorCode::ContentTooLarge);
+    }
+
+    #[test]
+    fn complete_large_markdown_round_trips_with_final_rows_intact() {
+        let (directory, workspace) = fixture();
+        let mut text = String::from("# Billable hours fixture\n\n| Date | Activity |\n| --- | --- |\n");
+        for _ in 0..5000 { text.push_str("| 2026-10-27 | Arrival support and guest questions |\n"); }
+        text.push_str("\n## Running totals\nFINAL_ROW_COMPLETE\n");
+        assert!(text.len() > 64 * 1024 && text.len() < MAX_PREVIEW_BYTES);
+        fs::write(directory.path().join("hours.md"), &text).expect("large markdown");
+        let preview = workspace.preview("hours.md").expect("complete preview");
+        assert_eq!(preview.text.as_deref(), Some(text.as_str()));
+        assert!(!preview.truncated);
+        assert!(preview.editable);
+        let edited = format!("{text}\nSAVED_FINAL_ROW\n");
+        let saved = workspace.save_preview("hours.md", preview.version.as_deref().expect("version"), edited.as_bytes()).expect("large edit save");
+        assert_eq!(saved.text.as_deref(), Some(edited.as_str()));
+        assert_eq!(fs::read_to_string(directory.path().join("hours.md")).expect("disk"), edited);
     }
 
     #[test]

@@ -9,6 +9,7 @@ import { getBootstrapConfig } from "../bridge";
 import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { mainPreviewStyles } from "../components/styles/main-preview";
 import { EDITOR_PANE_KEY, EditorPaneLayout, nativeHeaderInset, readEditorPanePreference } from "../features/preview/editor-pane";
+import { MAX_PREVIEW_TEXT_UNITS } from "../core/configuration/explorer";
 import { CONVERSATION_ICON,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,MAIN_PREVIEW_ACTIVATE_EVENT,MAIN_PREVIEW_CLOSE_EVENT,MAIN_PREVIEW_DRAFT_EVENT,MAIN_PREVIEW_RELOAD_EVENT,MAIN_PREVIEW_SAVE_EVENT,MAIN_PREVIEW_TAG,MARKDOWN_PREVIEWER_ID } from "../core/preview/configuration";
 import { cloneView,firstVisibleLineOffset,formatBytes,isCsvPreviewPath,isDiagramPreviewPath,isMarkdownPreviewPath,isMediaPreviewView,normalizeState,officeDocumentKind,previewerIdForMediaKind,previewMethod,previewPackageId,restoreAttribute,selectionOffsetWithin,sourceLineCount,textPositionAtOffset,unsupportedCopy } from "../features/preview/view-state";
 import type { DiagramPreviewJob,DocxBlockSplitResult,DocxPaginationClock,FocusSnapshot,MainPreviewActivateDetail,MainPreviewActivateEvent,MainPreviewCloseDetail,MainPreviewCloseEvent,MainPreviewDraftDetail,MainPreviewDraftEvent,MainPreviewEditorState,MainPreviewEmptyView,MainPreviewFileView,MainPreviewGitDiffView,MainPreviewMediaView,MainPreviewModelView,MainPreviewPathDetail,MainPreviewReloadEvent,MainPreviewSaveEvent,MainPreviewState,MainPreviewTextView,ModelMemoryCacheScope,ModelPreviewJob,ModelPreviewSourceInspection,NotebookCellModel,NotebookMimeBundle,NotebookModel,NotebookOutputModel,NotebookPreviewJob,NotebookRenderBudget,OfficeDomBudget,OfficePreviewJob,ParsedXlsxWorksheet,PdfPreviewJob,SuppressedAttributes,XlsxSharedStrings,XlsxStyleTable,XlsxWorksheetMeta } from "../file-preview/contracts";
@@ -626,7 +627,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       const textarea = this.ownerDocument.createElement("textarea");
       textarea.className = "code-editor";
       textarea.value = editor.draft;
-      textarea.maxLength = MAX_SYNTAX_SOURCE_UNITS;
+      textarea.maxLength = MAX_PREVIEW_TEXT_UNITS;
       textarea.wrap = "off";
       textarea.spellcheck = false;
       textarea.autocomplete = "off";
@@ -636,7 +637,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       textarea.setAttribute("aria-busy", String(editor.saving));
       let acceptedDraft = editor.draft;
       textarea.addEventListener("input", () => {
-        if (textarea.value.length > MAX_SYNTAX_SOURCE_UNITS) {
+        if (textarea.value.length > MAX_PREVIEW_TEXT_UNITS) {
           const selectionStart = Math.min(textarea.selectionStart, acceptedDraft.length);
           const selectionEnd = Math.min(textarea.selectionEnd, acceptedDraft.length);
           textarea.value = acceptedDraft;

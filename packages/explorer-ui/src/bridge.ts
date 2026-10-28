@@ -264,7 +264,7 @@ export class ExplorerBridge extends EventTarget {
     const encoded=JSON.stringify(request),payloadBytes=new TextEncoder().encode(encoded).byteLength;
     // The native ingress has a separate 96 KiB authenticated binding budget,
     // smaller than the CDP frame limit. Never let a rejected write look hung.
-    if(payloadBytes>96*1024)throw new ExplorerBridgeError({code:'PAYLOAD_LIMIT',message:`Native request ${request.method} exceeds the binding payload limit: observedBytes=${payloadBytes}; maxBytes=${96*1024}.`,data:{payloadBytes,maxBytes:96*1024,payloadOmitted:true}});
+    if(payloadBytes>768*1024)throw new ExplorerBridgeError({code:'PAYLOAD_LIMIT',message:`Native request ${request.method} exceeds the binding payload limit: observedBytes=${payloadBytes}; maxBytes=${768*1024}.`,data:{payloadBytes,maxBytes:768*1024,payloadOmitted:true}});
     if (typeof binding === "function") return binding(encoded);
     const objectBridge = binding as ObjectBridge;
     if (typeof objectBridge.request === "function") return objectBridge.request(request);

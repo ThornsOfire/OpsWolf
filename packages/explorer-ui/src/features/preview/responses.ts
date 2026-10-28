@@ -29,8 +29,10 @@ export function normalizePreview(raw: unknown): NormalizedPreview {
   if(typeof object.text!=="string") {
     throw new ExplorerBridgeError({ code: "INVALID_REQUEST",message: "The preview text was not valid." });
   }
-  const capped=object.text.slice(0,MAX_PREVIEW_TEXT_UNITS);
-  const truncated=object.truncated||capped.length<object.text.length;
+  if(object.truncated) throw new ExplorerBridgeError({code:'PREVIEW_INCOMPLETE',message:'The complete file was not received. No partial preview is shown. Reopen with the updated custom launcher.'});
+  if(object.text.length>MAX_PREVIEW_TEXT_UNITS) throw new ExplorerBridgeError({code:'CONTENT_TOO_LARGE',message:'This file exceeds the in-app text limit. No partial preview is shown.'});
+  const capped=object.text;
+  const truncated=false;
   const version=typeof object.version==="string"&&/^[0-9a-f]{64}$/.test(object.version)? object.version:undefined;
   const lineEnding=normalizeLineEnding(object.lineEnding);
   const editable=object.editable===true&&!truncated&&Boolean(version)&&lineEnding!==undefined&&lineEnding!=="mixed";
@@ -175,7 +177,7 @@ export function editSaveError(error: unknown): string {
   if(code==="ACCESS_DENIED") return "Windows denied permission to save this file. Your draft has been kept.";
   if(code==="NOT_FOUND") return "This file no longer exists at its original location. Your draft has been kept.";
   if(code==="TOO_LARGE"||code==="PAYLOAD_TOO_LARGE"||code==="CONTENT_TOO_LARGE") {
-    return "This draft is larger than the 64 KB editing limit.";
+    return "This draft is larger than the 512 KB editing limit. Your complete draft has been kept.";
   }
   if(code==="NOT_EDITABLE"||code==="UNSUPPORTED_TYPE") {
     return "This file is no longer eligible for editing. Reload it to continue.";

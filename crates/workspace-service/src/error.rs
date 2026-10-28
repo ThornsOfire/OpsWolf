@@ -81,7 +81,7 @@ impl WorkspaceError {
             Self::AccessDenied => "The requested path cannot be accessed.",
             Self::NotDirectory => "The requested path is not a directory.",
             Self::TooManyEntries => "The directory is too large to display safely.",
-            Self::ContentTooLarge => "The edited file exceeds the 64 KiB limit.",
+            Self::ContentTooLarge => "This file exceeds the 512 KiB in-app text limit. No partial document is loaded or saved.",
             Self::EntryConflict => {
                 "The requested change conflicts with the current workspace state."
             }

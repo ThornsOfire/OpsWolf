@@ -1,0 +1,46 @@
+name: Build custom editor
+on:
+  push:
+    branches: [feature/right-editor-pane]
+    paths:
+      - 'crates/**'
+      - '.github/workflows/editor-build.yml'
+permissions:
+  contents: read
+jobs:
+  windows-editor:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: -C target-feature=+crt-static
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: packages/explorer-ui/package-lock.json
+      - run: rustup update stable --no-self-update
+      - run: npm --prefix packages/explorer-ui ci
+      - run: npm --prefix packages/explorer-ui run build
+      - name: Native file and transport tests
+        shell: pwsh
+        run: |
+          cargo test -p workspace-service --locked -- --test-threads=1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test -p cdp-client --locked -- --test-threads=1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Compile native reader and windowless launcher
+        run: cargo build --release --locked -p code-codex --bin code-codex --bin code-codex-launcher
+      - name: Artifact checksums
+        shell: pwsh
+        run: |
+          Get-FileHash target/release/code-codex.exe,target/release/code-codex-launcher.exe -Algorithm SHA256 | Format-List | Out-File target/release/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: code-codex-editor-windows
+          path: |
+            target/release/code-codex.exe
+            target/release/code-codex-launcher.exe
+            target/release/SHA256SUMS.txt
+          retention-days: 7

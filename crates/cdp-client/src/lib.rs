@@ -49,9 +49,9 @@ use serde_json::{Value, json};
 
 pub const PRIMARY_BINDING_NAME: &str = "__codeCodex";
 pub const PRIMARY_RECEIVER_NAME: &str = "__codeCodexReceive";
-// A 64 KiB UTF-8 edit expands to about 86 KiB as Base64. Keep ingress tightly
+// A 512 KiB UTF-8 edit expands to about 683 KiB as Base64. Keep ingress tightly
 // bounded while leaving room for the authenticated JSON request envelope.
-const MAX_BINDING_PAYLOAD_BYTES: usize = 96 * 1024;
+const MAX_BINDING_PAYLOAD_BYTES: usize = 768 * 1024;
 const MAX_CDP_MESSAGE_BYTES: usize = 12 * 1024 * 1024;
 const MAX_DISCOVERY_RESPONSE_BYTES: usize = 1024 * 1024;
 const MAX_REQUESTS_PER_SECOND: usize = 120;
@@ -179,7 +179,7 @@ mod tests {
             document_epoch: 0,
         };
         assert!(outbound_expression(&outbound, PRIMARY_RECEIVER_NAME).is_err());
-        assert_eq!(MAX_BINDING_PAYLOAD_BYTES, 96 * 1024);
+        assert_eq!(MAX_BINDING_PAYLOAD_BYTES, 768 * 1024);
         assert_eq!(MAX_CDP_MESSAGE_BYTES, 12 * 1024 * 1024);
     }
 

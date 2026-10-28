@@ -66,7 +66,9 @@ export class PreviewRequestsController {
       diagnostic.finish('failed',runtimeErrorDetails(error));
       if(!this.canApplyPreview(tab,bridge,context,mainPreview,generation,sessionRevision,instanceId,revision)) return;
       const code=errorCode(error);
-      const message=mediaRoute? mediaPreviewError(error):undefined;
+      const message=mediaRoute? mediaPreviewError(error):code==='PREVIEW_INCOMPLETE'
+        ? 'The complete file was not received. No partial preview is shown. Reopen with the updated custom launcher.'
+        :code==='CONTENT_TOO_LARGE' ? 'This file exceeds the 512 KB in-app text limit. No partial document is shown.' :undefined;
       tab.view=message
         ? { kind: "error",path: tab.path,name: tab.name,code,message }
         :{ kind: "error",path: tab.path,name: tab.name,code };
