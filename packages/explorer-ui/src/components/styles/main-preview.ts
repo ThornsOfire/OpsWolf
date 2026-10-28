@@ -174,6 +174,19 @@ export const mainPreviewStyles = String.raw`
 
   .tab-strip::-webkit-scrollbar { display: none; }
 
+  .editor-pane-actions { position: absolute; right: 8px; top: 7px; z-index: 3; display: flex; gap: 4px; pointer-events: auto; -webkit-app-region: no-drag; }
+  .editor-pane-actions button { border: 1px solid var(--cle-main-line); border-radius: 5px; background: var(--cle-main-bar); padding: 4px 8px; cursor: pointer; }
+  .editor-pane-toggle[aria-pressed="true"] { background: var(--cle-main-hover); }
+  .editor-pane-close, .editor-pane-resizer { display: none; }
+  :host([data-editor-pane-open]) { left: auto !important; right: 0 !important; width: var(--cle-editor-pane-width); border-left: 1px solid var(--cle-main-line); background: var(--cle-main-bg); }
+  :host([data-editor-pane-open]) .editor-pane-close { display: block; }
+  :host([data-editor-pane]) .conversation { display: none; }
+  :host([data-editor-pane]:not([data-editor-pane-open])) .tab-strip { visibility: hidden; }
+  :host([data-editor-pane-open]) .editor-pane-resizer { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 4; cursor: col-resize; pointer-events: auto; touch-action: none; }
+  .editor-pane-resizer:focus-visible { outline: 2px solid var(--cle-main-focus); outline-offset: -2px; }
+  :host([data-editor-pane-open]) .tab-strip { width: 100% !important; padding-right: 150px; }
+  :host(:not([data-editor-pane])) .tab-strip { padding-right: 110px; }
+
   :host([data-clipped-layout="true"]) .surface {
     --cle-preview-header-height: 42px;
     grid-template-rows: var(--cle-preview-header-height) minmax(0, 1fr);

@@ -1,5 +1,15 @@
 # Code-Codex
 
+### Experimental right editor pane (this fork)
+
+After opening a file, click **Editor pane** at the top right to keep the conversation visible beside the file editor. Click it again to return to conversation tabs. The choice and pane width persist across sessions. Drag the pane's left edge to resize it, or focus the separator and use Left/Right arrows. Close the pane with **×**; existing unsaved-change prompts still apply.
+
+The pane reuses Code-Codex's existing syntax-highlighted text editor, save controls, and optional file preview plugins (including PDF). It is a basic source editor; it does not add language servers, autocomplete, debugging, or other full IDE services. Text files retain the existing **Edit** control and **Ctrl+S** saving behavior. This fork does not change the official Codex app or its native right-panel tabs.
+
+Development validation: `npm --prefix packages/explorer-ui ci`, `npm --prefix packages/explorer-ui run typecheck`, `npm --prefix packages/explorer-ui run build`, and `node scripts/test-editor-pane.mjs`. The browser regression uses the repository's existing isolated Chrome fixture.
+
+To try the built UI without rebuilding Rust, launch the installed `code-codex.exe run --ui-bundle "<absolute path to packages/explorer-ui/dist/explorer.js>"` after closing the current Codex session. Keep the regular Code-Codex launcher for returning to the stock UI.
+
 Windows startup can offer a consent-based graceful restart when an unmanaged
 official Codex instance is already open. The dialog warns about interrupted tasks
 and unsaved changes, with an optional remembered choice. See [startup conflict

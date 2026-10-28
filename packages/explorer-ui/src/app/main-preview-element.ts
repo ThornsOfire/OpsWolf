@@ -8,6 +8,7 @@ import { usesClippedMainLayout } from "../adapters/codex-layout-version";
 import { getBootstrapConfig } from "../bridge";
 import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { mainPreviewStyles } from "../components/styles/main-preview";
+import { EDITOR_PANE_KEY, EditorPaneLayout, readEditorPanePreference } from "../features/preview/editor-pane";
 import { CONVERSATION_ICON,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,MAIN_PREVIEW_ACTIVATE_EVENT,MAIN_PREVIEW_CLOSE_EVENT,MAIN_PREVIEW_DRAFT_EVENT,MAIN_PREVIEW_RELOAD_EVENT,MAIN_PREVIEW_SAVE_EVENT,MAIN_PREVIEW_TAG,MARKDOWN_PREVIEWER_ID } from "../core/preview/configuration";
 import { cloneView,firstVisibleLineOffset,formatBytes,isCsvPreviewPath,isDiagramPreviewPath,isMarkdownPreviewPath,isMediaPreviewView,normalizeState,officeDocumentKind,previewerIdForMediaKind,previewMethod,previewPackageId,restoreAttribute,selectionOffsetWithin,sourceLineCount,textPositionAtOffset,unsupportedCopy } from "../features/preview/view-state";
 import type { DiagramPreviewJob,DocxBlockSplitResult,DocxPaginationClock,FocusSnapshot,MainPreviewActivateDetail,MainPreviewActivateEvent,MainPreviewCloseDetail,MainPreviewCloseEvent,MainPreviewDraftDetail,MainPreviewDraftEvent,MainPreviewEditorState,MainPreviewEmptyView,MainPreviewFileView,MainPreviewGitDiffView,MainPreviewMediaView,MainPreviewModelView,MainPreviewPathDetail,MainPreviewReloadEvent,MainPreviewSaveEvent,MainPreviewState,MainPreviewTextView,ModelMemoryCacheScope,ModelPreviewJob,ModelPreviewSourceInspection,NotebookCellModel,NotebookMimeBundle,NotebookModel,NotebookOutputModel,NotebookPreviewJob,NotebookRenderBudget,OfficeDomBudget,OfficePreviewJob,ParsedXlsxWorksheet,PdfPreviewJob,SuppressedAttributes,XlsxSharedStrings,XlsxStyleTable,XlsxWorksheetMeta } from "../file-preview/contracts";
@@ -50,6 +51,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _codeMinimap: CodeMinimap | null = null;
 
   _minimapEnabled = true;
+  readonly _editorPane = new EditorPaneLayout(this);
+  _panePreference = { docked: false, width: 560 };
+  _paneResizeCleanup: (() => void) | undefined;
 
   readonly _mediaObjectUrls = new Map<string, {
     readonly bytes: Uint8Array;
@@ -108,6 +112,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   constructor() {
     super();
+    try { this._panePreference = readEditorPanePreference(this.ownerDocument.defaultView!.localStorage); } catch { /* Storage may be unavailable. */ }
     try { this._minimapEnabled = this.ownerDocument.defaultView?.localStorage.getItem(CODE_MINIMAP_PREFERENCE) !== "false"; }
     catch { runtimeEvent("code-minimap", "preference read", "unavailable"); }
     const bootstrap = getBootstrapConfig();
@@ -116,12 +121,36 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._shadow.innerHTML = `
       <style>${mainPreviewStyles}${SURFACE_OPACITY_PREVIEW_CSS}${codeMinimapStyles}</style>
       <div class="surface">
+        <div class="editor-pane-actions">
+          <button type="button" class="editor-pane-toggle" title="Move files between conversation tabs and the right editor pane" aria-pressed="false">Editor pane</button>
+          <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
+        </div>
+        <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>
         <div class="tab-strip" role="tablist" aria-label="Conversation and file previews"></div>
         <div class="panel-mount"></div>
       </div>
     `;
     this._tabList = this._required<HTMLElement>(".tab-strip");
     this._panelMount = this._required<HTMLElement>(".panel-mount");
+    this._required('.editor-pane-toggle').addEventListener('click', () => {
+      this._panePreference.docked = !this._panePreference.docked;
+      this._savePanePreference();
+      if (this._panePreference.docked && this._state.activePath === null && this._state.tabs[0]) {
+        this.dispatchEvent(new CustomEvent(MAIN_PREVIEW_ACTIVATE_EVENT, { detail: { kind: 'file', path: this._state.tabs[0].path }, bubbles: true, composed: true, cancelable: true }));
+      }
+      this._syncSuppression();
+    });
+    this._required('.editor-pane-close').addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent(MAIN_PREVIEW_ACTIVATE_EVENT, { detail: { kind: 'conversation' }, bubbles: true, composed: true, cancelable: true }));
+    });
+    const resizeHandle = this._required<HTMLElement>('.editor-pane-resizer');
+    resizeHandle.addEventListener('pointerdown', (event) => this._resizePane(event));
+    resizeHandle.addEventListener('keydown', (event) => {
+      if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+      event.preventDefault();
+      this._panePreference.width = Math.max(260, Math.min(1200, this._panePreference.width + (event.key === 'ArrowLeft' ? 20 : -20)));
+      this._savePanePreference(); this._syncSuppression();
+    });
     this._tabList.addEventListener("click", (event) => this._onTabListClick(event));
     this._tabList.addEventListener("keydown", (event) => this._onTabListKeyDown(event));
     this._shadow.addEventListener("keydown", (event) => this._onShadowKeyDown(event as KeyboardEvent));
@@ -151,6 +180,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _disposeDisconnected(): void {
+    this._paneResizeCleanup?.();
+    this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
     this._connected = false;
     this._codeMinimap?.dispose();
@@ -1814,6 +1845,19 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _syncSuppression(): void {
+    const paneActive = this._connected && !this._suspended && this._panePreference.docked && this._state.activePath !== null && this._state.tabs.length > 0;
+    this.toggleAttribute('data-editor-pane', this._panePreference.docked);
+    this.toggleAttribute('data-editor-pane-open', paneActive);
+    this._required('.editor-pane-toggle').setAttribute('aria-pressed', String(this._panePreference.docked));
+    if (this._panePreference.docked && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) {
+      this._restoreSuppressedChildren();
+      this._syncNativeViewportBounds(this.parentElement, null);
+      this._nativeTitleObserver?.disconnect(); this._nativeTitleObserverRoot = null;
+      if (paneActive) this._editorPane.apply(this.parentElement, this._panePreference.width);
+      else this._editorPane.restore();
+      return;
+    }
+    this._editorPane.restore();
     const parent = this._connected && !this._suspended && this._state.tabs.length > 0 && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)
       ? this.parentElement
       : null;
@@ -1937,6 +1981,39 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const element = this._shadow.querySelector<T>(selector);
     if (!element) throw new Error(`Missing main preview element: ${selector}`);
     return element;
+  }
+
+  _savePanePreference(): void {
+    try { this.ownerDocument.defaultView?.localStorage.setItem(EDITOR_PANE_KEY, JSON.stringify(this._panePreference)); } catch { /* Keep the current session usable. */ }
+  }
+
+  _resizePane(event: PointerEvent): void {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    this._paneResizeCleanup?.();
+    const handle = event.currentTarget as HTMLElement;
+    const startX = event.clientX;
+    const startWidth = this.getBoundingClientRect().width;
+    handle.setPointerCapture(event.pointerId);
+    const move = (next: PointerEvent) => {
+      if (next.pointerId !== event.pointerId) return;
+      this._panePreference.width = Math.max(260, Math.min(1200, startWidth + startX - next.clientX));
+      if (this.parentElement) this._editorPane.apply(this.parentElement, this._panePreference.width);
+    };
+    const finish = () => { cleanup(); this._savePanePreference(); };
+    const cleanup = () => {
+      handle.removeEventListener('pointermove', move);
+      handle.removeEventListener('pointerup', finish);
+      handle.removeEventListener('pointercancel', finish);
+      handle.removeEventListener('lostpointercapture', finish);
+      if (handle.hasPointerCapture(event.pointerId)) handle.releasePointerCapture(event.pointerId);
+      this._paneResizeCleanup = undefined;
+    };
+    this._paneResizeCleanup = cleanup;
+    handle.addEventListener('pointermove', move);
+    handle.addEventListener('pointerup', finish);
+    handle.addEventListener('pointercancel', finish);
+    handle.addEventListener('lostpointercapture', finish);
   }
 }
 
