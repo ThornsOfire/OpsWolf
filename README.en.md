@@ -2,7 +2,7 @@
 
 ### Experimental right editor pane (this fork)
 
-After opening a file, click **Editor pane** at the top right to keep the conversation visible beside the file editor. Click it again to return to conversation tabs. The choice and pane width persist across sessions. Drag the pane's left edge to resize it, or focus the separator and use Left/Right arrows. Close the pane with **×**; existing unsaved-change prompts still apply.
+This fork defaults to opening files in a right-side editor pane, keeping the conversation visible. The **Editor pane · custom** button identifies the custom UI; click it to return to conversation tabs or switch back. Existing saved layout choices and pane width persist across sessions. Drag the pane's left edge to resize it, or focus the separator and use Left/Right arrows. Close the pane with **×**; existing unsaved-change prompts still apply. PDF and Markdown preview plugins default to enabled when no preview preference has been saved; their verified packages must be installed separately.
 
 The pane reuses Code-Codex's existing syntax-highlighted text editor, save controls, and optional file preview plugins (including PDF). It is a basic source editor; it does not add language servers, autocomplete, debugging, or other full IDE services. Text files retain the existing **Edit** control and **Ctrl+S** saving behavior. This fork does not change the official Codex app or its native right-panel tabs.
 

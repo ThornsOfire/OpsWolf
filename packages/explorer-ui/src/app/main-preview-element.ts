@@ -52,7 +52,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
-  _panePreference = { docked: false, width: 560 };
+  _panePreference = { docked: true, width: 560 };
   _paneResizeCleanup: (() => void) | undefined;
 
   readonly _mediaObjectUrls = new Map<string, {
@@ -122,7 +122,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       <style>${mainPreviewStyles}${SURFACE_OPACITY_PREVIEW_CSS}${codeMinimapStyles}</style>
       <div class="surface">
         <div class="editor-pane-actions">
-          <button type="button" class="editor-pane-toggle" title="Move files between conversation tabs and the right editor pane" aria-pressed="false">Editor pane</button>
+          <button type="button" class="editor-pane-toggle" title="Custom editor build: move files between conversation tabs and the right editor pane" aria-pressed="false">Editor pane · custom</button>
           <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
         </div>
         <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>

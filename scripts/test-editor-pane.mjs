@@ -19,7 +19,9 @@ const ev = expression => browser.evaluate(expression);
 const results=[];
 async function check(name, expression) { assert.equal(await ev(expression),true,name);results.push(name); }
 try {
-  await check('Default remains conversation tabs', `!viewer.hasAttribute('data-editor-pane')&&document.querySelector('#chat').hasAttribute('inert')`);
+  await check('Fresh custom build defaults to right pane and has a visible build label', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-pane-toggle').textContent.includes('custom')&&!document.querySelector('#chat').hasAttribute('inert')`);
+  await ev(`q('.editor-pane-toggle').click()`);
+  await check('Conversation tabs remain available', `!viewer.hasAttribute('data-editor-pane')&&document.querySelector('#chat').hasAttribute('inert')`);
   await ev(`q('.editor-pane-toggle').click()`); await delay(80);
   await check('Docking restores interactive chat and header', `viewer.hasAttribute('data-editor-pane-open')&&!document.querySelector('#chat').hasAttribute('inert')&&!document.querySelector('header').hasAttribute('inert')&&getComputedStyle(document.querySelector('#chat')).opacity==='1'`);
   await check('Chat and editor occupy separate rectangles', `(()=>{let c=document.querySelector('#chat').getBoundingClientRect(),p=viewer.getBoundingClientRect();return c.right<=p.left+1&&p.width>=260&&p.width<900})()`);

@@ -2902,7 +2902,7 @@ export class CodeCodexElement extends HTMLElement {
     }
     #readEnabledPreviewers(): readonly string[] {
         try {
-            const value: unknown = JSON.parse(localStorage.getItem(PREVIEWER_SETTINGS_KEY) || "[]");
+            const value: unknown = JSON.parse(localStorage.getItem(PREVIEWER_SETTINGS_KEY) || '["code-codex.pdf-preview","code-codex.markdown-preview"]');
             if (!Array.isArray(value))
                 return [];
             return [...new Set(value.filter((entry): entry is string => typeof entry === "string" && PREVIEWER_IDS.has(entry)))];

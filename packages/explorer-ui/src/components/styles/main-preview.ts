@@ -184,8 +184,8 @@ export const mainPreviewStyles = String.raw`
   :host([data-editor-pane]:not([data-editor-pane-open])) .tab-strip { visibility: hidden; }
   :host([data-editor-pane-open]) .editor-pane-resizer { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 4; cursor: col-resize; pointer-events: auto; touch-action: none; }
   .editor-pane-resizer:focus-visible { outline: 2px solid var(--cle-main-focus); outline-offset: -2px; }
-  :host([data-editor-pane-open]) .tab-strip { width: 100% !important; padding-right: 150px; }
-  :host(:not([data-editor-pane])) .tab-strip { padding-right: 110px; }
+  :host([data-editor-pane-open]) .tab-strip { width: 100% !important; padding-right: 205px; }
+  :host(:not([data-editor-pane])) .tab-strip { padding-right: 165px; }
 
   :host([data-clipped-layout="true"]) .surface {
     --cle-preview-header-height: 42px;

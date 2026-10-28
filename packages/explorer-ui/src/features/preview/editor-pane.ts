@@ -4,8 +4,8 @@ export interface EditorPanePreference { docked: boolean; width: number }
 export function readEditorPanePreference(storage: Storage): EditorPanePreference {
   try {
     const value = JSON.parse(storage.getItem(EDITOR_PANE_KEY) || 'null');
-    return { docked: value?.docked === true, width: Number.isFinite(value?.width) ? Math.max(260, Math.min(1200, value.width)) : 560 };
-  } catch { return { docked: false, width: 560 }; }
+    return { docked: value?.docked !== false, width: Number.isFinite(value?.width) ? Math.max(260, Math.min(1200, value.width)) : 560 };
+  } catch { return { docked: true, width: 560 }; }
 }
 export function editorPaneWidth(requested: number, available: number): number {
   return Math.max(160, Math.min(requested, Math.max(160, available - 280)));
