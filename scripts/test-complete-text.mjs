@@ -27,8 +27,12 @@ try{
  await check('Normalizer retains every character of a document larger than 64 KB',`preview.text===fullText&&!preview.truncated&&preview.editable`);
  await check('Rendered Markdown reaches the final checklist',`viewer.shadowRoot.querySelector('.markdown-body').textContent.includes('End-of-session checklist')`);
  await check('Rendered Markdown includes all table rows',`viewer.shadowRoot.querySelectorAll('tr').length===expectedTableRows(fullText)`);
+ await ev(`(()=>{const content=viewer.shadowRoot.querySelector('.preview-content');content.scrollTop=content.scrollHeight})()`);
+ await check('Scroll viewport reaches the actual end of the rendered document',`(()=>{const content=viewer.shadowRoot.querySelector('.preview-content'),last=viewer.shadowRoot.querySelector('.markdown-body').lastElementChild;return content.scrollTop+content.clientHeight>=content.scrollHeight-1&&last.getBoundingClientRect().bottom<=content.getBoundingClientRect().bottom+1})()`);
  await ev('show(true)');
  await check('Source editor receives the entire document and accepts beyond the old cutoff',`viewer.shadowRoot.querySelector('textarea').value===fullText.replaceAll('\\r\\n','\\n')&&viewer.shadowRoot.querySelector('textarea').maxLength===512*1024`);
+ await ev(`window.drafts=[];viewer.addEventListener('cle-main-preview-draft',e=>drafts.push(e.detail));const editor=viewer.shadowRoot.querySelector('textarea');editor.value+='\\nCOMPLETE_EDIT_TAIL';editor.dispatchEvent(new Event('input',{bubbles:true}));`);
+ await check('An edit beyond the former cutoff preserves the full draft',`drafts.length===1&&drafts[0].text.endsWith('COMPLETE_EDIT_TAIL')&&drafts[0].text.length>65536`);
  await check('Legacy truncated native responses are rejected instead of shown',`(()=>{try{normalizePreview({kind:'text',text:fullText.slice(0,65536),sizeBytes:${bytes.length},truncated:true})}catch(e){return e.code==='PREVIEW_INCOMPLETE'}return false})()`);
  await check('Oversized response is rejected without slicing',`(()=>{try{normalizePreview({kind:'text',text:'x'.repeat(512*1024+1),sizeBytes:512*1024+1,truncated:false})}catch(e){return e.code==='CONTENT_TOO_LARGE'}return false})()`);
  await check('No unhandled browser errors',`errors.length===0`);
