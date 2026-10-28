@@ -6,6 +6,10 @@ This fork defaults to opening files in a right-side editor pane, keeping the con
 
 The pane reuses Code-Codex's existing syntax-highlighted text editor, save controls, and optional file preview plugins (including PDF). It is a basic source editor; it does not add language servers, autocomplete, debugging, or other full IDE services. Text files retain the existing **Edit** control and **Ctrl+S** saving behavior. This fork does not change the official Codex app or its native right-panel tabs.
 
+Scroll the mouse wheel over the tab strip to browse crowded tabs, drag a document tab before or after another tab to reorder it, or use **▾** to list all open files. The menu marks the current file and supports arrow-key navigation. Up to 64 tabs remain open (the original eight-tab eviction limit is increased).
+
+Use **Pin** on the active file to reopen it when returning to the same local project. Pins are stored per absolute project root; another project has its own pins. Closing a pinned tab keeps its pin for the next session; **Unpin** removes the pin without closing the file. Up to 32 files can be pinned per project. Dragging pinned tabs also saves their relative reopening order. Missing pinned files show the existing file-load error and can be unpinned. Pin storage saves relative paths, not file contents or unsaved drafts.
+
 Development validation: `npm --prefix packages/explorer-ui ci`, `npm --prefix packages/explorer-ui run typecheck`, `npm --prefix packages/explorer-ui run build`, and `node scripts/test-editor-pane.mjs`. The browser regression uses the repository's existing isolated Chrome fixture.
 
 To try the built UI without rebuilding Rust, launch the installed `code-codex.exe run --ui-bundle "<absolute path to packages/explorer-ui/dist/explorer.js>"` after closing the current Codex session. Keep the regular Code-Codex launcher for returning to the stock UI.

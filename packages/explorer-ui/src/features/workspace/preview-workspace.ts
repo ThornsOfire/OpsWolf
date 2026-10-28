@@ -11,6 +11,7 @@ import { gitHistoryError,normalizeGitDiff } from "../../git-history-facade";
 import { runtimeEvent,runtimeTaskLabel } from "../../runtime-events";
 import { recordCaughtRuntimeError } from "../../runtime-operations";
 import { TabStore } from "../preview/tab-store";
+import { PinnedFiles, projectPinKey } from "../preview/pinned-files";
 export interface PreviewWorkspaceControllerPorts {
  readonly element:HTMLElement;
  readonly collapse:(collapsed?:boolean)=>void;
@@ -57,8 +58,7 @@ export class PreviewWorkspaceController {
     let tab=this.previewTabs.find((candidate) => candidate.path===tabPath);
     if(!tab) {
       if(this.previewTabs.length>=MAX_PREVIEW_TABS) {
-        const evicted=this.tabStore.evictFirst();
-        if(evicted) this.disposePreviewTab(evicted);
+        this.evictUnpinnedTab();
       }
       tab={
         instanceId: this.tabStore.nextInstanceId(),
@@ -107,7 +107,42 @@ export class PreviewWorkspaceController {
   get previewTabs(): readonly PreviewTab[] { return this.tabStore.items; }
   get activePreviewPath(): string | null { return this.tabStore.activePath; }
   set activePreviewPath(path: string | null) { this.tabStore.activate(path); }
-  constructor(private readonly host: PreviewWorkspaceControllerPorts) {}
+  readonly pins: PinnedFiles;
+  private restoredProject: string | undefined;
+  constructor(private readonly host: PreviewWorkspaceControllerPorts) {
+    let storage: Storage | undefined;
+    try { storage = host.element.ownerDocument.defaultView?.localStorage; } catch { /* Optional local preferences. */ }
+    this.pins = new PinnedFiles(storage);
+  }
+  get pinnedPaths(): string[] { return this.pins.get(this.host.context?.rootPath ?? ''); }
+  togglePin(path: string): void {
+    if (!this.previewTabs.some(tab => tab.path === path)) return;
+    if (!this.pins.toggle(this.host.context?.rootPath ?? '', path)) {
+      this.host.announce('Could not save this pin. Pins require a local project and allow up to 32 files.'); return;
+    }
+    this.syncMainPreview();
+    this.host.announce(this.pinnedPaths.includes(path) ? 'File pinned for this project' : 'File unpinned');
+  }
+  reorderTabs(path: string, targetPath: string, after: boolean): void {
+    if (!this.tabStore.move(path, targetPath, after)) return;
+    this.pins.reorder(this.host.context?.rootPath ?? '', this.previewTabs.map(tab => tab.path));
+    this.syncMainPreview();
+  }
+  restorePinnedFiles(): void {
+    const root = this.host.context?.rootPath;
+    if (!root || this.restoredProject === projectPinKey(root) || this.host.editingPath ||
+      !this.host.mainPreviewSurface?.isConnected || (this.host.state !== 'ready' && this.host.state !== 'empty')) return;
+    const paths = this.pins.get(root), active = this.activePreviewPath;
+    if (paths.length && !this.host.ensureMainPreview()) return;
+    this.restoredProject = projectPinKey(root);
+    for (const path of paths) this.openPreviewPath(path, path.split(/[\\/]/).at(-1) ?? path);
+    if (paths.length) { this.activePreviewPath = active ?? paths[0]!; this.syncMainPreview(); }
+  }
+  private evictUnpinnedTab(): void {
+    const pins = this.pinnedPaths;
+    const index = this.previewTabs.findIndex(tab => !pins.includes(tab.path) && tab.path !== this.host.editingPath);
+    if (index >= 0) { const tab = this.tabStore.remove(index); if (tab) this.disposePreviewTab(tab); }
+  }
 readonly tabStore = new TabStore<PreviewTab>();
 previewSessionRevision = 0;
 closePreviewTabsWithin(path: string): void {
@@ -150,9 +185,7 @@ openPreviewPath(relativePath: string, name: string): void {
         let tab = this.previewTabs.find((candidate) => candidate.path === relativePath);
         if (!tab) {
             if (this.previewTabs.length >= MAX_PREVIEW_TABS) {
-                const evicted = this.tabStore.evictFirst();
-                if (evicted)
-                    this.disposePreviewTab(evicted);
+                this.evictUnpinnedTab();
             }
             tab = {
                 instanceId: this.tabStore.nextInstanceId(),
@@ -315,6 +348,7 @@ disposePreviewTab(tab: PreviewTab): void {
         tab.view = { kind: "loading", path: tab.path, name: tab.name };
     }
 purgePreviewTabs(renderRows = true): void {
+        this.restoredProject = undefined;
         this.previewSessionRevision += 1;
         this.host.clearEditing(false);
         for (const tab of this.previewTabs)
@@ -341,6 +375,7 @@ syncMainPreview(): void {
             activePath: this.activePreviewPath,
             tabs: this.previewTabs.map((tab) => tab.view),
             enabledPreviewers: [...this.host.enabledPreviewers],
+            pinnedPaths: this.pinnedPaths,
             ...(editor ? { editor } : {}),
         });
         this.host.syncEditModeButton();

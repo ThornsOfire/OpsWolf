@@ -332,6 +332,7 @@ export interface MainPreviewState {
   readonly activePath: string | null;
   readonly tabs: readonly MainPreviewFileView[];
   readonly enabledPreviewers?: readonly string[];
+  readonly pinnedPaths?: readonly string[];
   readonly editor?: MainPreviewEditorState;
 }
 

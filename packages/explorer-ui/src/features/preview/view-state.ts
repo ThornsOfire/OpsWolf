@@ -179,7 +179,7 @@ export function normalizeState(state: MainPreviewState): MainPreviewState {
       ...(state.editor.error === undefined ? {} : { error: state.editor.error }),
     }
     : undefined;
-  return { activePath, tabs, enabledPreviewers, ...(editor ? { editor } : {}) };
+  return { activePath, tabs, enabledPreviewers, pinnedPaths: [...new Set(state.pinnedPaths ?? [])], ...(editor ? { editor } : {}) };
 }
 
 

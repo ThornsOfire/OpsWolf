@@ -37,7 +37,7 @@ export const PREVIEW_SELECTION_DELAY_MS=120;
 export const MAX_PREVIEW_TEXT_UNITS=65_536;
 
 
-export const MAX_PREVIEW_TABS=8;
+export const MAX_PREVIEW_TABS=64;
 
 
 export const MIN_WIDTH=180;

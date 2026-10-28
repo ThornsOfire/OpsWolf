@@ -1448,6 +1448,7 @@ export class CodeCodexElement extends HTMLElement {
             this.#mainPreview?.reparent(document.body);
         if (nextSurface && this.#workspaceSession.context && !this.#previewWorkspace.tabStore.items.length && this.#previeweditingSettings.restoreDetachedDraft(this.#workspaceSession.context))
             return;
+        if (nextSurface) this.#previewWorkspace.restorePinnedFiles();
         if (nextSurface && this.#previewWorkspace.tabStore.items.length) {
             this.#ensureMainPreview();
             this.#previewWorkspace.syncMainPreview();
@@ -2392,6 +2393,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#treeinteractionSettings.renderTree();
                 if (!this.#previeweditingSettings.restoreDetachedDraft(context))
                     this.#announce(`${context.projectName} loaded`);
+                this.#previewWorkspace.restorePinnedFiles();
                 if (this.#githistorySettings.gitHistoryOpen)
                     void this.#githistorySettings.loadGitHistory(true);
                 // Show the root before installing a recursive watcher (large projects
@@ -2773,6 +2775,8 @@ export class CodeCodexElement extends HTMLElement {
         preview.addEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.addEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.addEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
+        preview.addEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
+        preview.addEventListener("cle-main-preview-pin", this.#onMainPreviewPin as EventListener);
         surface.append(preview);
         this.#mainPreview = preview;
         return preview;
@@ -2789,6 +2793,8 @@ export class CodeCodexElement extends HTMLElement {
         preview.removeEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.removeEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.removeEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
+        preview.removeEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
+        preview.removeEventListener("cle-main-preview-pin", this.#onMainPreviewPin as EventListener);
         preview.setState({ activePath: null, tabs: [] });
         preview.remove();
     }
@@ -2855,6 +2861,17 @@ export class CodeCodexElement extends HTMLElement {
         const detail = asRecord(event.detail);
         if (detail?.path === this.#previeweditingSettings.drafts.path)
             this.#previeweditingSettings.reloadEditedFile();
+    };
+    #onMainPreviewReorder = (event: CustomEvent<unknown>): void => {
+        if (event.target !== this.#mainPreview) return;
+        const detail = asRecord(event.detail);
+        if (typeof detail?.path === 'string' && typeof detail.targetPath === 'string' && typeof detail.after === 'boolean')
+            this.#previewWorkspace.reorderTabs(detail.path, detail.targetPath, detail.after);
+    };
+    #onMainPreviewPin = (event: CustomEvent<unknown>): void => {
+        if (event.target !== this.#mainPreview) return;
+        const detail = asRecord(event.detail);
+        if (typeof detail?.path === 'string') this.#previewWorkspace.togglePin(detail.path);
     };
     #startResize(event: PointerEvent): void {
         if (event.button !== 0)

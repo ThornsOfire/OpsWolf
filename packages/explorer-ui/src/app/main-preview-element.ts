@@ -54,6 +54,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   readonly _editorPane = new EditorPaneLayout(this);
   _panePreference = { docked: true, width: 560 };
   _paneResizeCleanup: (() => void) | undefined;
+  _draggedTabPath: string | undefined;
+  readonly _openFilesMenu: HTMLElement;
 
   readonly _mediaObjectUrls = new Map<string, {
     readonly bytes: Uint8Array;
@@ -122,6 +124,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       <style>${mainPreviewStyles}${SURFACE_OPACITY_PREVIEW_CSS}${codeMinimapStyles}</style>
       <div class="surface">
         <div class="editor-pane-actions">
+          <button type="button" class="tab-pin-toggle" title="Pin this file for this project" aria-pressed="false">Pin</button>
+          <button type="button" class="open-files-toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
           <button type="button" class="editor-pane-toggle" title="Custom editor build: move files between conversation tabs and the right editor pane" aria-pressed="false">Editor pane · custom</button>
           <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
         </div>
@@ -129,9 +133,38 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         <div class="tab-strip" role="tablist" aria-label="Conversation and file previews"></div>
         <div class="panel-mount"></div>
       </div>
+      <div class="open-files-menu" popover="auto" role="menu" aria-label="Open files"></div>
     `;
     this._tabList = this._required<HTMLElement>(".tab-strip");
     this._panelMount = this._required<HTMLElement>(".panel-mount");
+    this._openFilesMenu = this._required('.open-files-menu');
+    this._required('.open-files-toggle').addEventListener('click', () => this._toggleOpenFilesMenu());
+    this._openFilesMenu.addEventListener('toggle', () => {
+      this._required('.open-files-toggle').setAttribute('aria-expanded', String(this._openFilesMenu.matches(':popover-open')));
+    });
+    this._openFilesMenu.addEventListener('keydown', event => {
+      if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+      event.preventDefault();
+      const items = [...this._openFilesMenu.querySelectorAll<HTMLButtonElement>('.open-file-item')];
+      if (!items.length) return;
+      const index = items.indexOf(this._shadow.activeElement as HTMLButtonElement);
+      const next = event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 :
+        (index + (event.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
+      items[next]?.focus();
+    });
+    this._required('.tab-pin-toggle').addEventListener('click', () => {
+      if (this._state.activePath) this._dispatchPathEvent('cle-main-preview-pin', { path: this._state.activePath });
+    });
+    this._tabList.addEventListener('wheel', event => {
+      if (event.ctrlKey || event.metaKey || this._tabList.scrollWidth <= this._tabList.clientWidth) return;
+      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
+      this._tabList.scrollLeft += delta * (event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? this._tabList.clientWidth : 1);
+      event.preventDefault();
+    }, { passive: false });
+    this._tabList.addEventListener('dragstart', event => this._startTabDrag(event));
+    this._tabList.addEventListener('dragover', event => this._overTabDrag(event));
+    this._tabList.addEventListener('drop', event => this._dropTabDrag(event));
+    this._tabList.addEventListener('dragend', () => this._clearTabDrag());
     this._required('.editor-pane-toggle').addEventListener('click', () => {
       this._panePreference.docked = !this._panePreference.docked;
       this._savePanePreference();
@@ -180,6 +213,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _disposeDisconnected(): void {
+    if (this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
+    this._clearTabDrag();
     this._paneResizeCleanup?.();
     this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
@@ -352,6 +387,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       const slot = this.ownerDocument.createElement("div");
       const active = view.path === this._state.activePath;
       slot.className = `tab-slot file${active ? " active" : ""}`;
+      slot.dataset.path = view.path;
+      slot.draggable = true;
 
       const tab = this.ownerDocument.createElement("button");
       tab.type = "button";
@@ -365,6 +402,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       tab.dataset.tabKind = "file";
       tab.dataset.path = view.path;
       tab.append(this._staticIcon(getFileIcon(view.name).markup, "tab-icon"), this._textSpan(view.name, "tab-label"));
+      if (this._state.pinnedPaths?.includes(view.path)) tab.prepend(this._textSpan('◆', 'tab-pin-mark'));
 
       const close = this.ownerDocument.createElement("button");
       close.type = "button";
@@ -378,6 +416,84 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     }
 
     this._tabList.replaceChildren(fragment);
+    const pin = this._required<HTMLButtonElement>('.tab-pin-toggle');
+    const pinned = this._state.activePath !== null && this._state.pinnedPaths?.includes(this._state.activePath) === true;
+    pin.disabled = this._state.activePath === null || this._state.activePath.startsWith('git-diff://');
+    pin.textContent = pinned ? 'Unpin' : 'Pin';
+    pin.title = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
+    pin.setAttribute('aria-pressed', String(pinned));
+    this._required('.open-files-toggle').setAttribute('aria-label', `All open files (${this._state.tabs.length})`);
+    if (this._openFilesMenu.matches(':popover-open')) this._renderOpenFilesMenu();
+  }
+
+  _renderOpenFilesMenu(): void {
+    const fragment = this.ownerDocument.createDocumentFragment();
+    for (const view of this._state.tabs) {
+      const button = this.ownerDocument.createElement('button');
+      button.type = 'button'; button.className = 'open-file-item';
+      button.dataset.path = view.path;
+      button.setAttribute('role', 'menuitemradio');
+      button.setAttribute('aria-checked', String(view.path === this._state.activePath));
+      button.textContent = `${this._state.pinnedPaths?.includes(view.path) ? '◆ ' : ''}${view.path}`;
+      button.title = view.path;
+      button.addEventListener('click', () => {
+        if (this._dispatchActivate({ kind: 'file', path: view.path })) this._openFilesMenu.hidePopover();
+      });
+      fragment.append(button);
+    }
+    this._openFilesMenu.replaceChildren(fragment);
+  }
+
+  _toggleOpenFilesMenu(): void {
+    if (this._openFilesMenu.matches(':popover-open')) { this._openFilesMenu.hidePopover(); return; }
+    this._renderOpenFilesMenu();
+    const rect = this._required('.open-files-toggle').getBoundingClientRect();
+    this._openFilesMenu.style.top = `${rect.bottom + 4}px`;
+    this._openFilesMenu.style.right = `${Math.max(4, this.ownerDocument.documentElement.clientWidth - rect.right)}px`;
+    this._openFilesMenu.showPopover();
+  }
+
+  _startTabDrag(event: DragEvent): void {
+    const target = event.target instanceof Element ? event.target : null;
+    const slot = target?.closest<HTMLElement>('.tab-slot.file');
+    if (!slot?.dataset.path || target?.closest('.tab-close')) { event.preventDefault(); return; }
+    this._draggedTabPath = slot.dataset.path;
+    slot.classList.add('dragging');
+    if (event.dataTransfer) { event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData('text/plain', slot.dataset.path); }
+    event.stopPropagation();
+  }
+
+  _tabDropTarget(event: DragEvent): { slot: HTMLElement; after: boolean } | undefined {
+    const target = event.target instanceof Element ? event.target : null;
+    const slot = target?.closest<HTMLElement>('.tab-slot.file') ?? this._tabList.querySelector<HTMLElement>('.tab-slot.file:last-child');
+    if (!slot || !this._tabList.contains(slot)) return;
+    const rect = slot.getBoundingClientRect();
+    return { slot, after: event.clientX > rect.left + rect.width / 2 };
+  }
+
+  _overTabDrag(event: DragEvent): void {
+    if (!this._draggedTabPath) return;
+    event.preventDefault(); event.stopPropagation();
+    const rect = this._tabList.getBoundingClientRect();
+    if (event.clientX < rect.left + 30) this._tabList.scrollLeft -= 28;
+    if (event.clientX > rect.right - 30) this._tabList.scrollLeft += 28;
+    for (const slot of this._tabList.querySelectorAll('[data-tab-drop]')) slot.removeAttribute('data-tab-drop');
+    const drop = this._tabDropTarget(event);
+    if (drop && drop.slot.dataset.path !== this._draggedTabPath) drop.slot.dataset.tabDrop = drop.after ? 'after' : 'before';
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move';
+  }
+
+  _dropTabDrag(event: DragEvent): void {
+    if (!this._draggedTabPath) return;
+    event.preventDefault(); event.stopPropagation();
+    const path = this._draggedTabPath, drop = this._tabDropTarget(event);
+    this._clearTabDrag();
+    if (drop?.slot.dataset.path) this._dispatchPathEvent('cle-main-preview-reorder', { path, targetPath: drop.slot.dataset.path, after: drop.after });
+  }
+
+  _clearTabDrag(): void {
+    this._draggedTabPath = undefined;
+    for (const slot of this._tabList.querySelectorAll('.dragging,[data-tab-drop]')) { slot.classList.remove('dragging'); slot.removeAttribute('data-tab-drop'); }
   }
 
   _renderPanel(): void {

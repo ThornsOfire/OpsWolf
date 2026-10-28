@@ -182,6 +182,15 @@ export const mainPreviewStyles = String.raw`
   .editor-pane-actions { position: relative; grid-row: 1; grid-column: 2; display: flex; justify-content: flex-end; align-items: center; gap: 3px; padding: 2px 5px; min-width: 0; background: var(--cle-main-bar); pointer-events: auto; -webkit-app-region: no-drag; }
   .editor-pane-actions button { border: 1px solid var(--cle-main-line); border-radius: 4px; background: var(--cle-main-bar); padding: 2px 6px; font-size: 12px; line-height: 18px; cursor: pointer; }
   .editor-pane-toggle[aria-pressed="true"] { background: var(--cle-main-hover); }
+  .tab-pin-toggle[aria-pressed="true"] { color: var(--cle-syntax-function); }
+  .tab-pin-mark { color: var(--cle-syntax-function); font-size: 9px; }
+  .open-files-menu { position: fixed; inset: auto; margin: 0; width: min(390px, calc(100vw - 16px)); max-height: min(480px, 65vh); overflow: auto; padding: 5px; border: 1px solid var(--cle-main-line); border-radius: 7px; background: var(--cle-main-bg); color: var(--cle-main-text); box-shadow: 0 8px 28px #0005; pointer-events: auto; font: inherit; }
+  .open-file-item { display: block; width: 100%; padding: 7px 9px; border: 0; border-radius: 4px; background: transparent; text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+  .open-file-item:hover, .open-file-item:focus-visible { background: var(--cle-main-hover); }
+  .open-file-item[aria-checked="true"] { color: var(--cle-syntax-function); font-weight: 600; }
+  .tab-slot.dragging { opacity: .5; }
+  .tab-slot[data-tab-drop="before"] { box-shadow: inset 3px 0 var(--cle-main-focus); }
+  .tab-slot[data-tab-drop="after"] { box-shadow: inset -3px 0 var(--cle-main-focus); }
   .editor-pane-close, .editor-pane-resizer { display: none; }
   :host([data-editor-pane-open]) { left: auto !important; right: 0 !important; width: var(--cle-editor-pane-width); border-left: 1px solid var(--cle-main-line); background: var(--cle-main-bg); }
   :host([data-editor-pane-open]) .editor-pane-close { display: block; }
