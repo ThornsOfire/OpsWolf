@@ -11,6 +11,20 @@ export function editorPaneWidth(requested: number, available: number): number {
   return Math.max(160, Math.min(requested, Math.max(160, available - 280)));
 }
 
+function nativeHeaders(parent: HTMLElement): HTMLElement[] {
+  const scope = parent.closest('[data-app-shell-active-page="true"]') ?? parent.parentElement ?? parent;
+  return [...scope.querySelectorAll<HTMLElement>('header')].filter(header =>
+    !header.closest('[data-app-shell-active-page="false"]') && !header.closest('[data-code-codex-owned]'));
+}
+
+export function nativeHeaderInset(parent: HTMLElement): number {
+  const bounds = parent.getBoundingClientRect();
+  const bottoms = nativeHeaders(parent).map(header => header.getBoundingClientRect()).filter(rect =>
+    rect.width > 0 && rect.height > 0 && rect.right > bounds.left && rect.left < bounds.right &&
+    rect.top <= bounds.top + 80 && rect.bottom > bounds.top && rect.bottom <= bounds.top + 120);
+  return bottoms.length ? Math.ceil(Math.max(...bottoms.map(rect => rect.bottom)) - bounds.top) : 48;
+}
+
 export class EditorPaneLayout {
   private parent: HTMLElement | null = null;
   private observer: ResizeObserver | null = null;
@@ -25,6 +39,7 @@ export class EditorPaneLayout {
       this.parent = parent;
       this.observer = new ResizeObserver(() => this.refresh());
       this.observer.observe(parent);
+      for (const header of nativeHeaders(parent)) this.observer.observe(header);
       this.childrenObserver = new MutationObserver(() => this.refresh());
       this.childrenObserver.observe(parent, { childList: true });
     }
@@ -36,6 +51,7 @@ export class EditorPaneLayout {
     if (!this.parent) return;
     const width = editorPaneWidth(this.width, this.parent.getBoundingClientRect().width);
     this.host.style.setProperty('--cle-editor-pane-width', `${width}px`);
+    this.host.style.setProperty('--cle-editor-pane-top', `${nativeHeaderInset(this.parent)}px`);
     const desired = new Set([...this.parent.children].filter((child): child is HTMLElement =>
       child instanceof HTMLElement && child !== this.host && !child.matches('header, style, script, [data-code-codex-owned]')));
     for (const child of this.originals.keys()) if (!desired.has(child)) this.restoreChild(child);
@@ -65,5 +81,6 @@ export class EditorPaneLayout {
     for (const child of this.originals.keys()) this.restoreChild(child);
     this.parent = null;
     this.host.style.removeProperty('--cle-editor-pane-width');
+    this.host.style.removeProperty('--cle-editor-pane-top');
   }
 }

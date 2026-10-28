@@ -187,6 +187,16 @@ export const mainPreviewStyles = String.raw`
   :host([data-editor-pane-open]) .tab-strip { width: 100% !important; padding-right: 205px; }
   :host(:not([data-editor-pane])) .tab-strip { padding-right: 165px; }
 
+  /* Native title-bar controls retain their own hit targets above our pane.
+   * Keep actions and scrolling tabs in separate grid rows, never overlays. */
+  :host([data-editor-pane]) { top: var(--cle-editor-pane-top, 48px) !important; }
+  :host([data-editor-pane]) .surface,
+  :host([data-editor-pane][data-clipped-layout="true"]) .surface { grid-template-rows: 36px 42px minmax(0, 1fr); }
+  :host([data-editor-pane]) .editor-pane-actions { position: relative; top: auto; right: auto; grid-row: 1; justify-content: flex-end; align-items: center; padding: 3px 8px; min-width: 0; background: var(--cle-main-bar); }
+  :host([data-editor-pane]) .editor-pane-toggle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :host([data-editor-pane]) .tab-strip { grid-row: 2; width: 100% !important; height: 42px; padding-right: 0; }
+  :host([data-editor-pane]) .panel-mount { grid-row: 3; }
+
   :host([data-clipped-layout="true"]) .surface {
     --cle-preview-header-height: 42px;
     grid-template-rows: var(--cle-preview-header-height) minmax(0, 1fr);

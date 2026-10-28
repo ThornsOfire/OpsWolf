@@ -16,9 +16,27 @@ const server = createServer((req,res) => { res.setHeader('Content-Type',req.url=
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 const browser = await launchFixture(`http://127.0.0.1:${server.address().port}`);
 const ev = expression => browser.evaluate(expression);
+async function clickSelector(selector) {
+  const point = await ev(`(()=>{const r=q(${JSON.stringify(selector)}).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+  await browser.command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
+  await browser.command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
+  await delay(60);
+}
 const results=[];
 async function check(name, expression) { assert.equal(await ev(expression),true,name);results.push(name); }
 try {
+  await ev(`(()=>{const header=document.querySelector('header');header.style.cssText='position:absolute;top:0;left:0;right:0;height:62px;z-index:100;background:#ddd;pointer-events:auto';header.innerHTML='Native Codex title and controls <button id="native-control" style="float:right">Native control</button>';window.nativeClicks=0;document.querySelector('#native-control').onclick=()=>nativeClicks++;state.tabs.push({...file,path:'second.ts',name:'second.ts'});viewer.addEventListener('cle-main-preview-close',e=>{state.tabs=state.tabs.filter(t=>t.path!==e.detail.path);if(state.activePath===e.detail.path)state.activePath=state.tabs[0]?.path??null;show();});show();})()`);
+  await clickSelector('[role="tab"][data-path="second.ts"]');
+  await check('Real pointer switches document tabs beneath native header', `state.activePath==='second.ts'`);
+  await clickSelector('button[data-close-path="second.ts"]');
+  await check('Real pointer closes document tab', `state.tabs.length===1&&state.activePath==='example.ts'`);
+  await check('Custom controls and tabs sit below native controls', `q('.editor-pane-actions').getBoundingClientRect().top>=document.querySelector('header').getBoundingClientRect().bottom&&q('.tab-strip').getBoundingClientRect().top>=q('.editor-pane-actions').getBoundingClientRect().bottom`);
+  await check('Editor content retains its full remaining height', `q('.panel-mount').getBoundingClientRect().height>400&&q('.panel-mount').getBoundingClientRect().top>=q('.tab-strip').getBoundingClientRect().bottom`);
+  await ev(`(()=>{const r=document.querySelector('#native-control').getBoundingClientRect();window.nativePoint={x:r.x+r.width/2,y:r.y+r.height/2}})()`);
+  const nativePoint=await ev('nativePoint');
+  await browser.command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...nativePoint});
+  await browser.command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...nativePoint});
+  await check('Native toolbar buttons remain clickable', `nativeClicks===1`);
   await check('Fresh custom build defaults to right pane and has a visible build label', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-pane-toggle').textContent.includes('custom')&&!document.querySelector('#chat').hasAttribute('inert')`);
   await ev(`q('.editor-pane-toggle').click()`);
   await check('Conversation tabs remain available', `!viewer.hasAttribute('data-editor-pane')&&document.querySelector('#chat').hasAttribute('inert')`);
