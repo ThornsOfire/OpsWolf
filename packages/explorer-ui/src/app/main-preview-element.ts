@@ -18,7 +18,7 @@ import { getFileIcon,icons } from "../icons";
 import { ensurePluginPackage,isPluginPackageLoaded } from "../plugin-runtime";
 import { runtimeEvent } from "../runtime-events";
 import { SURFACE_OPACITY_PREVIEW_CSS } from "../surface-opacity";
-import { highlightSyntaxForPath,MAX_SYNTAX_SOURCE_UNITS,type SyntaxHighlight } from "../syntax-highlight";
+import { highlightSyntaxForPath,type SyntaxHighlight } from "../syntax-highlight";
 
 export type { CsvModel,DiagramPoint,DiagramPreviewJob,DiagramSourceKind,DiagramSvgBudget,DocxBlockSplitResult,DocxPaginationClock,DrawioCellGeometry,DrawioEdge,DrawioPageSource,DrawioVertex,FocusSnapshot,MainPreviewActivateDetail,MainPreviewActivateEvent,MainPreviewCloseDetail,MainPreviewCloseEvent,MainPreviewDraftDetail,MainPreviewDraftEvent,MainPreviewEditorState,MainPreviewEmptyView,MainPreviewErrorView,MainPreviewFileBase,MainPreviewFileView,MainPreviewGitDiffView,MainPreviewLineEnding,MainPreviewLoadingView,MainPreviewMediaView,MainPreviewModelResource,MainPreviewModelView,MainPreviewPathDetail,MainPreviewReloadEvent,MainPreviewSaveEvent,MainPreviewState,MainPreviewTextView,MainPreviewUnavailableReason,MainPreviewUnsupportedView,ModelPreviewJob,ModelPreviewSourceInspection,NotebookCellModel,NotebookMimeBundle,NotebookModel,NotebookOutputModel,NotebookParseBudget,NotebookPreviewJob,NotebookRenderBudget,OfficeDocumentKind,OfficeDomBudget,OfficePreviewJob,ParsedXlsxWorksheet,PdfPreviewJob,PlantActivityModel,PlantActivityStatement,PlantActivityTheme,PlantBlockLayout,PlantLayoutEdge,PlantLayoutNode,PlantLayoutNodeKind,SuppressedAttributes,XlsxCellStyle,XlsxPreviewCell,XlsxRange,XlsxSharedStrings,XlsxStyleTable,XlsxWorksheetMeta } from "../file-preview/contracts";
 
