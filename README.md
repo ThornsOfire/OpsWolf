@@ -19,9 +19,9 @@ This is an unofficial community project, independent of OpenAI and the original 
 ### An editor that lives beside the chat
 
 - Files open in a resizable right editor pane, so you can keep talking to the agent while looking at your work.
-- **E** in the chat header opens or hides the editor. Your files stay open. There's a separate fullscreen button when you want the extra room.
+- **E** in the chat header opens or hides the editor. Hiding exits fullscreen, so reopening puts it beside chat at your saved width. Your files and session draft stay available. There's a separate fullscreen button when you want the extra room.
 - The chat, native tab, editor tab, and file-control headers are more compact. They were taking up way too much vertical real estate haha.
-- The native Codex sidebar starts collapsed once per launch. Open it yourself and it stays open for that session. The file explorer has its own controls.
+- The native Codex sidebar waits until you choose your first chat before collapsing once per launch. Browse projects first, then get the space back. Manually reopening it stays respected. The file explorer has its own controls.
 
 ### Actual file editing
 
@@ -32,6 +32,13 @@ This is an unofficial community project, independent of OpenAI and the original 
 - Word wrap keeps your draft and selection, with line numbers for the original source lines.
 - Save-and-close, save-and-switch, discard, and cancel prompts. If saving fails, your draft stays available.
 - Drag a file from the explorer into chat and it supplies the full local path, so the agent can find the thing you're talking about.
+
+### Pointing chat at the actual lines
+
+- Select source text, right-click, and **Cite in chat**, **Copy citation**, or **Add to citation group**. This works across supported text formats, not just Markdown.
+- Combine up to **32 ranges** within or across files. Links from you or the agent reopen the source in the editor with line highlights.
+- References include bounded quotes so unique matching text can be relocated when lines move. Missing or ambiguous matches are reported; unsaved-draft references are labelled.
+- The core has been tested both ways in the live app. The composer still shows the raw Markdown/encoded URL before sending, and hover tooltips can expose that URL. Compact chips and readable tooltips are still on the polish list haha. See [citation status and remaining work](docs/editor/citations.md).
 
 ### Tabs, pins, and all the little things
 
@@ -117,7 +124,7 @@ This hooks into the native desktop layout, so Codex updates can break parts of t
 
 Project pins and UI preferences stay local. Native chat history is the source of recorded patches; we don't add a separate permanent diff archive. **Open file** loads the current file, which might have changed since that patch was recorded. Deleted-file and combined comparisons don't get a source-file button.
 
-The context meter, selection-to-chat citations, broader editable-format support, richer Markdown table editing, configurable branding, and a fork-specific update workflow are on the wishlist. They aren't shipped features yet. We'll choose additional formats as we go and document preview, editing, and saving support separately.
+The context meter, compact citation chips/readable hover tooltips, broader editable-format support, richer Markdown table editing, configurable branding, and a fork-specific update workflow are on the wishlist. They aren't shipped features yet. Source-text citation routing is implemented; its composer presentation still needs work. We'll choose additional formats as we go and document preview, editing, and saving support separately.
 
 ## Credit and contributing
 

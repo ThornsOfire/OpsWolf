@@ -33,7 +33,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Change | Focused check |
 | --- | --- |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
-| Startup sidebar state, delayed readiness, manual reopen | `node scripts/test-native-sidebar.mjs` |
+| First chat selection, restored-chat startup, pointer/keyboard activation, delayed readiness and manual reopen | `node scripts/test-native-sidebar.mjs` |
 | Tab wheel/drag/dropdown/pins and close behavior | `node scripts/test-tab-navigation.mjs` |
 | Save/discard/cancel, failed/stale saves and switching | `node scripts/test-close-dialog.mjs` |
 | Complete inline Markdown/editor delivery and rejecting partial responses | `node scripts/test-complete-text.mjs` |
@@ -93,6 +93,7 @@ Update the appropriate Unreleased changelog entry alongside each meaningful user
 | Idea | Current status |
 | --- | --- |
 | Context meter | Not implemented |
+| Compact citation composer chips and readable hover tooltips | Core citation routing is implemented and live-tested; presentation remains unfinished. See [citation status](citations.md). |
 | Broader editable-format support | Planned; additional formats and priorities are still to be chosen. Track preview, source/structured editing, and save support separately; don't treat a preview plugin as an editor. |
 | Structured Markdown table-cell editing | Source editing exists; a dedicated matrix editor doesn't |
 | Configurable name/logo/appearance branding | Not implemented |

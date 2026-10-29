@@ -94,6 +94,8 @@ The Open file event identifies the current diff tab. Application wiring verifies
 
 `host/native-surfaces/composer-citations.ts` requires agreeing active-chat annotations and exactly one visible same-chat composer. Textareas use their native setter/input event; contenteditable uses the browser editing command at the end of the existing draft. No submit action or private React store is used. Unknown/ambiguous layouts fail with Copy citation available. This adapter needs real-host verification after relevant native markup changes.
 
+The current insertion is plain Markdown, not a native rich-link chip. Live testing on 2026-10-29 confirmed source selections/groups reach chat and assistant-generated references reopen the cited editor ranges. The composer exposes the encoded payload before sending; sent labels render, while hover tooltips can expose the full URL. A synthetic native rich-paste probe also retained literal Markdown on the inspected host. This isn't proof that every richer integration is impossible, and fixture coverage doesn't establish compact-chip serialization. Keep future work separate from the working route/anchor layer; see [citation status](citations.md).
+
 Queue/highlight state is memory-only. References inserted into a message include absolute paths and bounded quotes, and then follow ordinary chat retention. This feature doesn't add disk snapshots, retention jobs or a new backend route. Moved project roots aren't automatically rewritten; cross-project links are rejected.
 
 ## Storage and ownership

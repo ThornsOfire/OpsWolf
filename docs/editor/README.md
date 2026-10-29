@@ -60,6 +60,8 @@ Select source text and **right-click** for **Cite in chat**, **Add to citation g
 
 **Cite in chat** appends a Markdown reference to the current chat draft without replacing your existing text or sending it. The label includes the full path and line range so the agent can find it. If the native composer cannot be identified safely, use Copy citation. You choose when to send.
 
+**Current presentation:** the draft composer can display the entire Markdown link and its long encoded URL. The sent message renders as a clickable label, but hovering can still expose that raw URL. These are known presentation limitations; compact composer chips and readable citation tooltips are not implemented. See [citation status, live verification and remaining work](citations.md).
+
 For several selections, use **Add to citation group** on each range, across files if needed. A small tray above the composer lets you remove ranges, clear the group, copy it, or insert it. A group supports up to 32 ranges. Inserting creates one group link plus individual range links. The queue is session memory and clears when the chat/project changes or the extension stops; it creates no extra disk archive.
 
 Click a citation in chat to open its source in the editor and highlight it. Group links open the referenced files and focus the first one; individual links go straight to that range. The normal Preview / Edit / Save controls and dirty-file Save and switch / Discard / Cancel choices remain available. **Clear** removes the active highlights.
