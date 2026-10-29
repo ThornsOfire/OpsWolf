@@ -89,8 +89,14 @@ try{
  await check('Close-all is disabled during save and rejects direct calls', `q('.editor-pane-close').disabled&&controller.closeAllPreviewTabs()===false&&controller.previewTabs.length===beforeCloseCount`);
  await ev(`host.editSaving=false;host.leaveEditing=()=>{host.clearEditing();return true;};controller.syncMainPreview()`);
  await click('.editor-pane-close');
- await check('X closes every tab and leaves an empty editor open', `controller.previewTabs.length===0&&controller.activePreviewPath===null&&viewer.hasAttribute('data-editor-visible')&&!!q('.editor-empty')`);
- await check('Close-all preserves project pins and disables empty X', `controller.pinnedPaths.includes('src/file-11.ts')&&q('.editor-pane-close').disabled`);
+ await check('X closes unpinned tabs and keeps the pinned file open', `controller.previewTabs.length===1&&controller.previewTabs[0].path==='src/file-11.ts'&&controller.activePreviewPath==='src/file-11.ts'&&viewer.hasAttribute('data-editor-visible')`);
+ await check('Close-all preserves project pins and disables X when only pins remain', `controller.pinnedPaths.includes('src/file-11.ts')&&q('.editor-pane-close').disabled`);
+ await ev(`host.editingPath=controller.activePreviewPath;host.editDraft='PINNED_UNSAVED';host.leaveEditing=()=>{throw Error('Pinned draft must not be discarded');};controller.syncMainPreview();`);await delay(100);
+ // Create an additional clean tab without switching away from the pinned draft.
+ await ev(`if(!controller.previewTabs.some(t=>t.path==='other.txt'))controller.tabStore.append({path:'other.txt',name:'other.txt',view:makeView('other.txt'),instanceId:999,revision:1,dirty:false,modifiedDuringSave:false});controller.closeAllPreviewTabs()`);
+ await check('Close-all keeps pinned draft and does not prompt to discard it', `controller.previewTabs.length===1&&host.editDraft==='PINNED_UNSAVED'&&host.editingPath==='src/file-11.ts'`);
+ await ev(`host.editingPath=null;host.editDraft='';host.leaveEditing=()=>true;controller.togglePin('src/file-11.ts');controller.closeAllPreviewTabs()`);
+ await check('Without pinned tabs close-all still leaves empty editor open', `controller.previewTabs.length===0&&!!q('.editor-empty')&&viewer.hasAttribute('data-editor-visible')`);
  await check('No unhandled browser errors',`errors.length===0`);
  console.log(JSON.stringify({passed:true,checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop();}

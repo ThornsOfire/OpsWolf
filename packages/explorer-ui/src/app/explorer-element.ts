@@ -1,4 +1,4 @@
-import { requestDirtyEditorClose } from "../features/preview/close-dialog";
+import { chooseEditorClose,requestDirtyEditorClose } from "../features/preview/close-dialog";
 import { applyPluginCardIcons } from '../components/plugin-icons';
 import {attachPluginPins} from '../components/plugin-pins';
 import {AsciiTilesSettingsController,asciiTilesCardMarkup,asciiTilesPanelMarkup} from '../features/plugin-settings/ascii-tiles';
@@ -41,7 +41,7 @@ import { backgroundModule,connectBackgroundPackages } from "../background-plugin
 import { BridgeUnavailableError,ExplorerBridge,ExplorerBridgeError,assessBootstrapCompatibility,getBootstrapConfig } from "../bridge";
 import { backgroundSettingsText,bilingualLabelMarkup } from "../components/parameter-format";
 import { auroraIonosphereBackgroundCardMarkup,auroraIonosphereSettingsPanelMarkup,blackHoleBackgroundCardMarkup,blackHoleSettingsPanelMarkup,blinkingSquaresCardMarkup,blinkingSquaresPanelMarkup,cloudTrainCardMarkup,cloudTrainPanelMarkup,formatAuroraIonosphereControlValue,formatBlackHoleControlValue,formatGlowHorizonControlValue,formatHeavenlyCloudControlValue,formatMilkyWayControlValue,gitHistoryCardMarkup,gitHistoryPanelMarkup,glowHorizonBackgroundCardMarkup,glowHorizonSettingsPanelMarkup,heavenlyCloudBackgroundCardMarkup,heavenlyCloudSettingsPanelMarkup,mediaPreviewRoute,milkyWayBackgroundCardMarkup,milkyWaySettingsPanelMarkup,mountainCardMarkup,mountainPanelMarkup,particleBackgroundCardMarkup,particleSettingsPanelMarkup,pixelSculptCardMarkup,pixelSculptPanelMarkup,previewerCardMarkup,startupTransitionCardMarkup,startupTransitionPanelMarkup,transparentBackgroundCardMarkup } from "../components/plugin-templates";
-import { type BootstrapConfig,type ChangeKind,type ExplorerChange,type ExplorerSettings,type ExplorerViewState } from "../contracts/bridge";
+import { type BootstrapConfig,type ChangeKind,type ExplorerChange,type ExplorerSettings,type ExplorerViewState,type FlatTreeRow } from "../contracts/bridge";
 import { type BackgroundSettingsLanguage,type BlackHoleColorSettingKey,type BlackHoleNumericControlDefinition,type BlackHoleNumericSettingKey,type BlackHolePresetName,type GlowHorizonNumericControlDefinition,type GlowHorizonNumericSettingKey,type HeavenlyCloudNumericControlDefinition,type HeavenlyCloudNumericSettingKey,type ParticleImageTransformControlDefinition,type ParticleImageTransformKey,type ParticleNumericControlDefinition,type ParticleNumericSettingKey,type PreviewMarketCategory,type PreviewTab,type PreviewerDefinition,type StateCopy } from "../contracts/explorer-model";
 import { asRecord,errorCode,isTransientBootstrapError,normalizeChange,normalizeContext,normalizeHeaderLabel,normalizeList,normalizeSettings } from "../core/bridge/response-validation";
 import { ACTION_NOTICE_DURATION_MS,APPEARANCE_PLUGIN_IDS,APPEARANCE_PLUGIN_SETTINGS_KEY,AURORA_IONOSPHERE_BACKGROUND_PLUGIN_ID,AURORA_IONOSPHERE_NUMERIC_CONTROL_DEFINITIONS,BLACK_HOLE_BACKGROUND_PLUGIN_ID,BLACK_HOLE_BACKGROUND_PRESETS,BLACK_HOLE_NUMERIC_CONTROL_DEFINITIONS,BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,BOOTSTRAP_RETRY_DELAY_MS,CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,DEFAULT_SETTINGS,FORCED_COLORS_QUERY,GLOW_HORIZON_BACKGROUND_PLUGIN_ID,GLOW_HORIZON_NUMERIC_CONTROL_DEFINITIONS,HEAVENLY_CLOUD_BACKGROUND_PLUGIN_ID,HEAVENLY_CLOUD_NUMERIC_CONTROL_DEFINITIONS,MAX_WIDTH,MILKY_WAY_BACKGROUND_PLUGIN_ID,MIN_WIDTH,MOUNTAIN_BACKGROUND_PLUGIN_ID,PAGE_SIZE,PARTICLE_BACKGROUND_PLUGIN_ID,PARTICLE_IMAGE_TRANSFORM_CONTROL_DEFINITIONS,PARTICLE_NUMERIC_CONTROL_DEFINITIONS,PIXEL_SCULPT_BACKGROUND_PLUGIN_ID,PREVIEWER_DEFINITIONS,PREVIEWER_IDS,PREVIEWER_SETTINGS_KEY,REDUCED_TRANSPARENCY_QUERY,SETTINGS_KEY,TRANSPARENT_BACKGROUND_ATTRIBUTE,TRANSPARENT_BACKGROUND_HEALTH_INTERVAL_MS,TRANSPARENT_BACKGROUND_PLUGIN_ID } from "../core/configuration/explorer";
@@ -211,7 +211,7 @@ export class CodeCodexElement extends HTMLElement {
     get #treeinteractionSettings(): TreeInteractionController { if (!this.#treeinteractionSettingsValue) {
         const owner = this;
         this.#treeinteractionSettingsValue = new TreeInteractionController({activatePreviewPath:path=>{owner.#activePreviewPath=path;},
-            element: owner, collapse: (collapsed) => owner.collapse(collapsed), get treeShell() { return owner.#treeShell; }, announce: (...args) => owner.#announce(...args), get fileFilterInput() { return owner.#fileFilterInput; }, get state() { return owner.#state; }, setState: (...args) => owner.#setState(...args), get fileFilterEmpty() { return owner.#fileFilterEmpty; }, renderStatus: (...args) => owner.#renderStatus(...args), get contextMenuTarget() { return owner.#fileactionsSettings.contextMenuTarget; }, get activePreviewPath() { return owner.#activePreviewPath; }, get dragSource() { return owner.#externalDrop.dragSource; }, get dropTargetPath() { return owner.#externalDrop.dropTargetPath; }, closeContextMenu: (...args) => owner.#fileactionsSettings.closeContextMenu(...args), get treeWindow() { return owner.#treeWindow; }, openPreviewTab: (...args) => owner.#previewWorkspace.openPreviewTab(...args), get settings() { return owner.#settings; }, get marqueeElement() { return owner.#marqueeElement; }, contextTargetForRow: (...args) => owner.#fileactionsSettings.contextTargetForRow(...args), rootContextTarget: (...args) => owner.#fileactionsSettings.rootContextTarget(...args), get shadow() { return owner.#shadow; }, openContextMenu: (...args) => owner.#fileactionsSettings.openContextMenu(...args), pasteFiles: (...args) => owner.#fileactionsSettings.pasteFiles(...args), deleteSelectedFiles: (...args) => owner.#fileactionsSettings.deleteSelectedFiles(...args), leaveEditing: (...args) => owner.#previeweditingSettings.leaveEditing(...args), syncMainPreview: (...args) => owner.#previewWorkspace.syncMainPreview(...args), loadDirectory: (...args) => owner.#directoryjobsSettings.loadDirectory(...args)
+            element: owner, collapse: (collapsed) => owner.collapse(collapsed), get treeShell() { return owner.#treeShell; }, announce: (...args) => owner.#announce(...args), get fileFilterInput() { return owner.#fileFilterInput; }, get state() { return owner.#state; }, setState: (...args) => owner.#setState(...args), get fileFilterEmpty() { return owner.#fileFilterEmpty; }, renderStatus: (...args) => owner.#renderStatus(...args), get contextMenuTarget() { return owner.#fileactionsSettings.contextMenuTarget; }, get activePreviewPath() { return owner.#activePreviewPath; }, get dragSource() { return owner.#externalDrop.dragSource; }, get dropTargetPath() { return owner.#externalDrop.dropTargetPath; }, closeContextMenu: (...args) => owner.#fileactionsSettings.closeContextMenu(...args), get treeWindow() { return owner.#treeWindow; }, openPreviewTab: row => owner.#requestTreePreview(row), get settings() { return owner.#settings; }, get marqueeElement() { return owner.#marqueeElement; }, contextTargetForRow: (...args) => owner.#fileactionsSettings.contextTargetForRow(...args), rootContextTarget: (...args) => owner.#fileactionsSettings.rootContextTarget(...args), get shadow() { return owner.#shadow; }, openContextMenu: (...args) => owner.#fileactionsSettings.openContextMenu(...args), pasteFiles: (...args) => owner.#fileactionsSettings.pasteFiles(...args), deleteSelectedFiles: (...args) => owner.#fileactionsSettings.deleteSelectedFiles(...args), leaveEditing: (...args) => owner.#previeweditingSettings.leaveEditing(...args), syncMainPreview: (...args) => owner.#previewWorkspace.syncMainPreview(...args), loadDirectory: (...args) => owner.#directoryjobsSettings.loadDirectory(...args)
         });
     } return this.#treeinteractionSettingsValue; }
     #directoryjobsSettingsValue: DirectoryJobsController | undefined;
@@ -222,7 +222,7 @@ export class CodeCodexElement extends HTMLElement {
     #fileactionsSettingsValue: FileActionsController | undefined;
     get #fileactionsSettings(): FileActionsController { if (!this.#fileactionsSettingsValue) {
         const owner = this;
-        this.#fileactionsSettingsValue = new FileActionsController({clearFileClipboard:expected=>owner.#treeinteractionSettings.clearFileClipboard(expected),get workspaceSession(){return owner.#workspaceSession;},get canUseBridge(){return owner.#canUseBridge.bind(owner);},get refreshLoadedDirectories(){return owner.#refreshLoadedDirectories.bind(owner);},get loadDirectory(){return owner.#directoryjobsSettings.loadDirectory.bind(owner.#directoryjobsSettings);},get model(){return owner.#treeinteractionSettings.model;},get element(){return owner;},get fileClipboard(){return owner.#treeinteractionSettings.fileClipboard;},get focusedIndex(){return owner.#treeinteractionSettings.focusedIndex;}, mutations:owner.#mutations, get context() { return owner.#workspaceSession.context; }, get bridge() { return owner.#workspaceSession.bridge; }, get state() { return owner.#state; }, get treeWindow() { return owner.#treeWindow; }, get rows() { return owner.#treeinteractionSettings.rows; }, get selectedPaths() { return owner.#treeinteractionSettings.selectedPaths; }, setSingleSelection: (...args) => owner.#treeinteractionSettings.setSingleSelection(...args), focusIndex: (...args) => owner.#treeinteractionSettings.focusIndex(...args), clearSelection: (...args) => owner.#treeinteractionSettings.clearSelection(...args), get treeShell() { return owner.#treeShell; }, hideActionNotice: (...args) => owner.#hideActionNotice(...args), get shadow() { return owner.#shadow; }, get statePanel() { return owner.#statePanel; }, get contextMenu() { return owner.#contextMenu; }, renderVisible: (...args) => owner.#treeinteractionSettings.renderVisible(...args), get editingPath() { return owner.#previeweditingSettings.drafts.path; }, isEditDirty: (...args) => owner.#previeweditingSettings.isEditDirty(...args), effectiveWidth: (...args) => owner.#effectiveWidth(...args), get connected() { return owner.#connected; }, get editSaving() { return owner.#previeweditingSettings.drafts.saving; }, showActionNotice: (...args) => owner.#showActionNotice(...args), openPreviewTab: (...args) => owner.#previewWorkspace.openPreviewTab(...args), clearEditing: (...args) => owner.#previeweditingSettings.clearEditing(...args), closePreviewTabsWithin: (...args) => owner.#previewWorkspace.closePreviewTabsWithin(...args)
+        this.#fileactionsSettingsValue = new FileActionsController({clearFileClipboard:expected=>owner.#treeinteractionSettings.clearFileClipboard(expected),get workspaceSession(){return owner.#workspaceSession;},get canUseBridge(){return owner.#canUseBridge.bind(owner);},get refreshLoadedDirectories(){return owner.#refreshLoadedDirectories.bind(owner);},get loadDirectory(){return owner.#directoryjobsSettings.loadDirectory.bind(owner.#directoryjobsSettings);},get model(){return owner.#treeinteractionSettings.model;},get element(){return owner;},get fileClipboard(){return owner.#treeinteractionSettings.fileClipboard;},get focusedIndex(){return owner.#treeinteractionSettings.focusedIndex;}, mutations:owner.#mutations, get context() { return owner.#workspaceSession.context; }, get bridge() { return owner.#workspaceSession.bridge; }, get state() { return owner.#state; }, get treeWindow() { return owner.#treeWindow; }, get rows() { return owner.#treeinteractionSettings.rows; }, get selectedPaths() { return owner.#treeinteractionSettings.selectedPaths; }, setSingleSelection: (...args) => owner.#treeinteractionSettings.setSingleSelection(...args), focusIndex: (...args) => owner.#treeinteractionSettings.focusIndex(...args), clearSelection: (...args) => owner.#treeinteractionSettings.clearSelection(...args), get treeShell() { return owner.#treeShell; }, hideActionNotice: (...args) => owner.#hideActionNotice(...args), get shadow() { return owner.#shadow; }, get statePanel() { return owner.#statePanel; }, get contextMenu() { return owner.#contextMenu; }, renderVisible: (...args) => owner.#treeinteractionSettings.renderVisible(...args), get editingPath() { return owner.#previeweditingSettings.drafts.path; }, isEditDirty: (...args) => owner.#previeweditingSettings.isEditDirty(...args), effectiveWidth: (...args) => owner.#effectiveWidth(...args), get connected() { return owner.#connected; }, get editSaving() { return owner.#previeweditingSettings.drafts.saving; }, showActionNotice: (...args) => owner.#showActionNotice(...args), openPreviewTab: row => owner.#requestTreePreview(row), clearEditing: (...args) => owner.#previeweditingSettings.clearEditing(...args), closePreviewTabsWithin: (...args) => owner.#previewWorkspace.closePreviewTabsWithin(...args)
         });
     } return this.#fileactionsSettingsValue; }
     #previeweditingSettingsValue: PreviewEditingController | undefined;
@@ -2807,6 +2807,12 @@ export class CodeCodexElement extends HTMLElement {
     }
     #onMainPreviewActivate = (event: CustomEvent<unknown>): void => {
         const detail = asRecord(event.detail);
+        const draftPath=this.#previeweditingSettings.drafts.path;
+        if(draftPath&&this.#previeweditingSettings.isEditDirty()&&
+            (detail?.kind==='conversation'||(detail?.kind==='file'&&typeof detail.path==='string'&&detail.path!==draftPath))) {
+            event.preventDefault();
+            void this.#requestEditorClose(draftPath,()=>this.#onMainPreviewActivate(event));return;
+        }
         if (detail?.kind === "conversation") {
             if (!this.#previeweditingSettings.leaveEditing("Return to the conversation and discard your unsaved changes?")) {
                 event.preventDefault();
@@ -2840,34 +2846,50 @@ export class CodeCodexElement extends HTMLElement {
             this.#previewWorkspace.syncMainPreview();
         this.#treeinteractionSettings.renderVisible();
     };
+    #requestTreePreview(row:FlatTreeRow):void {
+        const editing=this.#previeweditingSettings;
+        const open=()=>this.#previewWorkspace.openPreviewTab(row);
+        if(row.node?.kind==='file'&&editing.drafts.path&&editing.drafts.path!==row.node.relativePath&&editing.isEditDirty()) {
+            void this.#requestEditorClose(editing.drafts.path,open);
+        } else open();
+    }
     #editorClosePending=false;
-    async #requestEditorClose(path?:string):Promise<void> {
+    async #requestEditorClose(path?:string,switchAction?:()=>void):Promise<void> {
         if(this.#editorClosePending)return;
         const editing=this.#previeweditingSettings;
         if(editing.drafts.saving){this.#announce('Wait for the current save to finish');return;}
         const close=()=>{
+            if(switchAction){switchAction();return;}
             if(path===undefined)this.#previewWorkspace.closeAllPreviewTabs();
             else this.#previewWorkspace.closePreviewTab(path);
         };
+        const pins=this.#previewWorkspace.pinnedPaths;
+        const pinned=!switchAction&&path!==undefined&&pins.includes(path);
+        const targets=path===undefined?this.#previewWorkspace.tabStore.items.filter(tab=>!pins.includes(tab.path)):this.#previewWorkspace.tabStore.items.filter(tab=>tab.path===path);
+        if(!targets.length)return;
         const draftPath=editing.drafts.path;
-        if(!draftPath || (path!==undefined&&path!==draftPath) || !editing.isEditDirty()){close();return;}
+        const dirty=Boolean(draftPath&&targets.some(tab=>tab.path===draftPath)&&editing.isEditDirty());
+        if(!dirty&&!pinned){close();return;}
         const generation=this.#workspaceSession.generation;
         const context=this.#workspaceSession.context;
         const bridge=this.#workspaceSession.bridge;
         const preview=this.#mainPreview;
         const editSession=editing.drafts.session;
         let released=false;
-        const targets=path===undefined?[...this.#previewWorkspace.tabStore.items]:this.#previewWorkspace.tabStore.items.filter(tab=>tab.path===path);
         const current=()=>this.#connected&&!this.#dismissed&&this.#workspaceSession.generation===generation&&
             this.#workspaceSession.context===context&&this.#workspaceSession.bridge===bridge&&this.#mainPreview===preview&&
             targets.every(tab=>this.#previewWorkspace.tabStore.items.includes(tab))&&
-            (path!==undefined||targets.length===this.#previewWorkspace.tabStore.items.length)&&
-            (released?editing.drafts.path===null:editing.drafts.path===draftPath&&editing.drafts.session===editSession);
+            (path!==undefined||(targets.length===this.#previewWorkspace.tabStore.items.filter(tab=>!this.#previewWorkspace.pinnedPaths.includes(tab.path)).length&&targets.every(tab=>!this.#previewWorkspace.pinnedPaths.includes(tab.path))))&&
+            (!dirty||(released?editing.drafts.path===null:editing.drafts.path===draftPath&&editing.drafts.session===editSession));
         this.#editorClosePending=true;
         try {
+            if(!dirty){
+                const choice=await chooseEditorClose(this.ownerDocument,false,targets[0]!.name,{pinned:true,dirty:false});
+                if(choice==='discard'&&current())close();return;
+            }
             await requestDirtyEditorClose({
-                document:this.ownerDocument,all:path===undefined,
-                fileName:this.#previewWorkspace.tabStore.items.find(tab=>tab.path===draftPath)?.name??draftPath,
+                document:this.ownerDocument,all:path===undefined,switching:Boolean(switchAction),pinned,
+                fileName:this.#previewWorkspace.tabStore.items.find(tab=>tab.path===draftPath)?.name??draftPath!,
                 isCurrent:current,
                 save:async()=>{
                     if(editing.drafts.path!==draftPath)return false;

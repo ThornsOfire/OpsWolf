@@ -1,6 +1,8 @@
 export type CloseChoice='save'|'discard'|'cancel';
 
-export function chooseEditorClose(document:Document,all:boolean,fileName:string):Promise<CloseChoice> {
+export interface CloseDialogOptions { readonly switching?:boolean; readonly pinned?:boolean; readonly dirty?:boolean; }
+
+export function chooseEditorClose(document:Document,all:boolean,fileName:string,options:CloseDialogOptions={}):Promise<CloseChoice> {
   return new Promise(resolve=>{
     const host=document.createElement('span');host.dataset.codeCodexCloseDialog='true';
     const shadow=host.attachShadow({mode:'open'});
@@ -11,9 +13,13 @@ export function chooseEditorClose(document:Document,all:boolean,fileName:string)
       button[data-choice="save"]{background:Highlight;color:HighlightText;border-color:Highlight}button:focus-visible{outline:2px solid Highlight;outline-offset:2px}
     </style><dialog aria-labelledby="close-title" aria-describedby="close-description"><h2 id="close-title"></h2><p id="close-description"></p><footer><button type="button" data-choice="cancel" autofocus>Cancel</button><button type="button" data-choice="discard">Discard</button><button type="button" data-choice="save"></button></footer></dialog>`;
     const dialog=shadow.querySelector('dialog')!;
-    shadow.querySelector('h2')!.textContent=all?'Save changes before closing all tabs?':'Save changes before closing?';
-    shadow.querySelector('p')!.textContent=`${fileName} has unsaved changes. Discard closes without saving; Cancel keeps your tabs and draft.`;
-    shadow.querySelector('[data-choice="save"]')!.textContent=all?'Save all and close':'Save and close';
+    const dirty=options.dirty!==false;
+    shadow.querySelector('h2')!.textContent=!dirty?'Close pinned tab?':options.switching?'Save changes before switching files?':all?'Save changes before closing unpinned tabs?':'Save changes before closing?';
+    const warning=options.pinned?' This tab is pinned. Closing it keeps the project pin, so it can reopen next session.':'';
+    shadow.querySelector('p')!.textContent=(dirty?`${fileName} has unsaved changes. Cancel keeps your current file and draft.`:fileName)+warning;
+    const save=shadow.querySelector<HTMLButtonElement>('[data-choice="save"]')!;
+    save.textContent=options.switching?'Save and switch':all?'Save all and close':'Save and close';save.hidden=!dirty;
+    if(!dirty)shadow.querySelector('[data-choice="discard"]')!.textContent='Close pinned tab';
     let choice:CloseChoice='cancel';
     for(const button of shadow.querySelectorAll<HTMLButtonElement>('button'))button.addEventListener('click',()=>{
       choice=button.dataset.choice as CloseChoice;dialog.close();
@@ -27,6 +33,8 @@ export function chooseEditorClose(document:Document,all:boolean,fileName:string)
 export interface EditorCloseRequest {
   readonly document:Document;
   readonly all:boolean;
+  readonly switching?:boolean;
+  readonly pinned?:boolean;
   readonly fileName:string;
   readonly isCurrent:()=>boolean;
   readonly save:()=>Promise<boolean>;
@@ -36,7 +44,7 @@ export interface EditorCloseRequest {
 
 /** Only a successful save may proceed to close; stale requests never close a new workspace. */
 export async function requestDirtyEditorClose(request:EditorCloseRequest):Promise<void> {
-  const choice=await chooseEditorClose(request.document,request.all,request.fileName);
+  const choice=await chooseEditorClose(request.document,request.all,request.fileName,{switching:Boolean(request.switching),pinned:Boolean(request.pinned)});
   if(choice==='cancel'||!request.isCurrent())return;
   if(choice==='save') {
     if(!await request.save()||!request.isCurrent())return;

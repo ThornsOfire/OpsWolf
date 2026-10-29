@@ -4,12 +4,12 @@ import {resolve} from 'node:path';
 import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
 import {launchFixture,delay} from './browser-fixture.mjs';
 const ui=resolve(import.meta.dirname,'../packages/explorer-ui');
-const bundle=await build({bundle:true,write:false,format:'iife',stdin:{contents:`import {requestDirtyEditorClose} from './features/preview/close-dialog';window.requestDirtyEditorClose=requestDirtyEditorClose;`,resolveDir:resolve(ui,'src'),loader:'ts'}});
+const bundle=await build({bundle:true,write:false,format:'iife',stdin:{contents:`import {chooseEditorClose,requestDirtyEditorClose} from './features/preview/close-dialog';Object.assign(window,{chooseEditorClose,requestDirtyEditorClose});`,resolveDir:resolve(ui,'src'),loader:'ts'}});
 const html=`<!doctype html><meta charset="utf-8"><button id="original">Tab close</button><script src="/core.js"></script><script>
 window.errors=[];addEventListener('error',e=>errors.push(e.message));addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
-window.start=all=>{
+window.start=(all,options={})=>{
  window.calls={saved:0,discarded:0,closed:0,finished:false};window.current=true;
- window.done=requestDirtyEditorClose({document,all,fileName:'notes <test>.md',isCurrent:()=>current,
+ window.done=requestDirtyEditorClose({document,all,...options,fileName:'notes <test>.md',isCurrent:()=>current,
  save:()=>{calls.saved++;return new Promise(resolve=>window.resolveSave=resolve);},
  discard:()=>calls.discarded++,close:()=>calls.closed++}).then(()=>calls.finished=true);
 };
@@ -42,6 +42,21 @@ try{
  await check('Changed workspace prevents stale save and close',`calls.closed===0&&calls.saved===0`);
  await ev('start(true)');await click('save');await ev('current=false;resolveSave(true);done');
  await check('Changed workspace during saving prevents close',`calls.closed===0&&calls.saved===1`);
+ await ev(`start(false,{switching:true})`);
+ await check('Switching files offers Save and switch in the custom dialog', `q('[data-choice=save]').textContent==='Save and switch'&&q('h2').textContent.includes('switching')`);
+ await click('save');await ev('resolveSave(false);done');
+ await check('Failed save prevents switching away from the dirty file', `calls.closed===0&&calls.discarded===0`);
+ await ev(`start(false,{switching:true})`);await click('save');await ev('resolveSave(true);done');
+ await check('Successful save proceeds with the switch', `calls.saved===1&&calls.closed===1`);
+ await ev(`start(false,{switching:true})`);await click('cancel');await ev('done');
+ await check('Cancelling switch retains the current file and draft', `calls.closed===0&&calls.saved===0&&calls.discarded===0`);
+ await ev(`window.pinChoice=undefined;window.pinDone=chooseEditorClose(document,false,'pinned.md',{pinned:true,dirty:false}).then(choice=>pinChoice=choice);void 0`);
+ await check('Clean pinned-tab close warns and offers Close pinned tab or Cancel', `q('p').textContent.includes('pinned')&&q('[data-choice=save]').hidden&&q('[data-choice=discard]').textContent==='Close pinned tab'`);
+ await click('cancel');await ev('pinDone');
+ await check('Pinned-tab cancellation is respected', `pinChoice==='cancel'`);
+ await ev(`start(false,{pinned:true})`);
+ await check('Dirty pinned tab combines the pin warning and save choices', `q('p').textContent.includes('pinned')&&q('[data-choice=save]').textContent==='Save and close'`);
+ await click('discard');await ev('done');
  await check('No unhandled browser errors',`errors.length===0`);
  console.log(JSON.stringify({passed:true,checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop();}

@@ -390,19 +390,24 @@ the editor toggles between the right pane and expanded layout.
 Dragging a file from the tree into chat or another text field inserts its full
 local path. Dragging inside the tree still moves entries using workspace-relative paths.
 
-The editor header **X** closes all file tabs while leaving the empty editor open.
-Unsaved changes require confirmation, active saves block close-all, and project
-pins remain saved. **E** continues to hide or show the editor without closing tabs.
+The editor header **X** closes unpinned file tabs while leaving the editor open.
+Pinned tabs and their drafts stay open. Unsaved changes in closing tabs require
+confirmation, and active saves block close-all. **E** continues to hide or show the editor without closing tabs.
 
 The **word wrap** icon toggles wrapping for source editing and source previews,
 including the virtual large-file reader. It retains the current draft and caret
-selection and remembers the preference locally. While wrapping, the fixed-line
-number gutter and minimap are hidden to avoid misleading line alignment; source
-syntax highlighting remains available.
+selection and remembers the preference locally. While wrapping, the source line-number gutter adjusts to wrapped line heights
+and pane resizing. Continuation rows stay unnumbered. The minimap is hidden;
+source syntax highlighting remains available.
 
 Closing a dirty file tab offers **Save and close**, **Discard**, and **Cancel**.
-Closing all tabs offers **Save all and close** instead. The current editor keeps
+Closing all unpinned tabs offers **Save all and close** instead. The current editor keeps
 one active draft; save-all saves that pending draft before closing the tab set.
 A failed save or version conflict leaves the tabs and draft open. Clean tabs close
 without a prompt. Closing waits for a successful save and checks that the same
 workspace and draft still own the request.
+
+Closing a pinned tab with its individual X warns first; its project pin stays
+saved. Dirty pinned tabs combine this warning with save/discard/cancel choices.
+Switching away from a dirty file through tabs or the file tree offers **Save and
+switch**, **Discard**, and **Cancel**. A failed save keeps the current file and draft.

@@ -349,16 +349,23 @@ disposePreviewTab(tab: PreviewTab): void {
         tab.view = { kind: "loading", path: tab.path, name: tab.name };
     }
 closeAllPreviewTabs(): boolean {
-        if(this.host.editSaving) {
-            this.host.announce('Wait for the current save to finish');return false;
+        const pins=this.pinnedPaths;
+        const targets=this.previewTabs.filter(tab=>!pins.includes(tab.path));
+        if(!targets.length){this.host.announce('Pinned tabs kept open');return true;}
+        if(this.host.editSaving){this.host.announce('Wait for the current save to finish');return false;}
+        if(this.host.editingPath!==null && targets.some(tab=>tab.path===this.host.editingPath) &&
+            !this.host.leaveEditing('Close unpinned tabs and discard your unsaved changes?')) return false;
+        for(const tab of targets){
+            const index=this.previewTabs.indexOf(tab);
+            if(index>=0)this.tabStore.remove(index);
+            this.disposePreviewTab(tab);
         }
-        if(this.host.editingPath!==null && !this.host.leaveEditing('Close all tabs and discard your unsaved changes?')) return false;
-        this.previewSessionRevision+=1;
-        for(const tab of this.previewTabs) this.disposePreviewTab(tab);
-        this.tabStore.clear();this.activePreviewPath=null;
-        this.syncMainPreview();this.host.mainPreview?.showEditor?.();
-        this.host.renderVisible();this.host.announce('All editor tabs closed');
-        return true;
+        if(!this.previewTabs.some(tab=>tab.path===this.activePreviewPath))this.activePreviewPath=this.previewTabs[0]?.path??null;
+        const active=this.previewTabs.find(tab=>tab.path===this.activePreviewPath);
+        if(active&&(active.dirty||active.view.kind==='error'))this.schedulePreview(active);
+        else this.syncMainPreview();
+        this.host.mainPreview?.showEditor?.();this.host.renderVisible();
+        this.host.announce('Unpinned tabs closed; pinned tabs kept open');return true;
     }
 purgePreviewTabs(renderRows = true): void {
         this.restoredProject = undefined;

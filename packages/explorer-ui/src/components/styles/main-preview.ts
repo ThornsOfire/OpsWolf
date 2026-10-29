@@ -1814,10 +1814,8 @@ export const mainPreviewStyles = String.raw`
   .editor-empty { height:100%; display:grid; place-items:center; padding:24px; box-sizing:border-box; text-align:center; color:var(--cle-main-muted); background:var(--cle-main-bg); pointer-events:auto; }
   .word-wrap-toggle { width:28px; height:24px; display:grid; place-items:center; padding:0 !important; }
   .word-wrap-toggle[aria-pressed="true"] { background:var(--cle-main-hover); }
-  :host([data-word-wrap]) .code-line-numbers { display:none; }
-  :host([data-word-wrap]) .code-reader { width:100%; grid-template-columns:minmax(0,1fr); }
-  :host([data-word-wrap]) .literal-text { grid-column:1; min-width:0; white-space:pre-wrap; overflow-wrap:anywhere; }
-  :host([data-word-wrap]) .code-editor-stack { --cle-line-number-width:0px !important; }
+  :host([data-word-wrap]) .code-reader { width:100%; grid-template-columns:var(--cle-line-number-width) minmax(0,1fr); }
+  :host([data-word-wrap]) .literal-text { grid-column:2; min-width:0; white-space:pre-wrap; overflow-wrap:anywhere; }
   :host([data-word-wrap]) .code-editor,
   :host([data-word-wrap]) .code-editor-highlight { white-space:pre-wrap; overflow-wrap:anywhere; box-sizing:border-box; }
   :host([data-word-wrap]) .git-diff-reader { min-width:0; }

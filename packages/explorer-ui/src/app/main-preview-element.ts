@@ -1,3 +1,4 @@
+import { WrappedLineNumbers } from "../features/preview/wrapped-line-numbers";
 let nextInstanceId = 0;
 // Domain extracted from the original explorer composition; behavior and storage contracts retained.
 import type { ParsedPresentation } from "@extend-ai/react-pptx";
@@ -60,6 +61,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
   readonly _editorHeader: EditorHeaderControl;
+  _wrappedLineNumbers: WrappedLineNumbers | null = null;
   _wordWrap = false;
   _editorVisible = false;
   _panePreference = { docked: true, width: 560 };
@@ -140,7 +142,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
           <button type="button" class="editor-pane-toggle" title="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
           <button type="button" class="word-wrap-toggle" title="Enable word wrap" aria-label="Enable word wrap" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 3h12M2 7h9a3 3 0 0 1 0 6H8m2-2-2 2 2 2M2 11h3"/></svg></button>
           <button type="button" class="editor-fullscreen-toggle" title="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
-          <button type="button" class="editor-pane-close" title="Close all tabs" aria-label="Close all tabs">×</button>
+          <button type="button" class="editor-pane-close" title="Close all unpinned tabs" aria-label="Close all unpinned tabs">×</button>
         </div>
         <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>
         <div class="tab-strip" role="tablist" aria-label="Conversation and file previews"></div>
@@ -240,6 +242,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
     this._connected = false;
+    this._wrappedLineNumbers?.dispose();this._wrappedLineNumbers=null;
     this._largeTextReader?.dispose();
     this._largeTextReader = null;
     this._codeMinimap?.dispose();
@@ -337,6 +340,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     }
     this._reconcileMediaObjectUrls(nextState);
     const activeChanged = nextState.activePath !== this._state.activePath;
+    if(activeChanged&&this._openFilesMenu.matches(':popover-open'))this._openFilesMenu.hidePopover();
     const rovingStillExists = this._rovingPath === null || nextState.tabs.some((view) => view.path === this._rovingPath);
     this._state = nextState;
     if (activeChanged || !rovingStillExists) this._rovingPath = nextState.activePath;
@@ -394,6 +398,15 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const minimap=this._panelMount.querySelector<HTMLButtonElement>('.minimap-toggle');
     if(minimap)minimap.disabled=this._wordWrap;
     this._largeTextReader?.setWordWrap(this._wordWrap);
+    const source=textarea??this._panelMount.querySelector<HTMLElement>('.literal-text');
+    const gutter=this._panelMount.querySelector<HTMLElement>('.code-line-numbers');
+    if(this._wordWrap&&source&&gutter){
+      if(!this._wrappedLineNumbers)this._wrappedLineNumbers=new WrappedLineNumbers(source,gutter,()=>textarea?.value??source.textContent??'');
+      this._wrappedLineNumbers.update();
+    } else if(this._wrappedLineNumbers){
+      this._wrappedLineNumbers.dispose();this._wrappedLineNumbers=null;
+      if(source&&gutter)this._replaceLineNumbers(gutter,source.parentElement!,textarea?.value??source.textContent??'');
+    }
   }
 
   showEditor(): void { this._setEditorVisible(true); }
@@ -477,7 +490,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     pin.textContent = pinned ? 'Unpin' : 'Pin';
     pin.title = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
     pin.setAttribute('aria-pressed', String(pinned));
-    this._required<HTMLButtonElement>('.editor-pane-close').disabled=this._state.tabs.length===0||this._state.editor?.saving===true;
+    this._required<HTMLButtonElement>('.editor-pane-close').disabled=this._state.tabs.every(tab=>this._state.pinnedPaths?.includes(tab.path))||this._state.editor?.saving===true;
     this._required('.open-files-toggle').setAttribute('aria-label', `All open files (${this._state.tabs.length})`);
     if (this._openFilesMenu.matches(':popover-open')) this._renderOpenFilesMenu();
   }
@@ -551,6 +564,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _renderPanel(): void {
+    this._wrappedLineNumbers?.dispose();this._wrappedLineNumbers=null;
     this._largeTextReader?.dispose();
     this._largeTextReader = null;
     this._codeMinimap?.dispose();
@@ -1724,7 +1738,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _replaceLineNumbers(gutter: HTMLElement, surface: HTMLElement, source: string): void {
     const lineCount = sourceLineCount(source);
     gutter.dataset.lineCount = String(lineCount);
-    gutter.textContent = Array.from({ length: lineCount }, (_, index) => String(index + 1)).join("\n");
+    if(!this._wordWrap||!this._wrappedLineNumbers) gutter.textContent = Array.from({ length: lineCount }, (_, index) => String(index + 1)).join("\n");
+    this._wrappedLineNumbers?.update();
     const digits = Math.max(2, String(lineCount).length);
     surface.style.setProperty("--cle-line-number-width", `calc(${digits}ch + 24px)`);
   }
