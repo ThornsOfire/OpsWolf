@@ -8,7 +8,6 @@ There are three separate things to keep straight:
 
 | Area | Purpose |
 | --- | --- |
-| Shared semantic palettes, host theme changes, custom hooks, contrast and forced-color editing | `node scripts/test-appearance.mjs`; see [appearance contract](appearance.md); also editor, tooltips and background-surface fixtures |
 | Git checkout | Source, tests, documentation, license and distribution definitions |
 | `packages/explorer-ui/dist/`, `target/` | Generated UI and native outputs; ignored by Git |
 | An installation/launcher | The particular native executable and UI bundle actually used at runtime |
@@ -33,6 +32,7 @@ These commands run from the repository root after UI dependencies are installed.
 
 | Change | Focused check |
 | --- | --- |
+| Shared semantic palettes, host theme changes, custom hooks, contrast and forced-color editing | `node scripts/test-appearance.mjs`; see [appearance contract](appearance.md); also editor, tooltips and background-surface fixtures |
 | Owned settings, legacy preference migration, reset boundaries, modal focus and persistence failures | `node scripts/test-preferences.mjs`; see [settings and scope](settings.md); also editor-pane, minimap, typing, sidebar and menu fixtures |
 | Composer WPM timing, trusted input policy, IME boundaries, preferences and cleanup | `node scripts/test-typing-meter.mjs`; see [measurement and verification limits](typing-meter.md) |
 | Chat reading anchor, native scroll displacement, reflow, zoom and lifecycle | `node scripts/test-chat-reading.mjs`; see [candidate behavior](chat-reading.md) |
@@ -103,7 +103,7 @@ Update the appropriate Unreleased changelog entry alongside each meaningful user
 
 | Idea | Current status |
 | --- | --- |
-| Context meter | Not implemented |
+| Context meter | [Protocol researched](context-meter-research.md); no safe active-session data source established, so no metric is fabricated |
 | Compact citation composer chips and readable hover tooltips | Core citation routing is implemented and live-tested; presentation remains unfinished. See [citation status](citations.md). |
 | Broader editable-format support | Planned; additional formats and priorities are still to be chosen. Track preview, source/structured editing, and save support separately; don't treat a preview plugin as an editor. |
 | Structured Markdown table-cell editing | Source editing exists; a dedicated matrix editor doesn't |
