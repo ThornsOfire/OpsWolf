@@ -149,7 +149,6 @@ pub struct NativeBridge {
 }
 
 struct BridgeInner {
-    change_tracker: Arc<StdMutex<workspace_service::ChangeTracker>>,
     resolver: Option<AppServerClient>,
     manual_workspace: Option<Arc<Workspace>>,
     state: StdMutex<BridgeState>,
@@ -196,10 +195,8 @@ impl NativeBridge {
         settings_store: SettingsStore,
         settings: Settings,
     ) -> Self {
-        let history_dir=settings_store.path().parent().unwrap_or_else(||std::path::Path::new(".")).join("change-history");
         Self {
             inner: Arc::new(BridgeInner {
-                change_tracker:Arc::new(StdMutex::new(workspace_service::ChangeTracker::new(history_dir))),
                 resolver,
                 manual_workspace,
                 state: StdMutex::new(BridgeState {

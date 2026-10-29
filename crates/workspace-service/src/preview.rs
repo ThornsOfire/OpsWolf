@@ -3655,6 +3655,9 @@ use office_archive::{
     validate_office_local_headers, validate_office_package, xml_declaration_allows_utf8,
 };
 
-#[path = "preview/change_history.rs"]
-mod change_history;
-pub use change_history::{ChangeTracker,ReviewFile,ReviewSummary};
+/// Apply the same sensitive-file policy to recorded native patches without reading source files.
+pub fn permits_recorded_review(path: &str) -> bool {
+    let Ok(path)=validate_relative(path) else { return false; };
+    let Some(name)=path.file_name().and_then(|name|name.to_str()) else { return false; };
+    !matches!(preview_policy(name),PreviewPolicy::Unsupported(PreviewUnsupportedReason::Sensitive))
+}

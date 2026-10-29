@@ -5,6 +5,8 @@
 //! to resolve its stable `cwd` field. It does not inspect Codex databases.
 
 use std::collections::HashMap;
+mod review;
+pub use review::native_review_page;
 use std::ffi::OsString;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
@@ -47,7 +49,7 @@ struct RequestTrace {
 }
 impl RequestTrace {
     fn new(method: &str, number: u64, timeout: Duration) -> Self {
-        let method = if ["initialize", "thread/read", "thread/list"].contains(&method) {
+        let method = if ["initialize", "thread/read", "thread/list", "thread/turns/list"].contains(&method) {
             method
         } else {
             "other"
@@ -322,6 +324,16 @@ impl AppServerClient {
             )
             .await?;
         self.notify_without_params("initialized").await
+    }
+
+    /// Read one persisted turn without starting, resuming or modifying a conversation.
+    /// A single-turn page keeps ordinary chat/tool output out of large multi-turn responses.
+    pub async fn review_page(&self, thread_id: &str, cursor: Option<&str>) -> Result<Value, ResolverError> {
+        validate_thread_id(thread_id)?;
+        if cursor.is_some_and(|value| value.len()>4096) { return Err(ResolverError::Protocol); }
+        let result=self.request("thread/turns/list",json!({"threadId":thread_id,"sortDirection":"desc","limit":1,"itemsView":"full","cursor":cursor})).await?;
+        if result.get("data").and_then(Value::as_array).is_none_or(|turns|turns.len()>1) { return Err(ResolverError::Protocol); }
+        Ok(result)
     }
 
     pub async fn resolve_thread(&self, thread_id: &str) -> Result<ThreadWorkspace, ResolverError> {
@@ -715,6 +727,28 @@ mod tests {
         let workspace = client.resolve_thread("thread-1").await.expect("resolve");
         assert_eq!(workspace.cwd, PathBuf::from(r"C:\work\demo"));
         server.await.expect("server task");
+    }
+
+    #[tokio::test]
+    async fn review_reads_only_one_persisted_turn_without_resuming_it() {
+        let (client_stream,server_stream)=duplex(16*1024);
+        let (client_read,client_write)=split(client_stream);
+        let (server_read,mut server_write)=split(server_stream);
+        let server=tokio::spawn(async move{
+            let mut reader=BufReader::new(server_read);let mut line=String::new();
+            reader.read_line(&mut line).await.unwrap();let request:Value=serde_json::from_str(&line).unwrap();
+            assert_eq!(request["method"],"initialize");
+            server_write.write_all(format!("{}\n",json!({"id":request["id"],"result":{}})).as_bytes()).await.unwrap();
+            line.clear();reader.read_line(&mut line).await.unwrap();assert_eq!(serde_json::from_str::<Value>(&line).unwrap()["method"],"initialized");
+            line.clear();reader.read_line(&mut line).await.unwrap();let request:Value=serde_json::from_str(&line).unwrap();
+            assert_eq!(request["method"],"thread/turns/list");
+            assert_eq!(request["params"],json!({"threadId":"thread-1","cursor":"next-page","limit":1,"itemsView":"full","sortDirection":"desc"}));
+            server_write.write_all(format!("{}\n",json!({"id":request["id"],"result":{"data":[],"nextCursor":null}})).as_bytes()).await.unwrap();
+        });
+        let client=AppServerClient::connect_io(BufReader::new(client_read),client_write).await.unwrap();
+        assert!(client.review_page("thread-1",Some(&"x".repeat(4097))).await.is_err());
+        assert_eq!(client.review_page("thread-1",Some("next-page")).await.unwrap()["data"],json!([]));
+        server.await.unwrap();
     }
 
     #[test]

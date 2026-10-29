@@ -39,6 +39,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test -p cdp-client --locked -- --test-threads=1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          cargo test -p context-resolver --locked -- --test-threads=1
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Compile native reader and windowless launcher
         run: cargo build --release --locked -p code-codex --bin code-codex --bin code-codex-launcher
       - name: Artifact checksums
