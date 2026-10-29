@@ -32,7 +32,7 @@ pub fn native_review_page(result:&Value,root:&str)->Result<Value,ResolverError>{
     let Some(turn)=turns.first()else{return Ok(json!({"review":null,"nextCursor":cursor,"turnId":null}));};
     let id=turn.get("id").and_then(Value::as_str).filter(|s|identifier(s)).ok_or(ResolverError::Protocol)?;
     let status=turn.get("status").and_then(Value::as_str).ok_or(ResolverError::Protocol)?;
-    if !matches!(status,"completed"|"interrupted"|"failed"){return Ok(json!({"review":null,"nextCursor":cursor,"turnId":id}));}
+    if !matches!(status,"completed"|"interrupted"|"failed"|"inProgress"){return Ok(json!({"review":null,"nextCursor":cursor,"turnId":id}));}
     let items=turn.get("items").and_then(Value::as_array).ok_or(ResolverError::Protocol)?;
     let mut files:Vec<Value>=Vec::new();let mut message_ids=Vec::new();let mut bytes=0usize;let mut omitted=0usize;
     for item in items{
@@ -79,5 +79,14 @@ pub fn native_review_page(result:&Value,root:&str)->Result<Value,ResolverError>{
     #[test]fn pending_and_command_only_turns_do_not_invent_changes(){
         let mut value=page(json!([]));assert!(native_review_page(&value,"/work").unwrap()["review"].is_null());
         value["data"][0]["status"]=json!("inProgress");assert!(native_review_page(&value,"/work").unwrap()["review"].is_null());
+    }
+    #[test]fn active_response_exposes_only_successfully_applied_patches(){
+        let mut value=page(json!([{"path":"/work/live.txt","kind":{"type":"add"},"diff":"live\n"}]));
+        value["data"][0]["status"]=json!("inProgress");
+        let review=native_review_page(&value,"/work").unwrap();
+        assert_eq!(review["review"]["status"],"inProgress");
+        assert!(review["review"]["files"][0]["content"].as_str().unwrap().contains("+live"));
+        value["data"][0]["items"][1]["status"]=json!("inProgress");
+        assert!(native_review_page(&value,"/work").unwrap()["review"].is_null());
     }
 }
