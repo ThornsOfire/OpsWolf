@@ -32,6 +32,7 @@ This is an unofficial community project, independent of OpenAI and the original 
 - Word wrap keeps your draft and selection, with line numbers for the original source lines.
 - Save-and-close, save-and-switch, discard, and cancel prompts. If saving fails, your draft stays available.
 - Drag a file from the explorer into chat and it supplies the full local path, so the agent can find the thing you're talking about.
+- Markdown Preview links open project files in the editor or ask before an external website/app handoff. Hover for the destination and action; remembered choices are scoped and resettable. See [link navigation and warnings](docs/editor/links.md).
 
 ### Pointing chat at the actual lines
 

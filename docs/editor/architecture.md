@@ -104,10 +104,17 @@ Queue/highlight state is memory-only. References inserted into a message include
 
 ## Storage and ownership
 
+`EditorLinks` handles clicks/Enter in rendered Markdown through the existing sanitized `data-markdown-href` metadata; it doesn't restore browser-navigation `href` attributes on preview anchors or change the pinned Markdown package. Pure link policy resolves local paths against the source document and project root, classifies external handoffs and blocks command/script/internal schemes. The application revalidates local requests against the current text tab/context, then uses normal workspace loading and dirty-switch protection. Pending cross-document heading jumps are scoped to that context/path and expire after 30 seconds.
+
+External actions show the actual destination in a modal before using the host's ordinary `_blank` link handler with `noopener noreferrer`. No new native route, shell command or process runner is added. The native host/OS controls browser/app handling; not every URI scheme is supported. Preview sanitization can remove metadata for unsupported protocols, which remain explicitly unavailable. Tooltips and classification perform no network requests.
+
+`LinkPermissions` stores only explicit choices in a versioned local-renderer key: exact HTTP(S) origins and separately named application schemes, capped at 100 entries. No global allow-all flag is used. Shift-click forces review; the modal can revoke one saved permission or reset all choices. Storage failures fail back to asking again. The exported list/revoke/clear operations are available for a future full settings area. Stale file/chat/context or detached-source confirmations cannot launch or grant permission.
+
 | State | Location/lifetime |
 | --- | --- |
 | Pane width and docked/fullscreen preference | Local renderer storage, `code-codex:editor-pane:v1` |
 | Word-wrap preference | Local renderer storage, `code-codex:word-wrap:v1` |
+| Remembered preview-link choices | Local renderer storage, `code-codex:link-permissions:v1`; explicit origin/protocol choices, until revoked/reset |
 | Project pins and ordering | Local renderer storage, `code-codex:pinned-files:v1`; relative paths keyed by normalized root |
 | Open unpinned tabs and current draft | In memory in the running editor session |
 | Detached dirty draft handoff | In memory, 10-second TTL with matching chat/bootstrap identity |

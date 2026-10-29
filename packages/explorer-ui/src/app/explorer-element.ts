@@ -32,6 +32,7 @@ import { PreviewRequestsController } from "../features/workspace/preview-request
 import { PreviewWorkspaceController } from "../features/workspace/preview-workspace";
 import {CitationController} from '../features/workspace/citations';
 import {citationRelativePath} from '../features/preview/citation-model';
+import {resolvePreviewLink} from '../features/preview/link-policy';
 import { TreeInteractionController } from "../features/workspace/tree-interaction";
 import { UpdatesController } from "../features/workspace/updates";
 import { NativeWindowBackground } from "../host/native-surfaces/native-window-background";
@@ -2830,6 +2831,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.addEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.addEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
         preview.addEventListener("cle-main-preview-open-source", this.#onMainPreviewOpenSource as EventListener);
+        preview.addEventListener('cle-main-preview-open-link',this.#onMainPreviewOpenLink as EventListener);
         preview.addEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.addEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
         preview.addEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
@@ -2851,6 +2853,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.removeEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.removeEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
         preview.removeEventListener("cle-main-preview-open-source", this.#onMainPreviewOpenSource as EventListener);
+        preview.removeEventListener('cle-main-preview-open-link',this.#onMainPreviewOpenLink as EventListener);
         preview.removeEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.removeEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
         preview.removeEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
@@ -2898,6 +2901,25 @@ export class CodeCodexElement extends HTMLElement {
         else
             this.#previewWorkspace.syncMainPreview();
         this.#treeinteractionSettings.renderVisible();
+    };
+    #onMainPreviewOpenLink=(event:CustomEvent<unknown>):void=>{
+        if(event.target!==this.#mainPreview)return;
+        const detail=asRecord(event.detail),context=this.#workspaceSession.context;
+        if(!context||typeof detail?.href!=='string'||detail.sourcePath!==this.#activePreviewPath)return;
+        const source=this.#previewWorkspace.previewTabs.find(tab=>tab.path===this.#activePreviewPath)?.view;
+        if(source?.kind!=='text'||source.truncated)return;
+        const link=resolvePreviewLink(detail.href,context.rootPath,source.path);
+        if(link.kind!=='file'&&link.kind!=='citation')return;
+        const open=()=>{
+            if(link.kind==='citation')this.#previewWorkspace.openCitations(link.ranges);
+            else{
+                this.#previewWorkspace.openPreviewPath(link.path,link.path.split('/').at(-1)??link.path);
+                if(this.#activePreviewPath===link.path&&link.fragment)this.#mainPreview?.revealMarkdownHeading(link.path,link.fragment);
+            }
+        };
+        const editing=this.#previeweditingSettings;
+        const switches=link.kind==='file'?link.path!==editing.drafts.path:link.ranges.some(c=>citationRelativePath(c.path,context.rootPath)!==editing.drafts.path);
+        if(switches&&editing.drafts.path&&editing.isEditDirty())void this.#requestEditorClose(editing.drafts.path,open);else open();
     };
     #requestTreePreview(row:FlatTreeRow):void {
         const editing=this.#previeweditingSettings;

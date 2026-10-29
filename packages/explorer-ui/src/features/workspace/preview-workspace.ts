@@ -436,6 +436,7 @@ syncMainPreview(): void {
             }
             : undefined;
         this.host.mainPreview?.setState({
+            ...(this.host.context?{workspace:{rootPath:this.host.context.rootPath,threadId:this.host.context.threadId}}:{}),
             ...(this.citations?{citations:this.citations}:{}),
             activePath: this.activePreviewPath,
             tabs: this.previewTabs.map((tab) => tab.view),

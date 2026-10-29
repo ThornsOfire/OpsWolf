@@ -336,6 +336,7 @@ export type MainPreviewFileView =
   | MainPreviewErrorView;
 
 export interface MainPreviewState {
+  readonly workspace?:{readonly rootPath:string;readonly threadId:string};
   readonly citations?: import('../contracts/citations').CitationState;
   readonly activePath: string | null;
   readonly tabs: readonly MainPreviewFileView[];

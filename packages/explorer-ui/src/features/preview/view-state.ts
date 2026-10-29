@@ -184,7 +184,8 @@ export function normalizeState(state: MainPreviewState): MainPreviewState {
     }
     : undefined;
   const citations=state.citations&&Number.isSafeInteger(state.citations.revision)?{revision:state.citations.revision,ranges:state.citations.ranges.filter(c=>validCitation(c)&&seen.has(c.path)).slice(0,32).map(c=>({...c}))}:undefined;
-  return { activePath, tabs, enabledPreviewers, pinnedPaths: [...new Set(state.pinnedPaths ?? [])], ...(editor ? { editor } : {}),...(citations?{citations}:{}) };
+  const workspace=state.workspace&&typeof state.workspace.rootPath==='string'&&typeof state.workspace.threadId==='string'?{...state.workspace}:undefined;
+  return { activePath, tabs, enabledPreviewers, pinnedPaths: [...new Set(state.pinnedPaths ?? [])], ...(editor ? { editor } : {}),...(citations?{citations}:{}),...(workspace?{workspace}:{}) };
 }
 
 

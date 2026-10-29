@@ -10,6 +10,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Markdown Preview link navigation with destination/action tooltips. In-project file links open normal editor tabs with existing save/switch protection; heading links stay in the document. Website and supported app-URI handoffs require confirmation, with unchecked per-origin/per-protocol remember choices, Shift-click review, and warning-reset controls. Existing renderer protocol restrictions remain enforced; this adds no shell/process runner.
 - Source-text citations across supported text formats: select and right-click to cite in chat, copy a reference, or group ranges across files. Full-path links reopen normal editor tabs with highlights, unique quote relocation, and explicit missing/ambiguous results. Existing chat drafts and normal save/switch protection are preserved; citations never submit a message. The draft composer and hover tooltips can still expose the full encoded URL; compact presentation is not implemented. See [citation status](docs/editor/citations.md).
 - A resizable right editor pane beside chat, with a dedicated fullscreen/restore control. The header's **E** button opens or hides it, including when no file is open. Layout and pane width stay local. ([pane](https://github.com/ThornsOfire/code-codex/commit/4438a34), [visibility controls](https://github.com/ThornsOfire/code-codex/commit/64bc327))
 - Tab-strip mouse-wheel scrolling, drag-and-drop ordering, an open-files dropdown, up to 64 open tabs, and up to 32 project-specific file pins. Pins restore relative paths and their order for the same project root. ([tabs and pins](https://github.com/ThornsOfire/code-codex/commit/02a0d76))
@@ -34,6 +35,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- Edit-to-Preview now uses the current unsaved source text immediately, without requiring an application rerender to refresh the editor's draft snapshot.
 - Resizing the editor with native Changes open no longer hits Codex's competing top-layer workspace divider. The hosted comparison leaves room for the editor handle, restores the native divider on release, and keeps its internal file-list divider. Drag widths and chat-space limits now use layout units so zoomed drags track the pointer accurately.
 - The editor's word-wrap control now drives Codex's native Word wrap handler while a Changes tab is active, and reflects changes made through the native control. Unknown native controls disable the custom action instead of showing a wrap state that doesn't affect the comparison.
 - Wrapped source-line numbers stay aligned at application UI zoom levels such as 120%, in both Edit and read-only source views. Gutter measurements compare heights in the same CSS units and retain fractional content widths at wrap boundaries.

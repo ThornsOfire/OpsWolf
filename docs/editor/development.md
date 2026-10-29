@@ -41,6 +41,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Explorer-to-chat absolute path drag | `node scripts/test-drag-file-path.mjs` |
 | Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
 | Citation integration with the actual explorer and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
+| Preview link classification, tooltips, external/app confirmation, saved permissions and stale-dialog cancellation | `node scripts/test-preview-links.mjs` |
 | Native record history, per-file disclosures, coverage, card restoration | `node scripts/test-change-review.mjs` |
 | Hosting actual native comparison DOM in editor layout | `node scripts/test-native-diff-host.mjs` |
 | Diff → current source → edit/save/reopen and missing source | `node scripts/test-diff-source.mjs` |
@@ -78,6 +79,7 @@ The public documentation is split by purpose:
 - [Changelog](../../CHANGELOG.md): curated notable changes, with Unreleased at the top.
 - [Main README](../../README.md): what this fork does, quick setup, credit and major limits.
 - [User guide](README.md): controls, pins, saving, change review and troubleshooting.
+- [Preview links](links.md): destination tooltips, confirmations, scoped remembered choices, reset controls and supported boundaries.
 - [Editor architecture](architecture.md): owners, protocol flow, budgets, data lifetime and compatibility.
 - This guide: build/install distinction and focused verification.
 - [Tracker cleanup audit](tracker-cleanup.md): the removed first implementation and current evidence.

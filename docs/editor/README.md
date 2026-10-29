@@ -56,6 +56,8 @@ Drafts belong to the running session. There is a short, 10-second in-memory reco
 
 ## Citing source in chat
 
+Markdown Preview document links are also usable: see [link navigation, warnings and saved choices](links.md). Their tooltips describe the destination and action before clicking. This is separate from the unfinished compact presentation of citation links in the chat composer.
+
 Select source text and **right-click** for **Cite in chat**, **Add to citation group**, or **Copy citation**. This works with every supported complete text file, including code, JSON, TOML, logs, plain text and Markdown. It doesn't add editing support to a format the native reader doesn't allow. References cover whole logical lines, so wrapped screen rows still map to the original file.
 
 **Cite in chat** appends a Markdown reference to the current chat draft without replacing your existing text or sending it. The label includes the full path and line range so the agent can find it. If the native composer cannot be identified safely, use Copy citation. You choose when to send.

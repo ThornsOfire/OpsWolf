@@ -1,5 +1,6 @@
 import { WrappedLineNumbers } from "../features/preview/wrapped-line-numbers";
 import {EditorCitations} from '../features/preview/editor-citations';
+import {EditorLinks} from '../features/preview/editor-links';
 let nextInstanceId = 0;
 // Domain extracted from the original explorer composition; behavior and storage contracts retained.
 import type { ParsedPresentation } from "@extend-ai/react-pptx";
@@ -63,6 +64,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   readonly _editorPane = new EditorPaneLayout(this);
   readonly _editorHeader: EditorHeaderControl;
   readonly _citationUi:EditorCitations;
+  readonly _linkUi:EditorLinks;
   _wrappedLineNumbers: WrappedLineNumbers | null = null;
   _wordWrap = false;
   _nativeWordWrap:boolean|undefined;
@@ -158,6 +160,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._panelMount = this._required<HTMLElement>(".panel-mount");
     const citationOwner=this;
     this._citationUi=new EditorCitations({element:this,shadow:this._shadow,panel:this._panelMount,get state(){return citationOwner._state;},get reader(){return citationOwner._largeTextReader;},renderSource:()=>this._renderPanel()});
+    this._linkUi=new EditorLinks({element:this,shadow:this._shadow,panel:this._panelMount,get state(){return citationOwner._state;},openExternal:url=>{
+      const anchor=this.ownerDocument.createElement('a');anchor.href=url;anchor.target='_blank';anchor.rel='noopener noreferrer';anchor.hidden=true;this.ownerDocument.body.append(anchor);anchor.click();anchor.remove();
+    }});
     this._openFilesMenu = this._required('.open-files-menu');
     this._openFilesMenu.addEventListener('beforetoggle', event => {
       if((event as ToggleEvent).newState==='open') this._prepareOpenFilesMenu();
@@ -226,6 +231,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if (this._connected) {this._syncSuppression();return;}
     this._connected = true;
     this._citationUi.start();
+    this._linkUi.start();
     this._languageCleanup = localizeOwnedUi(this._shadow);
     this.ownerDocument.defaultView?.addEventListener("code-codex:plugin-loaded", this._onPluginLoaded);
     if (this._clippedLayout) this.dataset.clippedLayout = "true";
@@ -254,6 +260,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _disposeDisconnected(): void {
     this._citationUi.dispose();
+    this._linkUi.dispose();
     if (this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
     this._clearTabDrag();
     this._paneResizeCleanup?.();
@@ -307,6 +314,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const editor = this._state.editor;
     return {
       activePath: this._state.activePath,
+      ...(this._state.workspace?{workspace:{...this._state.workspace}}:{}),
       tabs: this._state.tabs.map((view) => cloneView(view)),
       enabledPreviewers: [...(this._state.enabledPreviewers ?? [])],
       ...(this._state.citations?{citations:{revision:this._state.citations.revision,ranges:this._state.citations.ranges.map(c=>({...c}))}}:{}),
@@ -433,6 +441,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   showEditor(): void { this._setEditorVisible(true); }
+
+  revealMarkdownHeading(path:string,fragment:string):void {this._linkUi.queueHeading(path,fragment);}
 
   setNativeWordWrapState(enabled:boolean|undefined):void {
     if(this._nativeWordWrap===enabled)return;
@@ -606,6 +616,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _renderPanel(): void {
     this._citationUi.closeMenu();
     this._citationUi.refresh();
+    this._linkUi.refresh();
     this._wrappedLineNumbers?.dispose();this._wrappedLineNumbers=null;
     this._largeTextReader?.dispose();
     this._largeTextReader = null;
@@ -802,6 +813,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       textarea.setAttribute("aria-busy", String(editor.saving));
       let acceptedDraft = editor.draft;
       textarea.addEventListener("input", () => {
+        if(!this._panelMount.contains(textarea)||this._state.activePath!==view.path||this._state.editor?.path!==view.path)return;
         if (textarea.value.length > MAX_PREVIEW_TEXT_UNITS) {
           const selectionStart = Math.min(textarea.selectionStart, acceptedDraft.length);
           const selectionEnd = Math.min(textarea.selectionEnd, acceptedDraft.length);
@@ -810,6 +822,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
           return;
         }
         acceptedDraft = textarea.value;
+        // Preview and link navigation read our state without asking the app to
+        // rerender on every keystroke. Keep that snapshot current too.
+        if(this._state.editor?.path===view.path)this._state={...this._state,editor:{...this._state.editor,draft:textarea.value}};
         this._replaceHighlightedSource(code, view.path, textarea.value);
         this._replaceLineNumbers(lineNumbers, stack, textarea.value);
         if (this._panelMount.contains(textarea)) this._codeMinimap?.setSource(textarea.value, this._highlightedSource(view.path, textarea.value));
