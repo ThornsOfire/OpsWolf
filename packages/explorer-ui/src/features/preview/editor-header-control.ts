@@ -17,8 +17,8 @@ export class EditorHeaderControl {
     this.element.style.cssText='display:inline-flex;flex:none;align-items:center;pointer-events:auto;-webkit-app-region:no-drag';
     const shadow=this.element.attachShadow({mode:'open'});
     shadow.innerHTML=`<style>
-      button{width:28px;height:28px;display:inline-grid;place-items:center;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--color-text-tertiary,inherit);font:600 13px/1 ui-monospace,Consolas,monospace;cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag}
-      button:hover,button[aria-pressed="true"]{background:var(--color-bg-primary-ghost-hover,rgba(127,127,127,.14))}
+      button{width:28px;height:28px;display:inline-grid;place-items:center;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--cursadex-muted,var(--color-text-secondary,inherit));font:600 13px/1 ui-monospace,Consolas,monospace;cursor:pointer;pointer-events:auto;-webkit-app-region:no-drag}
+      button:hover,button[aria-pressed="true"]{background:var(--cursadex-hover,var(--color-bg-primary-ghost-hover,rgba(127,127,127,.14)))}
       button:focus-visible{outline:2px solid currentColor;outline-offset:-2px}button:disabled{opacity:.4;cursor:default}
     </style><button type="button" aria-label="Editor pane">E</button>`;
     this.button=shadow.querySelector('button')!;

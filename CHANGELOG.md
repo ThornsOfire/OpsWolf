@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Shared tree/editor/settings color roles, public `--cursadex-*` theme hooks and live inherited native colors, with light/dark fallbacks and system high-contrast colors. Explicit light appearance wins over a dark OS preference. The high-contrast source mirror retains geometry for wrapped line numbers; document paper and native viewer rendering stay separate. Arbitrary marketplace themes still need compatibility checks.
+
 - Cursadex settings in the renamed application menu, with shared typing-speed, source-wrap, minimap and first-chat sidebar-collapse preferences. Existing wrap/minimap choices migrate without deleting old keys. Preference reset is separate from saved preview-link warning reset; storage failures remain usable for the session. Inherited Code-Codex tools and credit remain available.
 
 - Recognized native Changes sections start collapsed and show session-only unread markers. Expanding a section or Clear all unread clears markers; subsequently observed native patch records mark files again. Reads pause while hidden, and unavailable updates are explicit. This tracks recorded patches rather than every filesystem edit.

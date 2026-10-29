@@ -48,8 +48,8 @@ ${MENU_HOST_SELECTOR} > button {
   -webkit-app-region: no-drag;
 }
 ${MENU_HOST_SELECTOR} > button[aria-expanded="true"] {
-  background: var(--color-codex-application-menu-selection, rgba(255,255,255,.96));
-  color: var(--color-text, #1a1c1f);
+  background: var(--cursadex-selected,var(--color-codex-application-menu-selection, rgba(255,255,255,.96)));
+  color: var(--cursadex-text,var(--color-text, #1a1c1f));
 }
 ${MENU_POPUP_SELECTOR} {
   position: fixed;
@@ -60,8 +60,8 @@ ${MENU_POPUP_SELECTOR} {
   padding: 4px 0;
   border: 0;
   border-radius: var(--radius-sm, 7.5px);
-  background: var(--color-codex-application-menu, #f8f8f9);
-  color: var(--app-color-foreground-application-menu, #1a1c1f);
+  background: var(--cursadex-raised,var(--color-codex-application-menu, #f8f8f9));
+  color: var(--cursadex-text,var(--app-color-foreground-application-menu, #1a1c1f));
   box-shadow: 0 4px 12px rgba(0, 0, 0, .42);
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   overflow-y: auto;
@@ -86,7 +86,7 @@ ${MENU_POPUP_SELECTOR} > :is(button, a) {
 }
 ${MENU_POPUP_SELECTOR} > :is(button, a):hover,
 ${MENU_POPUP_SELECTOR} > :is(button, a):focus-visible {
-  background: var(--color-background-primary-ghost-hover, rgba(26, 28, 31, .053));
+  background: var(--cursadex-hover,var(--color-background-primary-ghost-hover, rgba(26, 28, 31, .053)));
   outline: none;
 }
 ${MENU_POPUP_SELECTOR} > [role="separator"] {

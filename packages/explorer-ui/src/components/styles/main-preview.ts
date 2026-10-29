@@ -1,35 +1,13 @@
+import { semanticThemeStyles } from './appearance-tokens';
 import { backgroundPreviewSurfaceStyles } from './background-surfaces';
 // Domain extracted from the original explorer composition; behavior and storage contracts retained.
 
 
 export const mainPreviewStyles = String.raw`
+  ${semanticThemeStyles}
   :host([data-home-suspended]) { display: none !important; }
   :host {
     --cle-preview-tab-height: 28px;
-    --cle-main-bg: #ffffff;
-    --cle-main-bar: #f7f7f5;
-    --cle-main-raised: #fbfbfa;
-    --cle-main-text: #20201e;
-    --cle-main-muted: #6d6c67;
-    --cle-main-faint: #96958f;
-    --cle-main-line: rgba(24, 24, 22, 0.12);
-    --cle-main-hover: rgba(24, 24, 22, 0.055);
-    --cle-main-active: #ffffff;
-    --cle-main-focus: #74736e;
-    --cle-syntax-comment: #627062;
-    --cle-syntax-string: #087a18;
-    --cle-syntax-keyword: #6b00d7;
-    --cle-syntax-number: #00717a;
-    --cle-syntax-constant: #a3155b;
-    --cle-syntax-type: #006e91;
-    --cle-syntax-function: #075db7;
-    --cle-syntax-property: #b54708;
-    --cle-syntax-tag: #b4235a;
-    --cle-syntax-attribute: #7a3db8;
-    --cle-syntax-selector: #006f72;
-    --cle-syntax-meta: #7047a3;
-    --cle-syntax-inserted: #157347;
-    --cle-syntax-deleted: #c12e35;
     position: absolute;
     z-index: 31;
     inset: 0;
@@ -41,63 +19,6 @@ export const mainPreviewStyles = String.raw`
     font: 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     pointer-events: none;
     contain: layout style paint;
-  }
-
-  :host-context(.dark),
-  :host-context(.electron-dark),
-  :host-context([data-theme="dark"]),
-  :host([data-theme="dark"]) {
-    --cle-main-bg: #1d1d1c;
-    --cle-main-bar: #232321;
-    --cle-main-raised: #20201e;
-    --cle-main-text: #ecece8;
-    --cle-main-muted: #aaa9a3;
-    --cle-main-faint: #7f7e79;
-    --cle-main-line: rgba(255, 255, 255, 0.13);
-    --cle-main-hover: rgba(255, 255, 255, 0.065);
-    --cle-main-active: #1d1d1c;
-    --cle-main-focus: #aaa9a3;
-    --cle-syntax-comment: #9aa69a;
-    --cle-syntax-string: #89d989;
-    --cle-syntax-keyword: #c7a0ff;
-    --cle-syntax-number: #75d0d6;
-    --cle-syntax-constant: #ff91b8;
-    --cle-syntax-type: #72d2e3;
-    --cle-syntax-function: #88baff;
-    --cle-syntax-property: #ff9d57;
-    --cle-syntax-tag: #ff8fa5;
-    --cle-syntax-attribute: #d0acff;
-    --cle-syntax-selector: #76d5cf;
-    --cle-syntax-meta: #c9a7f5;
-    --cle-syntax-inserted: #76d39b;
-    --cle-syntax-deleted: #ff969b;
-  }
-
-  :host([data-theme="light"]) {
-    --cle-main-bg: #ffffff;
-    --cle-main-bar: #f7f7f5;
-    --cle-main-raised: #fbfbfa;
-    --cle-main-text: #20201e;
-    --cle-main-muted: #6d6c67;
-    --cle-main-faint: #96958f;
-    --cle-main-line: rgba(24, 24, 22, 0.12);
-    --cle-main-hover: rgba(24, 24, 22, 0.055);
-    --cle-main-active: #ffffff;
-    --cle-main-focus: #74736e;
-    --cle-syntax-comment: #627062;
-    --cle-syntax-string: #087a18;
-    --cle-syntax-keyword: #6b00d7;
-    --cle-syntax-number: #00717a;
-    --cle-syntax-constant: #a3155b;
-    --cle-syntax-type: #006e91;
-    --cle-syntax-function: #075db7;
-    --cle-syntax-property: #b54708;
-    --cle-syntax-tag: #b4235a;
-    --cle-syntax-attribute: #7a3db8;
-    --cle-syntax-selector: #006f72;
-    --cle-syntax-meta: #7047a3;
-    --cle-syntax-inserted: #157347;
-    --cle-syntax-deleted: #c12e35;
   }
 
   :host-context(html[data-code-codex-transparent-background]) :is(
@@ -1749,37 +1670,7 @@ export const mainPreviewStyles = String.raw`
     .preview-meta-bar { padding-inline: 12px; }
   }
 
-  @media (prefers-color-scheme: dark) {
-    :host(:not([data-theme="light"])) {
-      --cle-main-bg: #1d1d1c;
-      --cle-main-bar: #232321;
-      --cle-main-raised: #20201e;
-      --cle-main-text: #ecece8;
-      --cle-main-muted: #aaa9a3;
-      --cle-main-faint: #7f7e79;
-      --cle-main-line: rgba(255, 255, 255, 0.13);
-      --cle-main-hover: rgba(255, 255, 255, 0.065);
-      --cle-main-active: #1d1d1c;
-      --cle-main-focus: #aaa9a3;
-      --cle-syntax-comment: #9aa69a;
-      --cle-syntax-string: #89d989;
-      --cle-syntax-keyword: #c7a0ff;
-      --cle-syntax-number: #75d0d6;
-      --cle-syntax-constant: #ff91b8;
-      --cle-syntax-type: #72d2e3;
-      --cle-syntax-function: #88baff;
-      --cle-syntax-property: #ff9d57;
-      --cle-syntax-tag: #ff8fa5;
-      --cle-syntax-attribute: #d0acff;
-      --cle-syntax-selector: #76d5cf;
-      --cle-syntax-meta: #c9a7f5;
-      --cle-syntax-inserted: #76d39b;
-      --cle-syntax-deleted: #ff969b;
-    }
-  }
-
   @media (forced-colors: active) {
-    .code-editor-highlight { display: none; }
     .code-line-numbers {
       color: GrayText;
       background: Canvas;

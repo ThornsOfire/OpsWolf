@@ -155,6 +155,11 @@ try {
   await browser.command('Emulation.clearDeviceMetricsOverride');
   await ev(`document.querySelector('main').style.width='1200px';document.querySelector('main').style.zoom='1';viewer._panePreference.width=340;state.editor={path:file.path,draft:numberedSource,saving:false};show()`);await delay(100);
   await check('Wrap preference persists locally', `JSON.parse(localStorage.getItem('cursadex:preferences:v1')).wordWrap===true`);
+  await ev(`q('.code-editor').focus();q('.code-editor').setSelectionRange(5,5)`);
+  await browser.command('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});await delay(100);
+  await check('High contrast preserves wrapped logical line alignment and draft caret',`numbersAlign()&&q('.code-editor').value===numberedSource&&q('.code-editor').selectionStart===5&&getComputedStyle(q('.code-editor-highlight')).visibility==='hidden'&&getComputedStyle(q('.code-editor')).webkitTextFillColor===getComputedStyle(q('.code-editor')).color`);
+  await browser.command('Emulation.setEmulatedMedia',{features:[]});await delay(80);
+  await check('Leaving high contrast restores syntax mirror without replacing the draft',`getComputedStyle(q('.code-editor-highlight')).visibility==='visible'&&q('.code-editor').value===numberedSource&&q('.code-editor').selectionStart===5`);
   await ev(`delete state.editor;show()`);await delay(60);
   await check('Read-only source also wraps within the pane', `getComputedStyle(q('.literal-text')).whiteSpace==='pre-wrap'&&q('.preview-content').scrollWidth<=q('.preview-content').clientWidth+1`);
   await clickSelector('.word-wrap-toggle');await delay(60);

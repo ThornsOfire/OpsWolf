@@ -8,6 +8,7 @@ There are three separate things to keep straight:
 
 | Area | Purpose |
 | --- | --- |
+| Shared semantic palettes, host theme changes, custom hooks, contrast and forced-color editing | `node scripts/test-appearance.mjs`; see [appearance contract](appearance.md); also editor, tooltips and background-surface fixtures |
 | Git checkout | Source, tests, documentation, license and distribution definitions |
 | `packages/explorer-ui/dist/`, `target/` | Generated UI and native outputs; ignored by Git |
 | An installation/launcher | The particular native executable and UI bundle actually used at runtime |

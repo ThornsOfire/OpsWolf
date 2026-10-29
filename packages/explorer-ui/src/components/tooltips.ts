@@ -11,9 +11,9 @@ export function attachTooltips(root: ShadowRoot, palette: 'explorer' | 'editor' 
   bubble.setAttribute('popover', 'manual');
   bubble.setAttribute('data-i18n-skip', '');
   const style = doc.createElement('style');
-  const surface = palette === 'editor' ? 'var(--cle-main-raised, #242424)' : palette === 'native' ? 'var(--color-surface, #242424)' : 'var(--cle-paper-raised, #242424)';
-  const ink = palette === 'editor' ? 'var(--cle-main-text, #f2f2f2)' : palette === 'native' ? 'var(--color-text-primary, inherit)' : 'var(--cle-ink, #f2f2f2)';
-  const rule = palette === 'editor' ? 'var(--cle-main-line, #383838)' : palette === 'native' ? 'var(--color-border, GrayText)' : 'var(--cle-rule, #383838)';
+  const surface = palette === 'editor' ? 'var(--cle-main-raised, Canvas)' : palette === 'native' ? 'var(--cursadex-raised,var(--color-surface,Canvas))' : 'var(--cle-paper-raised, Canvas)';
+  const ink = palette === 'editor' ? 'var(--cle-main-text, CanvasText)' : palette === 'native' ? 'var(--cursadex-text,var(--color-text-primary,CanvasText))' : 'var(--cle-ink, CanvasText)';
+  const rule = palette === 'editor' ? 'var(--cle-main-line, GrayText)' : palette === 'native' ? 'var(--cursadex-border,var(--color-border,GrayText))' : 'var(--cle-rule, GrayText)';
   style.textContent = `#cle-control-tooltip {
     position:fixed; inset:auto; margin:0; box-sizing:border-box;
     width:max-content; max-width:min(320px, calc(100vw - 16px));
