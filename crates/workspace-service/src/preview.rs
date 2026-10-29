@@ -3654,3 +3654,7 @@ use office_archive::{
     validate_office_decompressed_entries, validate_office_extra_fields,
     validate_office_local_headers, validate_office_package, xml_declaration_allows_utf8,
 };
+
+#[path = "preview/change_history.rs"]
+mod change_history;
+pub use change_history::{ChangeTracker,ReviewFile,ReviewSummary};

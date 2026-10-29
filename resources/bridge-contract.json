@@ -65,6 +65,14 @@
       "effect": "read"
     },
     {
+      "name": "explorer.changes.capture",
+      "effect": "private-review-state"
+    },
+    {
+      "name": "explorer.changes.chunk",
+      "effect": "read"
+    },
+    {
       "name": "explorer.preview",
       "effect": "read"
     },

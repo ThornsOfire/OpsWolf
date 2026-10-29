@@ -36,7 +36,7 @@ pub use preview::{
     MAX_NOTEBOOK_PREVIEW_BYTES, MAX_OFFICE_PREVIEW_BYTES, MAX_PDF_PREVIEW_BYTES, MAX_PREVIEW_BYTES,
     MAX_VIDEO_PREVIEW_BYTES, MAX_TEXT_FILE_BYTES, MEDIA_CHUNK_BYTES, MediaChunk, MediaInfo, MediaKind,
     MediaPreviewNotice, ModelResourceChunkRequest, ModelResourceInfo, PreviewKind,
-    PreviewLineEnding, PreviewResult, PreviewUnsupportedReason, TextTransferInfo,
+    ChangeTracker, ReviewFile, ReviewSummary, PreviewLineEnding, PreviewResult, PreviewUnsupportedReason, TextTransferInfo,
 };
 pub use settings::{
     PreparedSettings, SETTINGS_CANDIDATE_PREFIX, SETTINGS_CANDIDATE_SUFFIX,
