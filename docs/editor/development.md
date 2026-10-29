@@ -43,6 +43,8 @@ These commands run from the repository root after UI dependencies are installed.
 | Hosting actual native comparison DOM in editor layout | `node scripts/test-native-diff-host.mjs` |
 | Diff → current source → edit/save/reopen and missing source | `node scripts/test-diff-source.mjs` |
 | Module layering, capability ports and import cycles | `node scripts/check-architecture.mjs` |
+| Changelog structure and committed change-range coverage | `node scripts/check-changelog.mjs`; after committing, `node scripts/check-changelog.mjs --base HEAD~1 --head HEAD` |
+| Changelog checker regressions, including real Git ranges | `node --test scripts/test-changelog.mjs` |
 | Native source policy, complete transfer and file mutations | `cargo test -p workspace-service --locked -- --test-threads=1` |
 | Native renderer/transport boundary | `cargo test -p cdp-client --locked -- --test-threads=1` |
 | Native history protocol, patch projection and path filtering | `cargo test -p context-resolver --locked -- --test-threads=1` |
@@ -69,6 +71,9 @@ Keep screenshots and native-source inspection artifacts out of the public reposi
 
 The public documentation is split by purpose:
 
+- [Project rules](../../AGENTS.md): repo-specific workflow and implementation constraints for coding agents.
+- [Contributor guide](../../CONTRIBUTING.md): maintaining notes, exemptions and release preparation.
+- [Changelog](../../CHANGELOG.md): curated notable changes, with Unreleased at the top.
 - [Main README](../../README.md): what this fork does, quick setup, credit and major limits.
 - [User guide](README.md): controls, pins, saving, change review and troubleshooting.
 - [Editor architecture](architecture.md): owners, protocol flow, budgets, data lifetime and compatibility.
@@ -78,6 +83,8 @@ The public documentation is split by purpose:
 - [Startup conflict recovery](../startup-conflict-recovery.md) and [Windows login startup](../login-startup.md): inherited lifecycle details.
 
 Update the documented defaults when behavior changes. For example, the old custom titlebar button, the first 512 KiB-only reader, and the first snapshot tracker's retention settings describe earlier designs, not current behavior.
+
+Update the appropriate Unreleased changelog entry alongside each meaningful user-facing change. The read-only Changelog workflow checks structure and uses runtime-path changes as a heuristic for missing notes; it doesn't generate notes or judge their accuracy. See the contributor guide for explicit internal-maintenance exemptions. It runs independently of the native build, needs no npm dependencies, and doesn't install hooks or enable branch protection.
 
 ## What's still future work
 
