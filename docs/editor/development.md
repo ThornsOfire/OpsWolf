@@ -85,6 +85,7 @@ Update the documented defaults when behavior changes. For example, the old custo
 | --- | --- |
 | Context meter | Not implemented |
 | Selection/right-click citations into chat and jump-back anchors | Not implemented in the committed editor |
+| Broader editable-format support | Planned; additional formats and priorities are still to be chosen. Track preview, source/structured editing, and save support separately; don't treat a preview plugin as an editor. |
 | Structured Markdown table-cell editing | Source editing exists; a dedicated matrix editor doesn't |
 | Configurable name/logo/appearance branding | Not implemented |
 | Fork-specific update selection/distribution | Upstream endpoints remain inherited |

@@ -115,7 +115,7 @@ This hooks into the native desktop layout, so Codex updates can break parts of t
 
 Project pins and UI preferences stay local. Native chat history is the source of recorded patches; we don't add a separate permanent diff archive. **Open file** loads the current file, which might have changed since that patch was recorded. Deleted-file and combined comparisons don't get a source-file button.
 
-The context meter, selection-to-chat citations, richer Markdown table editing, configurable branding, and a fork-specific update workflow are on the wishlist. They aren't shipped features yet.
+The context meter, selection-to-chat citations, broader editable-format support, richer Markdown table editing, configurable branding, and a fork-specific update workflow are on the wishlist. They aren't shipped features yet. We'll choose additional formats as we go and document preview, editing, and saving support separately.
 
 ## Credit and contributing
 
