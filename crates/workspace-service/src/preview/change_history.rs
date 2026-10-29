@@ -23,7 +23,7 @@ fn regular(path:&Path)->bool {fs::symlink_metadata(path).is_ok_and(|m| {
  m.is_file()&&!m.file_type().is_symlink()
 })}
 #[derive(Clone)]
-struct Entry {fingerprint:String,text:Option<String>,size:u64}
+struct Entry {fingerprint:String,text:Option<String>,size:u64,modified_ns:u128}
 struct Snapshot {entries:BTreeMap<String,Entry>,complete:bool,unavailable:usize}
 
 impl Workspace {
@@ -38,7 +38,7 @@ impl Workspace {
   let meta=file.metadata().map_err(|e|map_io(&e))?;
   let size=meta.len();
   let stamp=meta.modified().ok().and_then(|m|m.duration_since(UNIX_EPOCH).ok()).map(|d|d.as_nanos()).unwrap_or_default();
-  let mut entry=Entry{fingerprint:format!("{size}:{stamp}"),text:None,size};
+  let mut entry=Entry{fingerprint:format!("{size}:{stamp}"),text:None,size,modified_ns:stamp};
   if policy==PreviewPolicy::Text&&size<=MAX_TEXT_FILE_BYTES as u64&&size<=budget as u64 {
    let mut bytes=Vec::with_capacity(size as usize);
    Read::by_ref(&mut file).take(MAX_TEXT_FILE_BYTES as u64+1).read_to_end(&mut bytes).map_err(|e|map_io(&e))?;
@@ -53,7 +53,7 @@ impl Workspace {
   self.ensure_root_valid()?;
   let mut result=Snapshot{entries:BTreeMap::new(),complete:true,unavailable:0};
   let mut queue=VecDeque::from([(String::new(),0usize)]);
-  let mut seen=0usize;let mut bytes=0usize;let started=std::time::Instant::now();
+  let mut seen=0usize;let mut bytes=0usize;let started=std::time::Instant::now();let wall_start=SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_nanos();
   while let Some((path,depth))=queue.pop_front(){
    if started.elapsed()>Duration::from_secs(10){result.complete=false;break;}
    if depth>24 {result.complete=false;continue;}
@@ -72,7 +72,7 @@ impl Workspace {
       }
      }else if item.kind==EntryKind::File {
       match self.review_entry(&item.relative_path,SNAPSHOT_BYTES.saturating_sub(bytes)) {
-       Ok(Some(entry))=>{if let Some(text)=&entry.text{bytes+=text.len();}else{result.unavailable+=1;}result.entries.insert(item.relative_path,entry);}
+       Ok(Some(entry))=>{if entry.modified_ns>wall_start{result.complete=false;}if let Some(text)=&entry.text{bytes+=text.len();}else{result.unavailable+=1;}result.entries.insert(item.relative_path,entry);}
        Ok(None)=>{},Err(_)=>result.complete=false,
       }
      }
@@ -155,6 +155,7 @@ impl ChangeTracker {
    if available{content+=size;}
    changes.push(Change{info:ReviewFile{relative_path:path,kind:if old.is_none(){"added"}else if new.is_none(){"deleted"}else{"modified"}.into(),before_bytes:old.map_or(0,|e|e.size),after_bytes:new.map_or(0,|e|e.size),text_available:available},before:if available{old.and_then(|e|e.text.clone())}else{None},after:if available{new.and_then(|e|e.text.clone())}else{None}});
   }
+  if changes.is_empty()&&complete{return Ok(None);}
   let created=now_ms();let id=format!("{created:013}-{:016x}",NEXT_ID.fetch_add(1,Ordering::Relaxed));
   let summary=ReviewSummary{id,created_ms:created,complete,unavailable:changes.iter().filter(|c|!c.info.text_available).count(),files:changes.iter().map(|c|c.info.clone()).collect()};
   let mut record=Record{summary,thread,changes};
@@ -233,4 +234,12 @@ impl ChangeTracker {
   let project=history.directory.join(project_key(&workspace));assert_eq!(fs::read_dir(&project).unwrap().count(),10);
   history.cleanup(now_ms()+RETENTION_MS+1).unwrap();assert_eq!(fs::read_dir(project).unwrap().count(),0);
  }
+ #[test]fn history_disk_cap_evicts_oldest_review_files(){
+  let area=tempfile::tempdir().unwrap();let mut history=ChangeTracker::new(area.path().join("history"));history.prepare().unwrap();
+  let project=history.directory.join("a".repeat(64));fs::create_dir(&project).unwrap();let now=now_ms();
+  for i in 1..=3 {let path=project.join(format!("{:013}-{:016x}.json",now-10+i,i));let file=fs::File::create(path).unwrap();file.set_len(80*1024*1024).unwrap();}
+  history.cleanup(now).unwrap();let files:Vec<_>=fs::read_dir(project).unwrap().flatten().collect();
+  assert_eq!(files.len(),2);assert!(files.iter().map(|f|f.metadata().unwrap().len()).sum::<u64>()<=HISTORY_BYTES);
+ }
+
 }
