@@ -25,6 +25,14 @@ async function clickSelector(selector) {
 const results=[];
 async function check(name, expression) { assert.equal(await ev(expression),true,name);results.push(name); }
 try {
+  await ev(`q('.word-wrap-toggle').dispatchEvent(new PointerEvent('pointerover',{bubbles:true,composed:true}))`);await delay(500);
+  await check('Editor toolbar hover opens the shared bubble without a browser title',`q('#cle-control-tooltip').matches(':popover-open')&&q('#cle-control-tooltip').textContent==='Enable word wrap'&&!q('.word-wrap-toggle').hasAttribute('title')&&getComputedStyle(q('#cle-control-tooltip')).borderRadius==='16px'`);
+  await check('Editor bubble uses editor surface and text colors',`(()=>{const probe=document.createElement('span');probe.style.cssText='color:var(--cle-main-text);background:var(--cle-main-raised)';viewer.shadowRoot.append(probe);const actual=getComputedStyle(q('#cle-control-tooltip')),expected=getComputedStyle(probe),ok=actual.color===expected.color&&actual.backgroundColor===expected.backgroundColor;probe.remove();return ok})()`);
+  await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
+  await ev(`q('.word-wrap-toggle').click();q('.word-wrap-toggle').focus()`);await delay(30);
+  await check('Wrap bubble updates with the active command and keeps its accessible name',`q('#cle-control-tooltip').textContent==='Disable word wrap'&&q('.word-wrap-toggle').getAttribute('aria-label')==='Disable word wrap'`);
+  await ev(`q('.word-wrap-toggle').blur();q('.word-wrap-toggle').click()`);
+  await check('Generated Preview and Edit controls opt in without native duplicate tooltips',`[...viewer.shadowRoot.querySelectorAll('.preview-mode-button')].length>=2&&[...viewer.shadowRoot.querySelectorAll('.preview-mode-button')].every(b=>!!b.dataset.tooltip&&!b.hasAttribute('title')&&!!b.getAttribute('aria-label'))`);
   await ev(`(()=>{const header=document.querySelector('header');header.style.cssText='position:absolute;top:0;left:0;right:0;height:62px;z-index:100;background:#ddd;pointer-events:auto';header.innerHTML='Native Codex title and controls <button id="native-control" style="float:right">Native control</button>';window.nativeClicks=0;document.querySelector('#native-control').onclick=()=>nativeClicks++;state.tabs.push({...file,path:'second.ts',name:'second.ts'});viewer.addEventListener('cle-main-preview-close',e=>{state.tabs=state.tabs.filter(t=>t.path!==e.detail.path);if(state.activePath===e.detail.path)state.activePath=state.tabs[0]?.path??null;show();});show();})()`);
   await clickSelector('[role="tab"][data-path="second.ts"]');
   await check('Real pointer switches document tabs beneath native header', `state.activePath==='second.ts'`);
@@ -84,8 +92,11 @@ try {
   await ev(`document.querySelector('header').innerHTML='<div data-app-shell-header-toolbar style="display:flex;align-items:center;justify-content:space-between;height:100%"><div>Chat title</div><div id="chat-actions" style="display:flex;align-items:center;gap:6px"><button id="dots">...</button><button id="summary">Pinned summary</button><button id="new-tab">New tab</button></div></div>';window.headerE=()=>document.querySelector('[data-code-codex-editor-control]')?.shadowRoot.querySelector('button');show()`);await delay(80);
   await check('E moves into native chat-header actions and leaves file-tab row', `!!headerE()&&headerE().textContent==='E'&&q('.editor-pane-toggle').hidden&&document.querySelector('#chat-actions').firstElementChild.hasAttribute('data-code-codex-editor-control')`);
   await check('E occupies its own hit target beside native controls', `(()=>{const e=headerE().getBoundingClientRect(),d=document.querySelector('#dots').getBoundingClientRect();return e.right<=d.left&&e.top>=document.querySelector('header').getBoundingClientRect().top})()`);
+  await ev(`headerE().dispatchEvent(new PointerEvent('pointerover',{bubbles:true,composed:true}))`);await delay(500);
+  await check('Native-header E has its own shared bubble and no browser title',`headerE().getRootNode().querySelector('#cle-control-tooltip').matches(':popover-open')&&headerE().getRootNode().querySelector('#cle-control-tooltip').textContent==='Close editor'&&!headerE().hasAttribute('title')`);
+  await ev(`document.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}))`);
   await ev(`headerE().click()`);await delay(80);
-  await check('Header E closes editor while preserving dirty draft', `!viewer.hasAttribute('data-editor-visible')&&q('textarea').value==='const changed = 2;'&&state.editor.draft==='const changed = 2;'&&headerE().title==='Open editor'`);
+  await check('Header E closes editor while preserving dirty draft', `!viewer.hasAttribute('data-editor-visible')&&q('textarea').value==='const changed = 2;'&&state.editor.draft==='const changed = 2;'&&headerE().dataset.tooltip==='Open editor'`);
   await ev(`headerE().click()`);await delay(80);
   await check('Header E reopens editor without changing layout', `viewer.hasAttribute('data-editor-pane-open')&&headerE().getAttribute('aria-pressed')==='true'`);
   await ev(`document.querySelector('#chat-actions').replaceWith(document.querySelector('#chat-actions').cloneNode(true));document.querySelector('[data-code-codex-editor-control]').remove()`);await delay(80);
@@ -102,13 +113,13 @@ try {
   await ev(`window.savedState={...state};state={activePath:null,tabs:[],enabledPreviewers:[]};show()`);await delay(80);
   await check('Last file closing leaves a useful empty editor', `!!headerE()&&!headerE().disabled&&!!q('.editor-empty')&&viewer.hasAttribute('data-editor-pane-open')`);
   await ev(`headerE().click()`);await delay(60);
-  await check('Empty editor closes and leaves enabled E ready to open', `!viewer.hasAttribute('data-editor-visible')&&!headerE().disabled&&headerE().getAttribute('aria-pressed')==='false'&&headerE().title==='Open editor'&&getComputedStyle(q('.surface')).display==='none'&&!document.querySelector('#chat').hasAttribute('inert')`);
+  await check('Empty editor closes and leaves enabled E ready to open', `!viewer.hasAttribute('data-editor-visible')&&!headerE().disabled&&headerE().getAttribute('aria-pressed')==='false'&&headerE().dataset.tooltip==='Open editor'&&getComputedStyle(q('.surface')).display==='none'&&!document.querySelector('#chat').hasAttribute('inert')`);
   await ev(`headerE().click()`);await delay(60);
-  await check('E opens an empty editor with no document loaded', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-empty').textContent.includes('Open a file')&&headerE().getAttribute('aria-pressed')==='true'&&headerE().title==='Close editor'`);
+  await check('E opens an empty editor with no document loaded', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-empty').textContent.includes('Open a file')&&headerE().getAttribute('aria-pressed')==='true'&&headerE().dataset.tooltip==='Close editor'`);
   await ev(`q('.editor-fullscreen-toggle').click()`);await delay(60);
-  await check('Dedicated fullscreen control expands an empty editor', `!viewer.hasAttribute('data-editor-pane')&&viewer.hasAttribute('data-editor-visible')&&q('.editor-fullscreen-toggle').title==='Restore editor to right pane'`);
+  await check('Dedicated fullscreen control expands an empty editor', `!viewer.hasAttribute('data-editor-pane')&&viewer.hasAttribute('data-editor-visible')&&q('.editor-fullscreen-toggle').dataset.tooltip==='Restore editor to right pane'`);
   await ev(`q('.editor-fullscreen-toggle').click()`);await delay(60);
-  await check('Dedicated restore control docks an empty editor', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-fullscreen-toggle').title==='Expand editor'`);
+  await check('Dedicated restore control docks an empty editor', `viewer.hasAttribute('data-editor-pane-open')&&q('.editor-fullscreen-toggle').dataset.tooltip==='Expand editor'`);
   await ev(`state=savedState;show()`);await delay(80);
   await check('Opening a file enables the existing header E', `!!headerE()&&!headerE().disabled&&viewer.hasAttribute('data-editor-pane-open')`);
   await ev(`viewer.setSuspended(true)`);
@@ -173,6 +184,7 @@ try {
   await check('Replacing docked editors never preserves another editor width as original',`document.querySelector('#chat').style.maxWidth==='98%'&&document.querySelector('#chat').style.width===''`);
   await ev(`dockedReplacement.showEditor();dockedReplacement.remove();document.querySelector('main').append(dockedReplacement)`);await delay(60);
   await check('Same-element synchronous reconnect reapplies right-pane layout and one E control',`dockedReplacement.hasAttribute('data-editor-pane-open')&&document.querySelector('#chat').style.width.includes('calc')&&document.querySelectorAll('[data-code-codex-editor-control]').length===1`);
+  await check('Remount retains exactly one tooltip service per editor and E root',`dockedReplacement.shadowRoot.querySelectorAll('#cle-control-tooltip').length===1&&headerE().getRootNode().querySelectorAll('#cle-control-tooltip').length===1`);
   await ev(`dockedReplacement.remove()`);await delay(60);
   await ev(`viewer.remove()`); await delay(60);
   await check('Disposal restores original native styles', `document.querySelector('#chat').style.maxWidth==='98%'&&document.querySelector('#chat').style.width===''`);

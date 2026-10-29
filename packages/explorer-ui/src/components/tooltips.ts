@@ -1,5 +1,5 @@
 /** Opt-in tooltips for product controls. Native/user content is never scanned. */
-export function attachTooltips(root: ShadowRoot): () => void {
+export function attachTooltips(root: ShadowRoot, palette: 'explorer' | 'editor' | 'native' = 'explorer'): () => void {
   const doc = root.ownerDocument;
   const bubble = doc.createElement('div');
   if (typeof bubble.showPopover !== 'function') {
@@ -11,12 +11,15 @@ export function attachTooltips(root: ShadowRoot): () => void {
   bubble.setAttribute('popover', 'manual');
   bubble.setAttribute('data-i18n-skip', '');
   const style = doc.createElement('style');
+  const surface = palette === 'editor' ? 'var(--cle-main-raised, #242424)' : palette === 'native' ? 'var(--color-surface, #242424)' : 'var(--cle-paper-raised, #242424)';
+  const ink = palette === 'editor' ? 'var(--cle-main-text, #f2f2f2)' : palette === 'native' ? 'var(--color-text-primary, inherit)' : 'var(--cle-ink, #f2f2f2)';
+  const rule = palette === 'editor' ? 'var(--cle-main-line, #383838)' : palette === 'native' ? 'var(--color-border, GrayText)' : 'var(--cle-rule, #383838)';
   style.textContent = `#cle-control-tooltip {
     position:fixed; inset:auto; margin:0; box-sizing:border-box;
     width:max-content; max-width:min(320px, calc(100vw - 16px));
-    padding:7px 12px; border:1px solid var(--cle-rule, #383838); border-radius:16px;
-    background:color-mix(in srgb, var(--cle-paper-raised, #242424) 94%, var(--cle-ink, #f2f2f2));
-    color:var(--cle-ink, #f2f2f2);
+    padding:7px 12px; border:1px solid ${rule}; border-radius:16px;
+    background:${surface};
+    color:${ink};
     font-family:inherit; font-size:13px; line-height:1.4; font-weight:400;
     box-shadow:0 2px 8px #0002; white-space:normal; overflow-wrap:anywhere;
     pointer-events:auto; user-select:none;

@@ -20,7 +20,7 @@ The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native
 
 Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width.
 
-The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls use rounded bubble tooltips styled after native Codex. Hover briefly or focus a control with the keyboard to show its tooltip; Escape dismisses it. Other controls retain their existing tooltips while this treatment is rolled out.
+The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, the header **E**, and our editor controls use rounded bubble tooltips styled after native Codex. Hover briefly or focus a control with the keyboard to show its tooltip; Escape dismisses it. Editor labels follow the current action, such as Expand/Restore and Enable/Disable wrap. Native comparison controls and document links retain their existing tooltips.
 
 Click a file in the explorer to open it. **E** can also open an empty editor before you've chosen a file.
 

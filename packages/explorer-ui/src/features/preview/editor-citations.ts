@@ -100,7 +100,7 @@ export class EditorCitations {
     const metadata=this.ports.panel.querySelector<HTMLElement>('.preview-metadata');
     if(metadata){metadata.textContent=label;metadata.title=label+(citations.some(c=>c.draft)?' · includes an unsaved-draft reference':'');metadata.setAttribute('role','status');}
     if(!this.ports.panel.querySelector('.citation-clear')){
-      const clear=this.menu.ownerDocument.createElement('button');clear.type='button';clear.className='citation-clear';clear.textContent='Clear';clear.title='Clear citation highlights';
+      const clear=this.menu.ownerDocument.createElement('button');clear.type='button';clear.className='citation-clear';clear.textContent='Clear';clear.dataset.tooltip='Clear citation highlights';
       clear.onclick=()=>{this.sourcePath='';this.ports.element.dispatchEvent(new CustomEvent('cle-main-preview-clear-citations',{bubbles:true,composed:true}));};this.ports.panel.querySelector('.preview-meta-bar')?.append(clear);
     }
     const key=state.citations!.revision+'\0'+state.activePath+'\0'+(editor?'edit':'read');

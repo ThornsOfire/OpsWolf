@@ -1,3 +1,5 @@
+import { attachTooltips } from '../../components/tooltips';
+
 /** A real flex item in the native chat actions row, never a floating overlay. */
 export class EditorHeaderControl {
   private readonly element: HTMLElement;
@@ -7,6 +9,7 @@ export class EditorHeaderControl {
   private enabled=false;
   private compactScope: HTMLElement | undefined;
   private compactStyle: HTMLStyleElement | undefined;
+  private tooltipCleanup: (() => void) | undefined;
   constructor(private readonly host: HTMLElement,private readonly fallback: HTMLButtonElement) {
     const document=host.ownerDocument;
     this.element=document.createElement('span');
@@ -26,9 +29,10 @@ export class EditorHeaderControl {
     this.enabled=enabled;
     this.button.disabled=false;
     this.button.setAttribute('aria-pressed',String(open));
-    this.button.title=open?'Close editor':'Open editor';
-    this.button.setAttribute('aria-label',this.button.title);
+    this.button.dataset.tooltip=open?'Close editor':'Open editor';
+    this.button.setAttribute('aria-label',this.button.dataset.tooltip);
     if(!enabled){this.dispose();return;}
+    this.tooltipCleanup ??= attachTooltips(this.element.shadowRoot!, 'native');
     if(!this.observer){
       this.observer=new MutationObserver(()=>{
         if(this.frame)return;
@@ -81,6 +85,7 @@ export class EditorHeaderControl {
     if(!this.compactStyle.isConnected)this.host.ownerDocument.head.append(this.compactStyle);
   }
   dispose():void {
+    this.tooltipCleanup?.();this.tooltipCleanup=undefined;
     this.enabled=false;this.observer?.disconnect();this.observer=undefined;
     this.host.ownerDocument.defaultView?.cancelAnimationFrame(this.frame);this.frame=0;
     this.element.remove();this.fallback.hidden=false;

@@ -30,6 +30,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Changed
 
+- Shared bubble tooltips now cover the header E and editor controls, including dynamic wrap/fullscreen actions, file-tab controls and Preview/Edit/Save. Each surface supplies its own colors; native comparison controls and document-link tooltips stay with their existing owners.
 - The collapsed docked file explorer uses an 18-pixel expand strip instead of 40 pixels, leaving more space for chat while keeping the full-height expand button.
 - Hiding the editor with E, or returning through its chat tab/Escape, exits fullscreen. E then reopens the editor docked beside chat at its saved width, keeping open files and session drafts. Cancelled switches leave the current layout intact.
 - **E** controls editor visibility; the separate fullscreen button controls layout. Hiding the editor keeps its open tabs and running-session draft. ([controls](https://github.com/ThornsOfire/code-codex/commit/64bc327))

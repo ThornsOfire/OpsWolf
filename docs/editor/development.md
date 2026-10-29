@@ -32,6 +32,7 @@ These commands run from the repository root after UI dependencies are installed.
 
 | Change | Focused check |
 | --- | --- |
+| Shared bubble hover/focus, dismissal, bounds, colors and editor/E lifecycle | `node scripts/test-tooltips.mjs`; `node scripts/test-editor-pane.mjs` |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
 | Native browser/file boundaries, titlebar controls, tab switching, divider drags, embedded-surface position/size notifications and cleanup at zoom | `node scripts/test-native-pane-boundary.mjs` |
 | Single middle pages, pinned Chat, native handlers, overflow, local-file transfer lifecycle and context guards | `node scripts/test-native-middle-pages.mjs` |

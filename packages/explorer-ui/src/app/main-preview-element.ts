@@ -11,6 +11,7 @@ import { usesClippedMainLayout } from "../adapters/codex-layout-version";
 import { getBootstrapConfig } from "../bridge";
 import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { mainPreviewStyles } from "../components/styles/main-preview";
+import { attachTooltips } from "../components/tooltips";
 import { EditorHeaderControl } from "../features/preview/editor-header-control";
 import { EDITOR_PANE_KEY, EditorPaneLayout, nativeHeaderInset, readEditorPanePreference } from "../features/preview/editor-pane";
 import { INLINE_TEXT_BYTES } from "../core/preview/text-configuration";
@@ -142,12 +143,12 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       <style>${mainPreviewStyles}${SURFACE_OPACITY_PREVIEW_CSS}${codeMinimapStyles}</style>
       <div class="surface">
         <div class="editor-pane-actions">
-          <button type="button" class="tab-pin-toggle" title="Pin this file for this project" aria-pressed="false">Pin</button>
-          <button type="button" class="open-files-toggle" popovertarget="open-files-menu" popovertargetaction="toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
-          <button type="button" class="editor-pane-toggle" title="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
-          <button type="button" class="word-wrap-toggle" title="Enable word wrap" aria-label="Enable word wrap" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 3h12M2 7h9a3 3 0 0 1 0 6H8m2-2-2 2 2 2M2 11h3"/></svg></button>
-          <button type="button" class="editor-fullscreen-toggle" title="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
-          <button type="button" class="editor-pane-close" title="Close all unpinned tabs" aria-label="Close all unpinned tabs">×</button>
+          <button type="button" class="tab-pin-toggle" data-tooltip="Pin this file for this project" aria-pressed="false">Pin</button>
+          <button type="button" class="open-files-toggle" popovertarget="open-files-menu" popovertargetaction="toggle" data-tooltip="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
+          <button type="button" class="editor-pane-toggle" data-tooltip="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
+          <button type="button" class="word-wrap-toggle" data-tooltip="Enable word wrap" aria-label="Enable word wrap" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 3h12M2 7h9a3 3 0 0 1 0 6H8m2-2-2 2 2 2M2 11h3"/></svg></button>
+          <button type="button" class="editor-fullscreen-toggle" data-tooltip="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
+          <button type="button" class="editor-pane-close" data-tooltip="Close all unpinned tabs" aria-label="Close all unpinned tabs">×</button>
         </div>
         <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>
         <div class="tab-strip" role="tablist" aria-label="Conversation and file previews"></div>
@@ -226,6 +227,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _languageCleanup: (() => void) | undefined;
+  _tooltipCleanup: (() => void) | undefined;
 
   connectedCallback(): void {
     if (this._connected) {this._syncSuppression();return;}
@@ -233,6 +235,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._citationUi.start();
     this._linkUi.start();
     this._languageCleanup = localizeOwnedUi(this._shadow);
+    this._tooltipCleanup = attachTooltips(this._shadow, 'editor');
     this.ownerDocument.defaultView?.addEventListener("code-codex:plugin-loaded", this._onPluginLoaded);
     if (this._clippedLayout) this.dataset.clippedLayout = "true";
     this._render();
@@ -267,6 +270,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._editorHeader.dispose();
     this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
+    this._tooltipCleanup?.();this._tooltipCleanup = undefined;
     this._connected = false;
     this._wrappedLineNumbers?.dispose();this._wrappedLineNumbers=null;
     this._largeTextReader?.dispose();
@@ -422,7 +426,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const wrapped=native?this._nativeWordWrap:this._wordWrap;
     toggle.disabled=native&&wrapped===undefined;
     toggle.setAttribute('aria-pressed',String(wrapped===true));
-    toggle.title=toggle.disabled?'Word wrap unavailable for this native viewer':wrapped?'Disable word wrap':'Enable word wrap';toggle.setAttribute('aria-label',toggle.title);
+    toggle.dataset.tooltip=toggle.disabled?'Word wrap unavailable for this native viewer':wrapped?'Disable word wrap':'Enable word wrap';toggle.setAttribute('aria-label',toggle.dataset.tooltip);
     const textarea=this._panelMount.querySelector<HTMLTextAreaElement>('.code-editor');
     if(textarea){textarea.wrap=this._wordWrap?'soft':'off';if(this._wordWrap)textarea.scrollLeft=0;this._syncEditorScroll(textarea);}
     this._codeMinimap?.setEnabled(this._minimapEnabled&&!this._wordWrap);
@@ -497,7 +501,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     conversationTab.setAttribute("aria-selected", String(this._state.activePath === null));
     conversationTab.tabIndex = this._rovingPath === null ? 0 : -1;
     conversationTab.dataset.tabKind = "conversation";
-    conversationTab.title = this._conversationTitle;
+    conversationTab.dataset.tooltip = this._conversationTitle;
     conversationTab.append(this._staticIcon(CONVERSATION_ICON, "tab-icon"), this._textSpan(this._conversationTitle, "tab-label"));
     conversationSlot.append(conversationTab);
     fragment.append(conversationSlot);
@@ -513,7 +517,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       tab.type = "button";
       tab.className = "preview-tab";
       tab.id = this._tabId(view.path);
-      tab.title = view.path;
+      tab.dataset.tooltip = view.path;
       tab.setAttribute("role", "tab");
       tab.setAttribute("aria-selected", String(active));
       tab.setAttribute("aria-controls", this._panelId(view.path));
@@ -526,7 +530,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       const close = this.ownerDocument.createElement("button");
       close.type = "button";
       close.className = "tab-close";
-      close.title = `Close ${view.name}`;
+      close.dataset.tooltip = `Close ${view.name}`;
       close.setAttribute("aria-label", `Close ${view.name}`);
       close.dataset.closePath = view.path;
       close.innerHTML = icons.close;
@@ -539,7 +543,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const pinned = this._state.activePath !== null && this._state.pinnedPaths?.includes(this._state.activePath) === true;
     pin.disabled = this._state.activePath === null || this._state.activePath.startsWith('git-diff://') || this._state.activePath.startsWith('review-diff://') || this._state.activePath.startsWith('native-diff://');
     pin.textContent = pinned ? 'Unpin' : 'Pin';
-    pin.title = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
+    pin.dataset.tooltip = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
     pin.setAttribute('aria-pressed', String(pinned));
     this._required<HTMLButtonElement>('.editor-pane-close').disabled=this._state.tabs.every(tab=>this._state.pinnedPaths?.includes(tab.path))||this._state.editor?.saving===true;
     this._required('.open-files-toggle').setAttribute('aria-label', `All open files (${this._state.tabs.length})`);
@@ -555,7 +559,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       button.setAttribute('role', 'menuitemradio');
       button.setAttribute('aria-checked', String(view.path === this._state.activePath));
       button.textContent = `${this._state.pinnedPaths?.includes(view.path) ? '◆ ' : ''}${view.path}`;
-      button.title = view.path;
+      button.dataset.tooltip = view.path;
       button.addEventListener('click', () => {
         if (this._dispatchActivate({ kind: 'file', path: view.path })) this._openFilesMenu.hidePopover();
       });
@@ -691,7 +695,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     metaBar.append(location, this._textSpan(metadata, "preview-metadata"));
     const action=(label:string,title:string,callback:()=>void,disabled=false):HTMLButtonElement=>{
       const button=this.ownerDocument.createElement('button');button.type='button';button.textContent=label;
-      button.className='preview-mode-button';button.title=title;button.disabled=disabled;
+      button.className='preview-mode-button';button.dataset.tooltip=title;button.setAttribute('aria-label',label);button.disabled=disabled;
       button.style.cssText='flex:none;padding:2px 6px;font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;cursor:pointer';
       button.addEventListener('click',callback);metaBar.append(button);return button;
     };
@@ -742,7 +746,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       const toggle = this.ownerDocument.createElement("button");
       toggle.type = "button";
       toggle.className = "minimap-toggle";
-      toggle.title = "Toggle code minimap";
+      toggle.dataset.tooltip = "Toggle code minimap";
       toggle.setAttribute("aria-label", "Toggle code minimap");
       toggle.setAttribute("aria-pressed", String(this._minimapEnabled));
       toggle.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M2 3h7M2 6h5M2 9h7M2 12h5M12 2v12M14 3v3m0 2v4"/></svg>';
@@ -2166,11 +2170,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.toggleAttribute('data-editor-visible',visible);
     const toggle=this._required<HTMLButtonElement>('.editor-pane-toggle');
     toggle.setAttribute('aria-pressed',String(visible));
-    toggle.title=visible?'Close editor':'Open editor';toggle.setAttribute('aria-label',toggle.title);
+    toggle.dataset.tooltip=visible?'Close editor':'Open editor';toggle.setAttribute('aria-label',toggle.dataset.tooltip);
     this._editorHeader.sync(hasNativeSurface && this._connected && !this._suspended,visible);
     const fullscreen=this._required<HTMLButtonElement>('.editor-fullscreen-toggle');
-    fullscreen.title=this._panePreference.docked?'Expand editor':'Restore editor to right pane';
-    fullscreen.setAttribute('aria-label',fullscreen.title);
+    fullscreen.dataset.tooltip=this._panePreference.docked?'Expand editor':'Restore editor to right pane';
+    fullscreen.setAttribute('aria-label',fullscreen.dataset.tooltip);
     fullscreen.setAttribute('aria-pressed',String(!this._panePreference.docked));
     fullscreen.innerHTML=this._panePreference.docked
       ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 2H2v4m8-4h4v4M2 10v4h4m8-4v4h-4"/></svg>'
@@ -2247,7 +2251,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         const tab = this._tabList.querySelector<HTMLButtonElement>('[data-tab-kind="conversation"]');
         const label = tab?.querySelector<HTMLElement>(".tab-label");
         if (label) label.textContent = titleText;
-        if (tab) tab.title = titleText;
+        if (tab) tab.dataset.tooltip = titleText;
       }
       const titleRect = title?.getBoundingClientRect();
       const headerRect = header?.getBoundingClientRect();
