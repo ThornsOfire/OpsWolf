@@ -142,19 +142,21 @@ impl ChangeTracker {
   let project=project_key(workspace);let thread=thread_key(thread);
   if active.project!=project||active.thread!=thread{return Err(WorkspaceError::Conflict);}
   let after=workspace.review_snapshot()?;let before=active.snapshot;
-  let mut changes=Vec::new();let mut content=0usize;
+  let mut changes=Vec::new();let mut content=0usize;let mut path_bytes=0usize;let mut complete=before.complete&&after.complete;
   let paths:BTreeSet<_>=before.entries.keys().chain(after.entries.keys()).cloned().collect();
   for path in paths {
    let old=before.entries.get(&path);let new=after.entries.get(&path);
    if old.zip(new).is_some_and(|(a,b)|match (&a.text,&b.text){(Some(x),Some(y))=>x==y,_=>a.fingerprint==b.fingerprint}){continue;}
    if old.is_none()&&!before.complete||new.is_none()&&!after.complete{continue;}
+   if changes.len()>=2000||path_bytes+path.len()>256*1024{complete=false;break;}
+   path_bytes+=path.len();
    let size=old.and_then(|e|e.text.as_ref()).map_or(0,String::len)+new.and_then(|e|e.text.as_ref()).map_or(0,String::len);
    let available=old.is_none_or(|e|e.text.is_some())&&new.is_none_or(|e|e.text.is_some())&&content+size<=CONTENT_BYTES;
    if available{content+=size;}
    changes.push(Change{info:ReviewFile{relative_path:path,kind:if old.is_none(){"added"}else if new.is_none(){"deleted"}else{"modified"}.into(),before_bytes:old.map_or(0,|e|e.size),after_bytes:new.map_or(0,|e|e.size),text_available:available},before:if available{old.and_then(|e|e.text.clone())}else{None},after:if available{new.and_then(|e|e.text.clone())}else{None}});
   }
   let created=now_ms();let id=format!("{created:013}-{:016x}",NEXT_ID.fetch_add(1,Ordering::Relaxed));
-  let summary=ReviewSummary{id,created_ms:created,complete:before.complete&&after.complete,unavailable:changes.iter().filter(|c|!c.info.text_available).count(),files:changes.iter().map(|c|c.info.clone()).collect()};
+  let summary=ReviewSummary{id,created_ms:created,complete,unavailable:changes.iter().filter(|c|!c.info.text_available).count(),files:changes.iter().map(|c|c.info.clone()).collect()};
   let mut record=Record{summary,thread,changes};
   let mut data=serde_json::to_vec(&record).map_err(|_|WorkspaceError::Internal)?;
   if data.len()>RECORD_BYTES {
@@ -204,7 +206,7 @@ impl ChangeTracker {
   self.prepare()?;let directory=self.directory.join(project_key(workspace));
   crate::application_paths::validate_directory_path(&directory).map_err(io_error)?;
   if directory.exists(){for file in fs::read_dir(directory).map_err(io_error)?.flatten(){let path=file.path();if path.file_stem().and_then(|s|s.to_str()).is_some_and(valid_id)&&regular(&path){fs::remove_file(path).map_err(io_error)?;}}}
-  self.cached=None;Ok(())
+  self.cached=None;self.active=None;Ok(())
  }
 }
 
