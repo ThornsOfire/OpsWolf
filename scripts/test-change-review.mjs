@@ -19,7 +19,7 @@ window.bridge={available:true,request:async(method,p)=>{actions.push({method,...
 window.viewer=document.createElement(fixtureTag);document.querySelector('main').append(viewer);
 window.host={element:document.body,state:'ready',context,bridge,mainPreviewSurface:document.querySelector('main'),mainPreview:viewer,editingPath:null,editDraft:'',editSaving:false,enabledPreviewers:new Set(),settings:{collapsed:false},generation:1,collapse(){},reportEditingConflict(){},renderVisible(){},announce(){},syncEditModeButton(){},ensureMainPreview:()=>viewer,detachMainPreview(){},clearEditing(){return false;},leaveEditing(){return true;}};
 window.workspace=new PreviewWorkspaceController(host);
-window.ports={element:document.querySelector('main'),get bridge(){return bridge;},get context(){return context;},enabled:true,openDiff:(id,path,content)=>{openCalls++;workspace.openReviewDiff(id,path,content);}};
+window.ports={element:document.querySelector('main'),get bridge(){return bridge;},get context(){return context;},enabled:true,openDiff:(id,path,content,source)=>{openCalls++;workspace.openReviewDiff(id,path,content,source);}};
 window.controller=new ChangeReviewController(ports);controller.start();window.q=s=>document.querySelector('[data-code-codex-change-review]')?.shadowRoot.querySelector(s);
 </script>`;
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/core.js'?'text/javascript':'text/html');res.end(req.url==='/core.js'?bundle.outputFiles[0].text:html);});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),ev=e=>browser.evaluate(e),checks=[];
@@ -42,8 +42,10 @@ try{
  await click('.file-toggle');
  await click('.file-name');
  await check('File opens recorded native diff in right editor without opening a native middle tab',`workspace.previewTabs.length===1&&workspace.previewTabs[0].view.content.includes('-old line\\n+new line')&&viewer.hasAttribute('data-editor-pane-open')&&nativeTabs===0`);
+ await check('Individual diff offers current source without making the patch editable',`workspace.previewTabs[0].view.openSourcePath==='IDEAS.md'&&viewer.shadowRoot.querySelector('.preview-mode-button').textContent==='Open file'&&!viewer.shadowRoot.querySelector('textarea')`);
  await ev(`document.querySelector('#native-latest .original-view').click()`);
  await check('Recognized native View changes is routed to custom editor',`nativeTabs===0&&workspace.previewTabs.some(t=>t.name==='All changed files')`);
+ await check('Combined diff has no synthetic source file action',`!workspace.previewTabs.find(t=>t.name==='All changed files').view.openSourcePath&&!viewer.shadowRoot.querySelector('.preview-mode-button')`);
  await ev(`document.querySelector('#native-unknown .original-view').click()`);
  await check('Unknown card retains its original native behavior',`nativeTabs===1`);
  await click('.undo');

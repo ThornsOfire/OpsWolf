@@ -839,8 +839,8 @@ export class CodeCodexElement extends HTMLElement {
         const reviewPorts={element:this,
             get bridge(){return owner.#workspaceSession.bridge;},get context(){return owner.#workspaceSession.context;},
             get enabled(){return owner.#connected&&!owner.#dismissed&&owner.#homeViewActive&&(owner.#state==='ready'||owner.#state==='empty');},
-            openDiff:(id:string,path:string,content:string)=>{
-                const open=()=>owner.#previewWorkspace.openReviewDiff(id,path,content);
+            openDiff:(id:string,path:string,content:string,openSourcePath?:string)=>{
+                const open=()=>owner.#previewWorkspace.openReviewDiff(id,path,content,openSourcePath);
                 const editing=owner.#previeweditingSettings;
                 if(editing.drafts.path&&editing.isEditDirty())void owner.#requestEditorClose(editing.drafts.path,open);
                 else open();
@@ -2809,6 +2809,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.addEventListener("cle-main-preview-close", this.#onMainPreviewClose as EventListener);
         preview.addEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.addEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
+        preview.addEventListener("cle-main-preview-open-source", this.#onMainPreviewOpenSource as EventListener);
         preview.addEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.addEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
         preview.addEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
@@ -2829,6 +2830,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.removeEventListener("cle-main-preview-close", this.#onMainPreviewClose as EventListener);
         preview.removeEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.removeEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
+        preview.removeEventListener("cle-main-preview-open-source", this.#onMainPreviewOpenSource as EventListener);
         preview.removeEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.removeEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
         preview.removeEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
@@ -2953,6 +2955,18 @@ export class CodeCodexElement extends HTMLElement {
         this.#previeweditingSettings.drafts.text = detail.text;
         this.#previeweditingSettings.drafts.revision += 1;
         this.#previeweditingSettings.syncEditModeButton();
+    };
+    #onMainPreviewOpenSource = (event: CustomEvent<unknown>): void => {
+        if(event.target!==this.#mainPreview)return;
+        const detail=asRecord(event.detail);
+        if(typeof detail?.path!=='string'||detail.path!==this.#activePreviewPath)return;
+        const tab=this.#previewWorkspace.previewTabs.find(tab=>tab.path===detail.path);
+        if(tab?.view.kind!=='git-diff'||!tab.view.openSourcePath)return;
+        const editing=this.#previeweditingSettings;
+        const open=()=>this.#previewWorkspace.openDiffSource(tab.path);
+        if(editing.drafts.path&&editing.drafts.path!==tab.view.openSourcePath&&editing.isEditDirty())
+            void this.#requestEditorClose(editing.drafts.path,open);
+        else open();
     };
     #onMainPreviewEdit = (event: CustomEvent<unknown>): void => {
         if(event.target !== this.#mainPreview) return;

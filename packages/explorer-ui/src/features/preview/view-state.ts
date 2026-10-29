@@ -92,6 +92,7 @@ export function cloneView(view: MainPreviewFileView): MainPreviewFileView {
         path: view.path,
         name,
         sourcePath: view.sourcePath,
+        openSourcePath: view.openSourcePath,
         content: view.content,
         truncated: view.truncated,
         shortHash: view.shortHash,

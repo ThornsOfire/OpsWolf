@@ -51,16 +51,22 @@ export class PreviewWorkspaceController {
  const tab:PreviewTab={instanceId:this.tabStore.nextInstanceId(),path:saved.path,name:saved.name,revision:1,timer:undefined,modifiedDuringSave:false,dirty:false,view:saved.view};this.tabStore.append(tab);return tab;
  }
 
-  openReviewDiff(recordId:string,path:string,content:string):void {
+  openDiffSource(path:string):void {
+    if(this.activePreviewPath!==path)return;
+    const view=this.previewTabs.find(tab=>tab.path===path)?.view;
+    if(view?.kind!=='git-diff'||!view.openSourcePath)return;
+    this.openPreviewPath(view.openSourcePath,view.openSourcePath.split(/[\\/]/).at(-1)??view.openSourcePath);
+  }
+  openReviewDiff(recordId:string,path:string,content:string,openSourcePath?:string):void {
     const preview=this.host.ensureMainPreview();if(!preview)return;
     const tabPath=`review-diff://${recordId}/${path}`;
     let tab=this.previewTabs.find(tab=>tab.path===tabPath);
     if(!tab){
       if(this.previewTabs.length>=MAX_PREVIEW_TABS)this.evictUnpinnedTab();
-      tab={path:tabPath,name:path.split('/').at(-1)||path,view:{kind:'git-diff',path:tabPath,name:path.split('/').at(-1)||path,sourcePath:path,content,truncated:false,shortHash:'Last response'},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false};
+      tab={path:tabPath,name:path.split('/').at(-1)||path,view:{kind:'git-diff',path:tabPath,name:path.split('/').at(-1)||path,sourcePath:path,openSourcePath,content,truncated:false,shortHash:'Last response'},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false};
       this.tabStore.append(tab);
     }
-    else if(tab.view.kind==='git-diff')tab.view={...tab.view,content};
+    else if(tab.view.kind==='git-diff')tab.view={...tab.view,content,openSourcePath};
     this.activePreviewPath=tabPath;preview.showEditor?.();this.syncMainPreview();this.host.renderVisible();
   }
   async openGitDiff(hash: string,path: string): Promise<void> {
@@ -110,6 +116,7 @@ export class PreviewWorkspaceController {
         path: tabPath,
         name,
         sourcePath: result.path||normalizedPath,
+        openSourcePath: result.path||normalizedPath,
         content: result.content,
         truncated: result.truncated,
         shortHash: hash.slice(0,7),

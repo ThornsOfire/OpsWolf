@@ -643,6 +643,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       button.style.cssText='flex:none;padding:2px 6px;font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;cursor:pointer';
       button.addEventListener('click',callback);metaBar.append(button);return button;
     };
+    if(view.kind==='git-diff'&&view.openSourcePath) {
+      action('Open file','Open the current file with Preview and Edit controls',()=>{
+        this._dispatchPathEvent<MainPreviewPathDetail>('cle-main-preview-open-source',{path:view.path});
+      });
+    }
     if(view.kind==='text'||view.kind==='empty') {
       const path=view.path;
       if(view.editable || draftEditor) {

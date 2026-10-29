@@ -21,7 +21,7 @@ export interface ChangeReviewPorts {
  readonly bridge:WorkspaceBridge|undefined;
  readonly context:ExplorerContext|undefined;
  readonly enabled:boolean;
- readonly openDiff:(id:string,path:string,content:string)=>void;
+ readonly openDiff:(id:string,path:string,content:string,openSourcePath?:string)=>void;
 }
 interface NativeCard {element:HTMLElement;previousDisplay:string;previousPriority:string;reviewId:string;}
 /** The native history remains the source of truth; only the visible presentation is adapted. */
@@ -76,7 +76,8 @@ export class ChangeReviewController {
  private open(review:NativeReview,file?:NativeReviewFile):void {
   if(this.key!==this.currentKey())return;
   const content=file?.content??review.files.map(f=>f.content??'').join('\n');
-  if(!content)return;this.ports.openDiff(review.id,file?.relativePath??(review.files.length===1?review.files[0]!.relativePath:'All changed files'),content);
+  const source=file??(review.files.length===1?review.files[0]:undefined);
+  if(!content)return;this.ports.openDiff(review.id,source?.relativePath??'All changed files',content,source?.kind==='delete'?undefined:source?.relativePath);
  }
  private tick=():void=>{
   this.timer=undefined;if(this.disposed)return;

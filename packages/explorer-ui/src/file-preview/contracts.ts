@@ -269,6 +269,7 @@ export interface MainPreviewTextView extends MainPreviewFileBase {
 export interface MainPreviewGitDiffView extends MainPreviewFileBase {
   readonly kind: "git-diff";
   readonly sourcePath: string;
+  readonly openSourcePath?: string | undefined;
   readonly content: string;
   readonly truncated: boolean;
   readonly shortHash: string;
