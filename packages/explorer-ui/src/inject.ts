@@ -1,4 +1,5 @@
 import {nativeSettingsBackgroundCss} from './native-background-surfaces';
+import {collapseNativeSidebarOnStartup} from './native-sidebar';
 import { optionalPluginExport } from './utility-plugin-facade';
 import { monitorStartupReadiness } from './startup-readiness';
 import { getBootstrapConfig } from "./bridge";
@@ -713,6 +714,7 @@ function installRemountObserver(): void {
 
 export function installInjector(): void {
   if (!claimRuntimeOwnership()) return;
+  collapseNativeSidebarOnStartup();
   const startupSplashActive = getBootstrapConfig().startupSplashActive === true;
   prepareStartupTransitionHandoff(startupSplashActive);
   window.__codeCodexInject = injectExplorer;
