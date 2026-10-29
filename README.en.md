@@ -411,3 +411,45 @@ Closing a pinned tab with its individual X warns first; its project pin stays
 saved. Dirty pinned tabs combine this warning with save/discard/cancel choices.
 Switching away from a dirty file through tabs or the file tree offers **Save and
 switch**, **Discard**, and **Cancel**. A failed save keeps the current file and draft.
+
+
+### Completion change reviews
+
+A compact **Latest recorded changes** panel mounts above the active chat composer
+when an observed response ends with file changes. Expand it for per-file unified
+diffs and addition/removal counts. Clicking a filename opens its recorded diff in
+the custom editor, including files outside Git repositories. Dirty editor drafts
+use the existing Save and switch / Discard / Cancel flow before opening a diff.
+The panel preserves unsent composer text. Responses with no observed changes keep
+the most recent useful review.
+
+This is a local workspace snapshot feature: it reports workspace changes observed
+during a response, including simultaneous manual or other-process edits; it does
+not claim sole agent attribution. It starts from the visible chat's response
+activity, so background chats are not independently monitored. Starting/restarting
+mid-response, unreadable paths, scan limits, or writes racing with the initial
+capture are marked as incomplete coverage. Existing pre-installation responses
+cannot be reconstructed retroactively.
+
+Snapshots follow the workspace's ignore rules and native sensitive-file policy.
+Private AppData, generated/build output, dependency folders, and project artifacts
+are excluded. UTF-8 text diffs support files up to 10 MiB. Binary or unavailable
+content is listed explicitly without pretending a text diff exists. Each scan is
+bounded to 25,000 entries, depth 24, about 10 seconds, and 64 MiB of text. Reviews
+hold up to 2,000 changed entries / 256 KiB of path metadata, 32 MiB of before/after
+text, and a 64 MiB record. Partial coverage and unavailable diffs remain visible.
+
+Only changed-file before/after copies are persisted. The starting snapshot stays
+in memory. Private history lives beside the discovered settings file under
+`change-history`, with hashed project directories; no personal Desktop path is
+required. No new network service is used. Retention is the newest **10 reviews per
+project**, no older than **7 days**, under a **200 MiB total** disk budget. Oldest
+records are removed before incoming writes. Expiration runs on history activity
+and approximately once a minute while the active chat is idle; stopped apps clean
+up on their next use. **Clear history** deletes only that project's review copies,
+including the active temporary capture, and never project/source files. Diffs
+already opened in editor tabs remain in memory until those tabs close.
+
+Per-turn App Server file-change events were evaluated against the installed app;
+command-based edits require snapshots to cover this workflow. Protocol reference:
+[official App Server documentation](https://learn.chatgpt.com/docs/app-server).

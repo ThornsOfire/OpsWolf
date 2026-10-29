@@ -18,7 +18,7 @@ window.dragFixture=(root,path)=>{
 };</script>`;
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/core.js'?'text/javascript':'text/html');res.end(req.url==='/core.js'?bundle.outputFiles[0].text:html);});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`);
 try{
- const root=String.raw`C:\Users\rstic\Desktop\OpsWolf Data`;
+ const root=String.raw`C:\Users\Fixture\Desktop\Example Workspace`;
  for(const path of ['IDEAS.md','notes/sub folder/test #1.md']){
   const result=await browser.evaluate(`dragFixture(${JSON.stringify(root)},${JSON.stringify(path)})`);
   assert.equal(result.text,root+'\\'+path.replaceAll('/','\\'));assert.equal(result.relative,path);assert.equal(result.source,path);assert.equal(result.canMove,true);

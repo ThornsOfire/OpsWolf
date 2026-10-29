@@ -42,6 +42,17 @@ export class PreviewWorkspaceController {
  const tab:PreviewTab={instanceId:this.tabStore.nextInstanceId(),path:saved.path,name:saved.name,revision:1,timer:undefined,modifiedDuringSave:false,dirty:false,view:saved.view};this.tabStore.append(tab);return tab;
  }
 
+  openReviewDiff(recordId:string,path:string,content:string):void {
+    const preview=this.host.ensureMainPreview();if(!preview)return;
+    const tabPath=`review-diff://${recordId}/${path}`;
+    let tab=this.previewTabs.find(tab=>tab.path===tabPath);
+    if(!tab){
+      if(this.previewTabs.length>=MAX_PREVIEW_TABS)this.evictUnpinnedTab();
+      tab={path:tabPath,name:path.split('/').at(-1)||path,view:{kind:'git-diff',path:tabPath,name:path.split('/').at(-1)||path,sourcePath:path,content,truncated:false,shortHash:'Last response'},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false};
+      this.tabStore.append(tab);
+    }
+    this.activePreviewPath=tabPath;preview.showEditor?.();this.syncMainPreview();this.host.renderVisible();
+  }
   async openGitDiff(hash: string,path: string): Promise<void> {
     const normalizedPath=path.replaceAll("\\","/");
     const name=normalizedPath.split("/").at(-1)||normalizedPath;

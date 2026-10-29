@@ -41,7 +41,7 @@ export class LargeTextReader {
   private readonly resize: ResizeObserver;
   private frame=0;
   private disposed=false;
-  constructor(private readonly document: Document,private readonly text:string) {
+  constructor(private readonly document: Document,private readonly text:string,private readonly diff=false) {
     this.rows=indexTextRows(text);
     const root=document.createElement('div');root.className='large-text-reader';this.element=root;
     const tools=document.createElement('div');tools.className='large-text-tools';
@@ -127,6 +127,7 @@ export class LargeTextReader {
       const row=this.document.createElement('div');row.className='large-text-row';
       row.dataset.offset=String(this.rows[index]);
       const slice=this.text.slice(this.rows[index],this.rows[index+1]??this.text.length).replace(/[\r\n]+$/,'');
+      if(this.diff){if(slice.startsWith('+'))row.dataset.change='add';else if(slice.startsWith('-'))row.dataset.change='remove';}
       row.textContent=slice||' ';fragment.append(row);
     }
     this.visible.replaceChildren(fragment);
@@ -143,5 +144,7 @@ export const largeTextStyles=`
 .large-text-viewport { flex:1; min-height:0; position:relative; overflow:auto; overflow-anchor:none; font:12px/20px ui-monospace,Consolas,monospace; tab-size:4; }
 .large-text-spacer { width:1px; pointer-events:none; }
 .large-text-visible { position:absolute; left:8px; min-width:calc(100% - 16px); }
+.large-text-row[data-change="add"] { color:#268b45; }
+.large-text-row[data-change="remove"] { color:#cf4a4a; }
 .large-text-row { height:20px; white-space:pre; width:max-content; min-width:100%; }
 `;

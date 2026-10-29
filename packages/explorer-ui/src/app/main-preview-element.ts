@@ -486,7 +486,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._tabList.replaceChildren(fragment);
     const pin = this._required<HTMLButtonElement>('.tab-pin-toggle');
     const pinned = this._state.activePath !== null && this._state.pinnedPaths?.includes(this._state.activePath) === true;
-    pin.disabled = this._state.activePath === null || this._state.activePath.startsWith('git-diff://');
+    pin.disabled = this._state.activePath === null || this._state.activePath.startsWith('git-diff://') || this._state.activePath.startsWith('review-diff://');
     pin.textContent = pinned ? 'Unpin' : 'Pin';
     pin.title = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
     pin.setAttribute('aria-pressed', String(pinned));
@@ -803,6 +803,12 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         }
         return;
       case "git-diff":
+        if(view.content.length>512*1024){
+          content.classList.add('large-text-content');
+          const style=this.ownerDocument.createElement('style');style.textContent=largeTextStyles;
+          this._largeTextReader=new LargeTextReader(this.ownerDocument,view.content,true);
+          content.append(style,this._largeTextReader.element);return;
+        }
         content.append(this._gitDiffReader(view));
         return;
       case "image":
@@ -1590,7 +1596,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       case "text":
         return view.truncated ? `${formatBytes(view.sizeBytes)} \u00b7 Preview truncated` : formatBytes(view.sizeBytes);
       case "git-diff":
-        return `Commit ${view.shortHash}${view.truncated ? " \u00b7 Diff truncated" : ""}`;
+        return `${view.path.startsWith("review-diff://")?"Response changes":`Commit ${view.shortHash}`}${view.truncated ? " \u00b7 Diff truncated" : ""}`;
       case "empty":
         return formatBytes(view.sizeBytes);
       case "image":
@@ -1619,7 +1625,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _gitDiffReader(view: MainPreviewGitDiffView): HTMLElement {
     const reader = this.ownerDocument.createElement("pre");
     reader.className = "git-diff-reader";
-    reader.setAttribute("aria-label", `${view.name} changes in commit ${view.shortHash}`);
+    reader.setAttribute("aria-label", view.path.startsWith("review-diff://")?`${view.name} recorded response changes`:`${view.name} changes in commit ${view.shortHash}`);
     for (const line of view.content.split("\n")) {
       const row = this.ownerDocument.createElement("span");
       row.className = "git-diff-line";
