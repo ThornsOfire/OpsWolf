@@ -33,7 +33,7 @@ export function localizeOwnedUi(root: HTMLElement|ShadowRoot): () => void {
         if(n.textContent!==value)n.textContent=value;
       }
       const values=attributes.get(n)??new Map<string,{ source: string; rendered: string }>(); attributes.set(n,values);
-      for(const attr of ['title','aria-label','placeholder','aria-valuetext']) {
+      for(const attr of ['title','data-tooltip','aria-label','placeholder','aria-valuetext']) {
         if(attr==='title'&&n.matches('[data-path],.particle-library-select,.gallery-preview')) continue;
         const current=n.getAttribute(attr); if(current===null) continue;
         const prior=values.get(attr); const source=prior?.rendered===current? prior.source:current;
@@ -53,7 +53,7 @@ export function localizeOwnedUi(root: HTMLElement|ShadowRoot): () => void {
   };
   const flush=() => { scheduled=false; if(disposed) return; const nodes=[...queue]; queue.clear(); for(const n of nodes) if(n===root||n.isConnected) visit(n); };
   const observer=new MutationObserver(records => { for(const r of records) { if(r.type==='childList') for(const n of r.addedNodes) queue.add(n); else queue.add(r.target); } if(queue.size&&!scheduled) { scheduled=true; queueMicrotask(flush); } });
-  visit(root); observer.observe(root,{ subtree: true,childList: true,characterData: true,attributes: true,attributeFilter: ['title','aria-label','placeholder','aria-valuetext'] });
+  visit(root); observer.observe(root,{ subtree: true,childList: true,characterData: true,attributes: true,attributeFilter: ['title','data-tooltip','aria-label','placeholder','aria-valuetext'] });
   const unsubscribe=subscribeLanguage(() => visit(root));
   return () => { disposed=true; observer.disconnect(); unsubscribe(); queue.clear(); };
 }

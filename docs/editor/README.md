@@ -18,6 +18,10 @@ The compact native header is 32 CSS pixels tall; editor tabs and the file-contro
 
 The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native pages, with one page visible at a time. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
 
+Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width.
+
+The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls use rounded bubble tooltips styled after native Codex. Hover briefly or focus a control with the keyboard to show its tooltip; Escape dismisses it. Other controls retain their existing tooltips while this treatment is rolled out.
+
 Click a file in the explorer to open it. **E** can also open an empty editor before you've chosen a file.
 
 | Control | Behavior |

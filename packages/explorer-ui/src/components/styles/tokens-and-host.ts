@@ -78,6 +78,12 @@ export const style0 = String.raw`
     width: 40px;
   }
 
+  :host([data-placement="inline"][data-collapsed="true"]) {
+    --cle-width: 18px !important;
+    min-width: 18px;
+    width: 18px;
+  }
+
   :host-context(.dark),
   :host-context(.electron-dark),
   :host-context([data-theme="dark"]),

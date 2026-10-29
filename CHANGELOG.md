@@ -10,6 +10,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Shared bubble tooltips for the file explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, with keyboard focus, Escape dismissal, theme colors, and viewport-aware positioning.
 - A single middle-page strip on qualified native shells, with pinned Chat, native page selection/close proxies, wheel scrolling and an overflow dropdown. Chat and the selected native page use the middle area one at a time instead of competing across an internal divider; native action handlers and sessions stay intact.
 - A local file/preview/PDF action to open or move eligible native tabs into the editor through normal workspace reads. The source stays open on cancellation, save/read failure, unsupported previews, or exposed native editing state; no native draft is silently discarded.
 - Markdown Preview link navigation with destination/action tooltips. In-project file links open normal editor tabs with existing save/switch protection; heading links stay in the document. Website and supported app-URI handoffs require confirmation, with unchecked per-origin/per-protocol remember choices, Shift-click review, and warning-reset controls. Existing renderer protocol restrictions remain enforced; this adds no shell/process runner.
@@ -29,6 +30,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Changed
 
+- The collapsed docked file explorer uses an 18-pixel expand strip instead of 40 pixels, leaving more space for chat while keeping the full-height expand button.
 - Hiding the editor with E, or returning through its chat tab/Escape, exits fullscreen. E then reopens the editor docked beside chat at its saved width, keeping open files and session drafts. Cancelled switches leave the current layout intact.
 - **E** controls editor visibility; the separate fullscreen button controls layout. Hiding the editor keeps its open tabs and running-session draft. ([controls](https://github.com/ThornsOfire/code-codex/commit/64bc327))
 - The editor row's X closes unpinned tabs. Individual pinned-tab closes ask first and retain the pin for next session; Unpin removes the pin without closing the file. ([close behavior](https://github.com/ThornsOfire/code-codex/commit/730027e))
