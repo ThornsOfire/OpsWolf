@@ -35,6 +35,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- Native browser/file panes respect the editor's reserved width instead of overlapping its documents and resize handle. In the qualified shell layout, the native tab bar and right-aligned controls share that boundary, and the docked editor divider extends through the tab-header band. Hiding or expanding the editor restores native sizing.
 - Edit-to-Preview now uses the current unsaved source text immediately, without requiring an application rerender to refresh the editor's draft snapshot.
 - Resizing the editor with native Changes open no longer hits Codex's competing top-layer workspace divider. The hosted comparison leaves room for the editor handle, restores the native divider on release, and keeps its internal file-list divider. Drag widths and chat-space limits now use layout units so zoomed drags track the pointer accurately.
 - The editor's word-wrap control now drives Codex's native Word wrap handler while a Changes tab is active, and reflects changes made through the native control. Unknown native controls disable the custom action instead of showing a wrap state that doesn't affect the comparison.

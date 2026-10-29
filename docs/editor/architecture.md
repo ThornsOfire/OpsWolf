@@ -30,6 +30,8 @@ Abbreviated sibling names in a cell resolve beside the preceding full source pat
 
 Pane top reservations measure marked app-shell headers. Legacy fallback is restricted to headers directly on the main surface or its parent; nested reader/content toolbars aren't app chrome. Including those toolbars creates a layout feedback loop that can push the editor downward.
 
+For the qualified active page with a sibling shell titlebar, docked layout leases the titlebar width and its main-titlebar container to the middle pane boundary. Native end controls remain at that pane's right edge. The editor begins at the same header band's top, converting viewport offsets to layout units for zoom, so its resize strip includes the tab row. Unowned native right-panel asides retain their requested width but are capped to the remaining middle content width; hosted Changes remains under its separate adapter. Native layout writes and child replacement are reconciled, and hiding, expanding, suspension or disposal restores leased properties. Unknown header layouts retain the existing below-header fallback.
+
 ## Reading and editing source
 
 1. `PreviewWorkspaceController` opens or reuses a tab for a relative project path and assigns a tab instance/revision.

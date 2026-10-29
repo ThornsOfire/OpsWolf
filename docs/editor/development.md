@@ -33,6 +33,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Change | Focused check |
 | --- | --- |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
+| Native browser/file pane boundaries, sibling titlebar controls, chat switching and divider drags at zoom | `node scripts/test-native-pane-boundary.mjs` |
 | First chat selection, restored-chat startup, pointer/keyboard activation, delayed readiness and manual reopen | `node scripts/test-native-sidebar.mjs` |
 | Tab wheel/drag/dropdown/pins and close behavior | `node scripts/test-tab-navigation.mjs` |
 | Save/discard/cancel, failed/stale saves and switching | `node scripts/test-close-dialog.mjs` |
