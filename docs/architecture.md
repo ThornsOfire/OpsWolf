@@ -1,5 +1,7 @@
 # Maintenance and extension guide
 
+For this fork's editor-specific ownership, native comparison hosting, review protocol and storage lifecycle, see [editor architecture](editor/architecture.md). The [editor user guide](editor/README.md), [development checks](editor/development.md), and [first-tracker cleanup audit](editor/tracker-cleanup.md) cover the custom workflow end to end.
+
 The application composition wires capabilities together. Feature controllers own their state and behavior. Workspace IO uses the request-only WorkspaceBridge contract; authentication, subscription and bridge disposal stay in application assembly. Core services own shared policies with a single purpose. A feature must not import an application element, modify another feature's fields, or pass an entire application/controller as a substitute for a small capability contract.
 
 ## Ownership

@@ -1,0 +1,96 @@
+# Using the editor fork
+
+This is the longer version of the [main README](../../README.md): what the buttons do, what stays saved, and where the edges are.
+
+## Getting around
+
+The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Closing it this way keeps its open files, selected tab, layout choice, and current draft in the running session. It doesn't save the draft to disk.
+
+Use the editor's fullscreen button to expand the editor, and the same button to restore the right pane. Drag the pane's left edge to resize it. The focused resize separator also supports Left/Right arrow keys. The pane preserves a minimum amount of chat space when the window becomes narrow.
+
+The native sidebar collapses once at startup through its own toggle. You can reopen it afterward; the extension won't keep snapping it shut. This startup behavior doesn't collapse the file explorer.
+
+The compact native header is 32 CSS pixels tall; editor tabs and the file-control row are 28 CSS pixels. Display scaling and application zoom change their physical pixel size.
+
+## Opening and managing files
+
+Click a file in the explorer to open it. **E** can also open an empty editor before you've chosen a file.
+
+| Control | Behavior |
+| --- | --- |
+| Mouse wheel over tabs | Scrolls through tabs when they overflow |
+| Drag a tab | Moves it before or after another tab |
+| Open-files dropdown | Lists open files; arrow keys navigate and Escape dismisses it |
+| Pin / Unpin | Changes whether this file reopens for the current project |
+| A tab's X | Closes that individual tab, with a warning for a pin or unsaved edit |
+| Editor row's X | Closes unpinned tabs; keeps pinned files open |
+| E | Hides or reopens the editor without closing its tabs |
+
+The tab budget is 64; when opening more files, the controller attempts to evict an eligible unpinned tab. Up to 32 files can be pinned for each project. Pins use the project's normalized absolute root as their key and keep relative file paths in reopening order. Moving the project to another root gives it a different pin identity.
+
+Recorded and native comparison tabs are read-only and can't be pinned. Ordinary source files opened from those comparisons can be pinned normally.
+
+Closing a pinned tab individually keeps its pin for next session. **Unpin** removes the pin without closing the file. Missing pinned files show a load error and can be unpinned. A pin isn't a backup and doesn't store a draft.
+
+Dragging an explorer file into chat supplies its absolute local path in the text payload. Internal tree moves keep their separate relative-path payload. The drag operation doesn't automatically give the agent the file's contents.
+
+## Preview, edit, save
+
+**Preview** is read-only. **Edit** enables source editing when the native reader marks the file editable. **Save**, or **Ctrl+S**, writes the complete draft using the loaded file version for conflict detection.
+
+For Markdown, editing shows the source text, including the pipe-delimited table rows. Rendered Markdown is provided by the optional preview plugin. Previewing an unsaved draft keeps that draft in memory; it isn't an implicit save.
+
+Word wrap is available from the editor tab row. It preserves the source, draft, selection, and caret while changing layout. Gutter numbers refer to logical source lines rather than each wrapped screen row. The minimap is hidden while wrapping.
+
+| File size | Reading | Editing |
+| --- | --- | --- |
+| Up to 512 KiB | Complete inline text; optional matching preview plugin | Supported text files the native reader allows |
+| Above 512 KiB through 10 MiB | Complete text in a virtual plain reader; Markdown offers explicit full rendering | Read-only |
+| Above 10 MiB | Explicit size error; no partial document presented as complete | Unavailable |
+
+These are byte limits: 1 KiB is 1,024 bytes. Binary, sensitive, unsupported, or unavailable files have their own restrictions. A rendered preview or syntax-highlighting budget doesn't authorize saving incomplete content.
+
+When switching away from a dirty file, choose **Save and switch**, **Discard**, or **Cancel**. Individual close and close-all similarly offer save-and-close choices. A failed save retains the draft and prevents the dependent close or switch. Save-all currently handles the active dirty editor; this isn't a multi-document unsaved-draft system.
+
+Drafts belong to the running session. There is a short, 10-second in-memory recovery handoff for a native UI refresh, subject to matching chat/bootstrap identity. This isn't recovery after quitting or crashing the entire application. Save before restarting.
+
+## Two ways to review changes
+
+### Persistent Native changes panel
+
+The panel sits above the composer. It reads native patch records for the active chat/project and keeps the latest useful review even after conversational replies. Expand the panel to skim filenames, then use each file's arrow to expand its inline diff independently. Readers are created on expansion and released on collapse.
+
+Click a filename to open its recorded patch in a normal editor diff tab. **Open file** then opens the current source in a separate ordinary tab. That source has its own available Preview / Edit / Save controls, while the recorded patch remains available.
+
+A recorded patch doesn't change when you edit the live file. It describes that response's recorded work. Combined diffs and deleted-file comparisons have no source-file button. If the source has disappeared since the response, its ordinary file tab shows the normal load error; the recorded comparison remains.
+
+Use the recent-review selector to inspect an older cached review and **Refresh** to request native records again. **Undo / Reapply** forwards to the matching mounted native control when available. The extension doesn't implement a separate reversal engine.
+
+### Live files-changed bubble
+
+The native bubble can appear during an active response. Clicking it opens Codex's actual comparison viewer as an editor **Changes** tab. Clicking a file in its hover list lets Codex select the exact file, then focuses that tab. Native comparison modes, file navigation, and other comparison controls stay native.
+
+Switching to another file hides the comparison without closing it. Returning to Changes preserves native viewer state where the host permits it. E hides it with the editor; fullscreen and resizing follow the editor layout. Closing Changes uses the original native close control.
+
+### Coverage and retention
+
+The persistent panel covers completed native patch items for eligible files inside the active project, including ordinary files outside Git. Shell commands and manual edits aren't guaranteed to appear. Sensitive, oversized, unsupported, and outside-project records can be omitted or unavailable. Unknown native cards remain in chat instead of being hidden without a working replacement.
+
+History lookup examines at most 40 one-turn pages and keeps up to 10 useful reviews in memory. The backend projects at most 128 files and 1 MiB of diff content per review; the existing App Server transport has a 4 MiB message limit. These review limits are separate from the 10 MiB source-file reader.
+
+The extension doesn't keep a second permanent snapshot archive. Codex's native chat history has its own lifecycle. This panel isn't a filesystem audit trail or a backup.
+
+## If something looks wrong
+
+| Symptom | First check |
+| --- | --- |
+| Custom controls missing after launch | Use the custom companion launcher and matching UI/native build |
+| PDF or Markdown preview unavailable | Install and enable its verified Preview Market package |
+| Diff has no Edit control | Use **Open file** for the current source; recorded patches are read-only |
+| Open file missing | Combined/deleted comparisons don't have a current source action |
+| Big file readable but not editable | Editing stops at 512 KiB; reading supports 10 MiB |
+| Expected edit absent from Native changes | Check whether it was a native patch, shell command, manual edit, or outside the project |
+| Changes opens in native location | The host layout may be unrecognized; report the Codex version and UI language |
+| Pins disappeared after moving a folder | Pin identity follows the project root |
+
+Please include what you clicked, what happened, and what you expected in a report. Synthetic examples are ideal. The [development guide](development.md) explains how to reproduce the behavior without client documents.
