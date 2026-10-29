@@ -84,5 +84,11 @@ try{
  await check('Reconcile keeps one menu instance',`document.querySelectorAll('#code-codex-application-menu-trigger').length===1&&fixture.writes.length===readsBefore`);
  await ev(`trigger.click();document.querySelector('[data-cursadex-preferences]').click();`);
  await check('Cursadex settings action closes menu and restores a visible focus origin',`trigger.textContent==='Cursadex'&&fixture.settingsOpened&&popup.hidden&&document.activeElement===trigger`);
+ await ev(`localStorage.setItem('cursadex:identity:v1',JSON.stringify({schema:1,selected:'profile-fixture',profiles:[{id:'profile-fixture',name:'Fixture Command',logo:null,colors:{background:'#1f1f1f',foreground:'#f2f2f2',accent:'#79b8ff'}}]}))`);
+ await browser.command('Page.reload');await delay(300);
+ await ev(`window.trigger=document.querySelector('#code-codex-application-menu-trigger');window.popup=document.querySelector('#code-codex-application-menu-popup');window.item=document.querySelector('[data-code-codex-login-startup]');`);
+ await check('Fresh menu uses the saved personal name and badge without changing native menus',`trigger.textContent==='Fixture Command'&&trigger.firstElementChild.style.backgroundColor==='rgb(31, 31, 31)'&&nativeButtons[0].textContent==='File'&&nativeButtons[1].textContent==='Help'`);
+ await ev(`trigger.click();document.querySelector('[data-cursadex-preferences]').click()`);
+ await check('Personalized settings label keeps the original action and focus behavior',`document.querySelector('[data-cursadex-preferences]').textContent==='Fixture Command settings…'&&fixture.settingsOpened&&popup.hidden&&document.activeElement===trigger`);
  writeFileSync(resolve(out,'result.json'),JSON.stringify({passed:true,checks},null,2));console.log(`Application menu: ${checks.length} browser checks passed; no OS state changed`);
 }finally{await browser.close();await new Promise(r=>server.close(r));}

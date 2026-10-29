@@ -36,6 +36,7 @@ These commands run from the repository root after UI dependencies are installed.
 | --- | --- |
 | Shared semantic palettes, host theme changes, custom hooks, contrast and forced-color editing | `node scripts/test-appearance.mjs`; see [appearance contract](appearance.md); also editor, tooltips and background-surface fixtures |
 | Owned settings, legacy preference migration, reset boundaries, modal focus and persistence failures | `node scripts/test-preferences.mjs`; see [settings and scope](settings.md); also editor-pane, minimap, typing, sidebar and menu fixtures |
+| Personal identity profiles, local logo upload/fallback, explicit save and next-document application | `node scripts/test-identity-profiles.mjs`; see [identity scope and Windows/Discord boundaries](identity.md) |
 | Composer WPM timing, trusted input policy, IME boundaries, preferences and cleanup | `node scripts/test-typing-meter.mjs`; see [measurement and verification limits](typing-meter.md) |
 | Chat reading anchor, native scroll displacement, reflow, zoom and lifecycle | `node scripts/test-chat-reading.mjs`; see [candidate behavior](chat-reading.md) |
 | Shared bubble hover/focus, dismissal, bounds, colors and editor/E lifecycle | `node scripts/test-tooltips.mjs`; `node scripts/test-editor-pane.mjs` |

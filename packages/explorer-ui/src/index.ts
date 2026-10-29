@@ -1,4 +1,6 @@
 import { startApplication } from './app/composition';
+import { identityProfiles } from './core/configuration/identity-profiles';
+identityProfiles(); // Capture identity before any settings can save a next-launch profile.
 startApplication();
 
 export { ActiveThreadTracker, extractThreadIdFromDocument, extractThreadIdFromUrl, resolveActiveThread } from "./active-thread";

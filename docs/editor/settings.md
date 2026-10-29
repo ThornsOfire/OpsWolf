@@ -9,6 +9,8 @@ Changes apply in the current window immediately:
 - **Code minimap** uses the same preference as its editor button. Wrapping temporarily hides the minimap without forgetting that preference.
 - **Collapse sidebar after selecting a chat** controls the existing once-per-session behavior. It does not move the current layout immediately or re-arm a collapse already consumed this session.
 
+**Personal identity** has its own explicit Save for next launch. Profiles customize our menu/settings name, PNG logo and name-badge colors; previewing does not change the active identity. Windows and Discord identity remain unchanged. See the [profile controls and compatibility matrix](identity.md).
+
 **Reset these preferences** restores WPM off, source wrapping off, minimap on, and sidebar collapse on. It does not reset files, drafts, pins, pane widths, themes, plugin settings, or permissions. **Reset link warnings** separately removes saved website-origin/application-protocol allowances so subsequent preview clicks ask again; it never launches a link. A failed reset leaves an error in the dialog.
 
 Preferences live in the renderer's local storage under `cursadex:preferences:v1`. Existing wrap/minimap keys are read as migration defaults when their new fields are absent; the old keys are left intact for older builds. Once saved, the central record takes precedence. This is one live store per renderer window, not account sync or a settings file watched across windows. If storage fails, current choices still work in this session and the dialog reports the persistence limitation. It never exports drafts or client content.

@@ -2,6 +2,8 @@ import { getLocale, selectLanguage, subscribeLanguage, translate, t } from './i1
 import { icons } from './icons';
 import type { LoginStartupActions } from './contracts/login-startup';
 import { LoginStartupController } from './features/startup/login-startup';
+import {identityProfiles} from './core/configuration/identity-profiles';
+import {renderIdentityMark} from './components/identity-mark';
 
 interface ApplicationMenuActions extends LoginStartupActions {
   isExplorerVisible(): boolean;
@@ -172,7 +174,12 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   trigger.type = "button";
   trigger.id = "code-codex-application-menu-trigger";
   trigger.className = nativeTriggers().find(button => button.dataset.state !== 'open')?.className ?? mount.lastNativeTrigger.className;
-  trigger.textContent = "Cursadex";
+  const identity = identityProfiles().active;
+  renderIdentityMark(trigger, identity);
+  trigger.style.maxWidth = '220px';
+  trigger.style.overflow = 'hidden';
+  trigger.style.textOverflow = 'ellipsis';
+  trigger.style.whiteSpace = 'nowrap';
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-expanded", "false");
   trigger.dataset.state = 'closed';
@@ -272,7 +279,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   const items: HTMLElement[] = [treeItem, preferencesItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, updateItem, repositoryItem, uninstallItem];
   const updateText=()=>{
     loginStartup.render();
-    preferencesItem.textContent = getLocale() === 'zh-CN' ? 'Cursadex 设置…' : 'Cursadex settings…';
+    preferencesItem.textContent = identity.name + (getLocale() === 'zh-CN' ? ' 设置…' : ' settings…');
     treeItem.textContent=t(actions.isExplorerVisible()?'menu.hideTree':'menu.showTree');
     for(const [item,key] of [[marketItem,'menu.market'],[runtimeItem,'menu.runtime'],[installationItem,'menu.installation'],[updateItem,'menu.updates'],[repositoryItem,'menu.repository'],[uninstallItem,'menu.uninstall']] as const)item.textContent=t(key);
     languageLabel.textContent=t('menu.language');
