@@ -377,3 +377,7 @@ syntax. Preview is read-only and can show the current unsaved
 draft; returning to Edit retains it. Switching between these pane controls does
 not save automatically. Saving still uses the existing conflict checks and
 512 KiB save limit. Larger files and binary formats remain read-only.
+
+The compact **E** control lives in the native chat-header action row, beside
+New tab, and switches between the right editor pane and expanded editor.
+It falls back to the editor tab row when that header slot is unavailable.

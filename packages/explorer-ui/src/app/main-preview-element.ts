@@ -8,6 +8,7 @@ import { usesClippedMainLayout } from "../adapters/codex-layout-version";
 import { getBootstrapConfig } from "../bridge";
 import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { mainPreviewStyles } from "../components/styles/main-preview";
+import { EditorHeaderControl } from "../features/preview/editor-header-control";
 import { EDITOR_PANE_KEY, EditorPaneLayout, nativeHeaderInset, readEditorPanePreference } from "../features/preview/editor-pane";
 import { INLINE_TEXT_BYTES } from "../core/preview/text-configuration";
 import { LargeTextReader,largeTextStyles } from "../features/preview/large-text-reader";
@@ -58,6 +59,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
+  readonly _editorHeader: EditorHeaderControl;
   _panePreference = { docked: true, width: 560 };
   _paneResizeCleanup: (() => void) | undefined;
   _draggedTabPath: string | undefined;
@@ -132,7 +134,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         <div class="editor-pane-actions">
           <button type="button" class="tab-pin-toggle" title="Pin this file for this project" aria-pressed="false">Pin</button>
           <button type="button" class="open-files-toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
-          <button type="button" class="editor-pane-toggle" title="Custom editor build: move files between conversation tabs and the right editor pane" aria-pressed="false">Editor pane · custom</button>
+          <button type="button" class="editor-pane-toggle" title="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
           <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
         </div>
         <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>
@@ -141,6 +143,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       </div>
       <div class="open-files-menu" popover="auto" role="menu" aria-label="Open files"></div>
     `;
+    this._editorHeader=new EditorHeaderControl(this,this._required<HTMLButtonElement>(".editor-pane-toggle"));
     this._tabList = this._required<HTMLElement>(".tab-strip");
     this._panelMount = this._required<HTMLElement>(".panel-mount");
     this._openFilesMenu = this._required('.open-files-menu');
@@ -222,6 +225,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if (this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
     this._clearTabDrag();
     this._paneResizeCleanup?.();
+    this._editorHeader.dispose();
     this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
     this._connected = false;
@@ -2007,6 +2011,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
     this._required('.editor-pane-toggle').setAttribute('aria-pressed', String(this._panePreference.docked));
+    this._editorHeader.sync(hasNativeSurface && this._connected && !this._suspended,this._panePreference.docked,this._state.tabs.length>0);
     if (this._panePreference.docked && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) {
       this._restoreSuppressedChildren();
       this._syncNativeViewportBounds(this.parentElement, null);

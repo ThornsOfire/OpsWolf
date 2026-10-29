@@ -1807,4 +1807,6 @@ export const mainPreviewStyles = String.raw`
   .preview-meta-bar .preview-metadata { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .preview-mode-button[aria-pressed="true"] { background: var(--cle-main-line) !important; }
   .preview-mode-button:disabled { opacity: .5; cursor: default !important; }
+  .editor-pane-toggle { width:28px; padding-inline:0 !important; font-weight:600; }
+  .editor-pane-toggle[hidden] { display:none !important; }
 `;
