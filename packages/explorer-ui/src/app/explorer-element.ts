@@ -868,6 +868,8 @@ export class CodeCodexElement extends HTMLElement {
             target:()=>owner.#mainPreview?.nativeDiffSurface(),
             preview:()=>owner.#mainPreview,
             setWordWrap:enabled=>owner.#mainPreview?.setNativeWordWrapState(enabled),
+            openFile:path=>owner.#openNativeFileInEditor(path),
+            announce:message=>owner.#announce(message),
         });
         this.#nativeDiffHost.start();
         this.#nativeMiddlePages??=new NativeMiddlePages({element:this,

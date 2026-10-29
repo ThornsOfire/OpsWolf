@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Recognized native Changes file headers offer an explicit Open file in editor action, using the full native path and normal preview/save guards while preserving the native Open in and File actions controls. External program selection remains native functionality, not a new launcher in this fork.
+
 - Optional composer typing-speed readout with reset, two-second idle handling and gross five-character WPM. Tracking starts off; paste, undo and citation insertion are excluded. Only the on/off preference persists, and no typing history is recorded.
 
 - Paused chat reading keeps a visible text block anchored during streaming and earlier-content reflow in qualified native layouts. A Jump to latest action returns to native following; cached chats release their anchors. This candidate still needs live-host verification.
