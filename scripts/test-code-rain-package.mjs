@@ -12,13 +12,13 @@ const artifacts=resolve(root,'artifacts/code-rain-package');
 await mkdir(artifacts,{recursive:true});
 const run=await mkdtemp(resolve(artifacts,'run-'));
 // This identity is a local package candidate, not a published catalog entry.
-const definition={id:'code-rain',name:'Code Rain Background',category:'appearance',api:1,version:'0.1.0',releaseTag:'plugin-assets-2026-10-29',capabilities:['background','startup','preview']};
+const definition={id:'code-rain',name:'Code Rain Background',category:'appearance',api:1,version:'0.1.1',releaseTag:'plugin-assets-2026-10-29',capabilities:['background','startup','preview']};
 const report={checks:[],failures:[]};
 let browser, server;
 const check=async(name,condition)=>{assert.ok(await condition,name);report.checks.push(name);};
 try {
   const provenance=await verifyCodeRainSource(ui);
-  await check('Reviewed standalone commit is pinned',provenance.commit==='939d305a10b82d3258315f565c88ccc1f5f11e68');
+  await check('Reviewed standalone commit is pinned',provenance.commit==='4d68d1fcdddd458d08be1523497b4f2a7af57f55');
   const descriptor=await buildCodeRain(ui,{bundle:true,absWorkingDir:ui,target:['chrome120'],charset:'utf8',legalComments:'none'},run,definition);
   const repeat=await buildCodeRain(ui,{bundle:true,absWorkingDir:ui,target:['chrome120'],charset:'utf8',legalComments:'none'},resolve(run,'repeat'),definition);
   await check('Repeated local builds produce identical package bytes',descriptor.sha256===repeat.sha256&&descriptor.size===repeat.size);
@@ -34,7 +34,7 @@ try {
   await mkdir(resolve(badPackage,'appearance/code-rain'),{recursive:true});
   await writeFile(resolve(badPackage,'appearance/code-rain',descriptor.asset),sources[0]+'/* altered */');
   assert.throws(()=>verifiedPluginSources(badPackage,descriptor),/failed verification/);report.checks.push('Altered compiled asset is rejected by the existing verification helper');
-  const harness=await build({bundle:true,write:false,format:'iife',define:{__CODE_CODEX_PLUGIN_CATALOG__:JSON.stringify([descriptor])},stdin:{contents:`import {isPluginPackageLoaded,ensurePluginPackage} from './plugin-runtime';window.packageLoaded=()=>isPluginPackageLoaded('code-rain');window.requirePackage=()=>ensurePluginPackage('code-rain');`,resolveDir:resolve(ui,'src'),loader:'ts'}});
+  const harness=await build({bundle:true,write:false,format:'iife',define:{__CODE_CODEX_PLUGIN_CATALOG__:JSON.stringify([descriptor])},stdin:{contents:`import {isPluginPackageLoaded,ensurePluginPackage} from './plugin-runtime';import {requestBackgroundFrame,cancelBackgroundFrame,setStartupBackgroundHold,registerBackgroundOpening} from './background-startup-hold';window.packageLoaded=()=>isPluginPackageLoaded('code-rain');window.requirePackage=()=>ensurePluginPackage('code-rain');window.hold=setStartupBackgroundHold;window.createHosted=(module,target)=>{target.setAttribute('data-code-codex-particle-layer','v1');const effect=new module.exports.CodeRain(target,module.exports.DEFAULT_RAIN,{frameScheduler:{request:cb=>requestBackgroundFrame(target,cb),cancel:cancelBackgroundFrame}});registerBackgroundOpening(target,effect);return effect};`,resolveDir:resolve(ui,'src'),loader:'ts'}});
   const html='<!doctype html><meta charset="utf-8"><style>body{margin:0;background:#18201d;color:white}#target{width:850px;height:500px;position:relative}textarea{width:400px}</style><textarea>Unsent fixture draft</textarea><div id="target"></div><script>window.errors=[];addEventListener("error",e=>errors.push(e.message));addEventListener("unhandledrejection",e=>errors.push(String(e.reason)));</script><script src="/harness.js"></script>';
   server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/harness.js'?'text/javascript':'text/html');res.end(req.url==='/harness.js'?harness.outputFiles[0].text:html);});
   await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -64,6 +64,13 @@ try {
   await browser.command('Emulation.setEmulatedMedia',{features:[]});
   await e(`effect=module.startup(document.querySelector('#target'));void 0;`);await delay(80);
   await check('A later activation starts with one fresh renderer',await e(`document.querySelectorAll('canvas').length===1&&effect.state.frames>0`));
+  await e(`effect.dispose();hold(true);effect=createHosted(module,document.querySelector('#target'));void 0;`);await delay(120);
+  await e(`window.frames=effect.state.frames`);await delay(120);
+  await check('Real Cursadex startup hold parks Rain frames',await e(`effect.state.frames===frames&&effect.state.animating`));
+  await e(`hold(false)`);await delay(120);
+  await check('Releasing the real host hold resumes Rain drawing',await e(`effect.state.frames>frames`));
+  await e(`hold(true)`);await delay(100);await e(`effect.dispose();window.frames=effect.state.frames;hold(false)`);await delay(100);
+  await check('Disposal during a real host hold prevents later drawing',await e(`effect.state.disposed&&effect.state.frames===frames&&!document.querySelector('canvas')`));
   const replacement=`window[Symbol.for('code-codex:background-modules:v1')].set('code-rain',{...module})`;
   await e(replacement);
   await check('Replacing a verified module invalidates its verification identity',await e(`!packageLoaded()`));

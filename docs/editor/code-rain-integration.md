@@ -4,11 +4,11 @@ The standalone [OpsWolf Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-R
 
 ## Source and package identity
 
-`packages/explorer-ui/vendor/opswolf-code-rain/` contains the exact renderer, state module and MIT license from source commit `939d305a10b82d3258315f565c88ccc1f5f11e68`. `provenance.json` records the source repository, commit, byte lengths and SHA-256 values. Git preserves these bytes without line-ending conversion. The build verifies them before compiling; it performs no fetch, install or dependency download. A future renderer update must deliberately replace the reviewed source, provenance and independent package identity when the compiled bytes change.
+`packages/explorer-ui/vendor/opswolf-code-rain/` contains the exact renderer, state module and MIT license from source commit `4d68d1fcdddd458d08be1523497b4f2a7af57f55`. `provenance.json` records the source repository, commit, byte lengths and SHA-256 values. Git preserves these bytes without line-ending conversion. The build verifies them before compiling; it performs no fetch, install or dependency download. A future renderer update must deliberately replace the reviewed source, provenance and independent package identity when the compiled bytes change.
 
 The package builder exports `CodeRain`, its settings normalization, preset/constants and rendering budget through the existing background-module registry. Registration creates no canvas and writes no preferences. `startup(target)` creates a renderer owned by that target; callers must dispose it. The host will own enablement, persistence, configuration controls and surface styles. The standalone app's controls/storage are not bundled.
 
-The local fixture builds candidate version `0.1.0` with a dated candidate release tag. That tag is not a published release or a promise that a download exists. The fixture does not add a production catalog entry, alter the native trusted catalog, change caches or install anything into Codex.
+The local fixture builds candidate version `0.1.1` with a dated candidate release tag. That tag is not a published release or a promise that a download exists. The fixture does not add a production catalog entry, alter the native trusted catalog, change caches or install anything into Codex.
 
 ## Verification
 
@@ -18,7 +18,9 @@ Run from the checkout:
 node scripts/test-code-rain-package.mjs
 ```
 
-The test uses installed esbuild and an isolated headless Chrome fixture. Twenty checks cover pinned source, deterministic compilation, license preservation, tampered source and asset rejection, the existing loader's verification identity, inert registration, startup/pause/settings/reduced-motion/forced-colors behavior, repeat disposal/reactivation, and preserved drafts/storage. Results and generated package bytes stay under ignored `artifacts/code-rain-package/`.
+The test uses installed esbuild and an isolated headless Chrome fixture. Twenty-three checks cover pinned source, deterministic compilation, license preservation, tampered source and asset rejection, the existing loader's verification identity, inert registration, startup/pause/settings/reduced-motion/forced-colors behavior, repeat disposal/reactivation, and preserved drafts/storage. Results and generated package bytes stay under ignored `artifacts/code-rain-package/`.
+
+The renderer now accepts an optional `frameScheduler` capability. The fixture connects it to Cursadex's real `requestBackgroundFrame` / `cancelBackgroundFrame` functions and checks startup hold, release and disposal while held. This keeps the standalone renderer independent of Codex and avoids replacing global animation functions. Production activation still needs to supply that scheduler; the generic startup preview deliberately uses its normal window scheduler.
 
 This is a real-browser package test using the project's verification helper and UI loader. It is **not** a native companion import or live-host activation test. The renderer suspends drawing under forced colors; the eventual host surface must also hide its decorative canvas, as the standalone app does. These package tests do not establish contrast for native documents over the effect.
 

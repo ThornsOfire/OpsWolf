@@ -5,8 +5,10 @@ const noise = n => {const x=Math.sin(n*127.1+311.7)*43758.5453;return x-Math.flo
 
 /** Owns only its canvas and lifecycle. No global styles, network or persisted state. */
 export class CodeRain {
-  constructor(container,settings,{onTransition=()=>{},onState=()=>{}}={}) {
+  constructor(container,settings,{onTransition=()=>{},onState=()=>{},frameScheduler}={}) {
     this.container=container;this.doc=container.ownerDocument;this.win=this.doc.defaultView;
+    if(frameScheduler!==undefined&&(!frameScheduler||typeof frameScheduler.request!=='function'||typeof frameScheduler.cancel!=='function'))throw TypeError('Frame scheduler requires request and cancel functions');
+    this.scheduler=frameScheduler??{request:callback=>this.win.requestAnimationFrame(callback),cancel:id=>this.win.cancelAnimationFrame(id)};
     this.settings=rainSettings(settings);this.onTransition=onTransition;this.onState=onState;
     this.canvas=this.doc.createElement('canvas');this.canvas.setAttribute('aria-hidden','true');
     Object.assign(this.canvas.style,{display:'block',width:'100%',height:'100%',pointerEvents:'none'});
@@ -44,9 +46,9 @@ export class CodeRain {
   reconcile(){
     if(this.disposed)return;
     if(!this.canAnimate()){
-      this.win.cancelAnimationFrame(this.frame);this.frame=0;this.previous=0;
+      this.scheduler.cancel(this.frame);this.frame=0;this.previous=0;
       if(!this.doc.hidden&&!this.offscreen)this.draw();
-    }else if(!this.frame){this.previous=0;this.frame=this.win.requestAnimationFrame(time=>this.tick(time));}
+    }else if(!this.frame){this.previous=0;this.frame=this.scheduler.request(time=>this.tick(time));}
     this.notify();
   }
   tick(now){
@@ -67,7 +69,7 @@ export class CodeRain {
       for(let column=0;column<this.phases.length;column++)this.phases[column]=(this.phases[column]+delta/1000*this.settings.speed*cell*(0.6+noise(column+2)*0.8)/span)%1;
       this.draw();
     }
-    this.frame=this.win.requestAnimationFrame(time=>this.tick(time));
+    this.frame=this.scheduler.request(time=>this.tick(time));
   }
   layout(){
     const s=this.settings,cell=Math.max(s.fontSize,this.width/RENDER_BUDGET.columns),count=Math.min(RENDER_BUDGET.columns,Math.ceil(this.width/cell));
@@ -110,7 +112,7 @@ export class CodeRain {
   }
   stopTransition(){this.transition=null;this.notify();return {...this.settings};}
   dispose(){
-    if(this.disposed)return;this.disposed=true;this.win.cancelAnimationFrame(this.frame);this.frame=0;this.transition=null;
+    if(this.disposed)return;this.disposed=true;this.scheduler.cancel(this.frame);this.frame=0;this.transition=null;
     this.resizeObserver.disconnect();this.intersectionObserver.disconnect();this.doc.removeEventListener('visibilitychange',this.visibility);
     this.motion.removeEventListener('change',this.motionChange);this.contrast.removeEventListener('change',this.visibility);this.canvas.remove();this.notify();
   }
