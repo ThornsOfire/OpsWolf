@@ -384,3 +384,6 @@ It falls back to the editor tab row when that header slot is unavailable.
 
 The header E is visible before any file opens and after the last file closes;
 it stays disabled until a file is available. The empty editor does not cover chat.
+
+Dragging a file from the tree into chat or another text field inserts its full
+local path. Dragging inside the tree still moves entries using workspace-relative paths.

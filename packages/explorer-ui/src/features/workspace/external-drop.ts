@@ -1,7 +1,7 @@
 import { WorkspaceBridge,ExplorerBridgeError } from "../../bridge";
 import { type ExplorerContext,type ExplorerViewState,type FlatTreeRow,type TreeNodeInput } from "../../contracts/bridge";
 import { type ContextMenuTarget,type DragSource,type ExternalDropCandidate,type ExternalDropRoot,type ExternalImportProgress } from "../../contracts/explorer-model";
-import { errorCode,isPathWithin } from "../../core/bridge/response-validation";
+import { errorCode,isPathWithin,joinAbsolutePath } from "../../core/bridge/response-validation";
 import { DROP_EXPAND_DELAY_MS,EXTERNAL_IMPORT_CHUNK_BYTES,EXTERNAL_IMPORT_COMMIT_TIMEOUT_MS,EXTERNAL_IMPORT_REQUEST_INTERVAL_MS,INTERNAL_DRAG_TYPE } from "../../core/configuration/explorer";
 import { runtimeEvent } from "../../runtime-events";
 import { recordCaughtRuntimeError } from "../../runtime-operations";
@@ -76,9 +76,11 @@ onTreeDragStart(event: DragEvent): void {
             kind: target.kind,
         };
         element.dataset.dragSource = "true";
-        event.dataTransfer.effectAllowed = "move";
+        event.dataTransfer.effectAllowed = "copyMove";
         event.dataTransfer.setData(INTERNAL_DRAG_TYPE, target.path);
-        event.dataTransfer.setData("text/plain", target.path);
+        // External text drops need an unambiguous location; tree moves keep the relative payload.
+        const root=this.host.context.rootPath;
+        event.dataTransfer.setData("text/plain", root ? joinAbsolutePath(root,target.path) : target.path);
     }
 onDropZoneDragOver(event: DragEvent, allowRoot: boolean): void {
         const source = this.dragSource;
