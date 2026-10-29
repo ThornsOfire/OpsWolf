@@ -121,7 +121,17 @@ try {
   await check('Read-only source also wraps within the pane', `getComputedStyle(q('.literal-text')).whiteSpace==='pre-wrap'&&q('.preview-content').scrollWidth<=q('.preview-content').clientWidth+1`);
   await clickSelector('.word-wrap-toggle');await delay(60);
   await check('Wrap toggle restores horizontal source layout', `!viewer.hasAttribute('data-word-wrap')&&q('.preview-content').scrollWidth>q('.preview-content').clientWidth`);
-  await ev(`state.activePath=file.path;show();viewer.remove()`); await delay(60);
+  await ev(`state.activePath=file.path;show();document.querySelector('main').setAttribute('data-app-shell-page-surface','true');document.querySelector('header').setAttribute('data-app-shell-titlebar','true');document.querySelector('header').style.setProperty('--app-shell-titlebar-height','52px');document.querySelector('#native-new-tab').parentElement.insertAdjacentHTML('afterbegin','<div data-app-shell-tab-row style="height:var(--app-shell-header-height,var(--app-shell-titlebar-height));display:flex;align-items:center"><button id="extra-native-tab">Additional tab</button></div>');show()`);await delay(100);
+  await check('Native titlebar and additional native tab rows share compact sizing', `document.querySelector('header').getBoundingClientRect().height===32&&document.querySelector('[data-app-shell-tab-row]').getBoundingClientRect().height===32`);
+  await check('Editor tab and metadata rows are compact without clipping controls', `q('.tab-strip').getBoundingClientRect().height===28&&q('.preview-meta-bar').getBoundingClientRect().height===28&&[...q('.editor-pane-actions').querySelectorAll('button')].filter(b=>!b.hidden&&b.getBoundingClientRect().width).every(b=>b.getBoundingClientRect().height<=28)`);
+  await check('Compact header retains separate clickable native and E targets', `(()=>{const buttons=[headerE().getRootNode().host,document.querySelector('#native-new-tab'),document.querySelector('#extra-native-tab')];return buttons.every(b=>{const r=b.getBoundingClientRect();return document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)===b})})()`);
+  await ev(`q('.editor-fullscreen-toggle').click()`);await delay(80);
+  await check('Compact fullscreen editor stays below native titlebar', `q('.tab-strip').getBoundingClientRect().top>=document.querySelector('header').getBoundingClientRect().bottom&&document.querySelector('header').getBoundingClientRect().height===32`);
+  await ev(`q('.editor-fullscreen-toggle').click();viewer.setSuspended(true)`);await delay(80);
+  await check('Suspending restores native header size and removes compact style', `document.querySelector('header').getBoundingClientRect().height===62&&!document.querySelector('[data-code-codex-compact-header]')&&!document.querySelector('style[data-code-codex-owned="compact-header"]')`);
+  await ev(`viewer.setSuspended(false);show()`);await delay(80);
+  await check('Resuming reapplies compact header exactly once', `document.querySelector('header').getBoundingClientRect().height===32&&document.querySelectorAll('style[data-code-codex-owned="compact-header"]').length===1`);
+  await ev(`viewer.remove()`); await delay(60);
   await check('Disposal restores original native styles', `document.querySelector('#chat').style.maxWidth==='98%'&&document.querySelector('#chat').style.width===''`);
   await check('No unhandled errors', `errors.length===0`);
   console.log(JSON.stringify({passed:true,checks:results},null,2));

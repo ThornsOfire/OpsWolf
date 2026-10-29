@@ -5,6 +5,8 @@ export class EditorHeaderControl {
   private observer: MutationObserver | undefined;
   private frame=0;
   private enabled=false;
+  private compactScope: HTMLElement | undefined;
+  private compactStyle: HTMLStyleElement | undefined;
   constructor(private readonly host: HTMLElement,private readonly fallback: HTMLButtonElement) {
     const document=host.ownerDocument;
     this.element=document.createElement('span');
@@ -41,6 +43,7 @@ export class EditorHeaderControl {
     const document=this.host.ownerDocument;
     const toolbars=[...document.querySelectorAll<HTMLElement>('header [data-app-shell-header-toolbar]')];
     const toolbar=toolbars.find(item=>!item.closest('[data-app-shell-active-page="false"]')&&item.getBoundingClientRect().width>0);
+    this.compactHeader(toolbar);
     const actions=toolbar?.closest('header')?.querySelector<HTMLElement>('[data-app-shell-header-slot="end"] [data-app-shell-header-slot-content]') ?? toolbar?.lastElementChild;
     if(actions instanceof HTMLElement && actions!==toolbar?.firstElementChild){
       if(this.element.parentElement!==actions)actions.prepend(this.element);
@@ -49,9 +52,39 @@ export class EditorHeaderControl {
       this.element.remove();this.fallback.hidden=false;
     }
   }
+  private compactHeader(toolbar: HTMLElement | undefined): void {
+    // Use the shell's sizing variables so content reservations and every native
+    // tab row shrink with the titlebar. Leave unknown older layouts unchanged.
+    const header=toolbar?.closest<HTMLElement>('header[data-app-shell-titlebar]');
+    const scope=header?.closest<HTMLElement>('[data-app-shell-page-surface="true"]') ?? undefined;
+    if(this.compactScope!==scope){
+      this.compactScope?.removeAttribute('data-code-codex-compact-header');
+      this.compactScope=scope;
+      scope?.setAttribute('data-code-codex-compact-header','');
+    }
+    if(!scope){this.compactStyle?.remove();return;}
+    if(!this.compactStyle){
+      this.compactStyle=this.host.ownerDocument.createElement('style');
+      this.compactStyle.dataset.codeCodexOwned='compact-header';
+      this.compactStyle.textContent=`
+        [data-code-codex-compact-header],
+        [data-code-codex-compact-header] header[data-app-shell-titlebar] {
+          --app-shell-titlebar-height:32px !important;
+          --app-shell-header-height:32px !important;
+        }
+        [data-code-codex-compact-header] header[data-app-shell-titlebar] {
+          height:32px !important;
+          min-height:32px !important;
+        }
+      `;
+    }
+    if(!this.compactStyle.isConnected)this.host.ownerDocument.head.append(this.compactStyle);
+  }
   dispose():void {
     this.enabled=false;this.observer?.disconnect();this.observer=undefined;
     this.host.ownerDocument.defaultView?.cancelAnimationFrame(this.frame);this.frame=0;
     this.element.remove();this.fallback.hidden=false;
+    this.compactScope?.removeAttribute('data-code-codex-compact-header');this.compactScope=undefined;
+    this.compactStyle?.remove();
   }
 }

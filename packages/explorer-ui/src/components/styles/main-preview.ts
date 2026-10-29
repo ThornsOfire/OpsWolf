@@ -5,7 +5,7 @@ import { backgroundPreviewSurfaceStyles } from './background-surfaces';
 export const mainPreviewStyles = String.raw`
   :host([data-home-suspended]) { display: none !important; }
   :host {
-    --cle-preview-tab-height: 32px;
+    --cle-preview-tab-height: 28px;
     --cle-main-bg: #ffffff;
     --cle-main-bar: #f7f7f5;
     --cle-main-raised: #fbfbfa;
@@ -179,7 +179,7 @@ export const mainPreviewStyles = String.raw`
 
   .tab-strip::-webkit-scrollbar { display: none; }
 
-  .editor-pane-actions { position: relative; grid-row: 1; grid-column: 2; display: flex; justify-content: flex-end; align-items: center; gap: 3px; padding: 2px 5px; min-width: 0; background: var(--cle-main-bar); pointer-events: auto; -webkit-app-region: no-drag; }
+  .editor-pane-actions { position: relative; grid-row: 1; grid-column: 2; display: flex; justify-content: flex-end; align-items: center; gap: 3px; padding: 1px 5px; min-width: 0; background: var(--cle-main-bar); pointer-events: auto; -webkit-app-region: no-drag; }
   .editor-pane-actions button { border: 1px solid var(--cle-main-line); border-radius: 4px; background: var(--cle-main-bar); padding: 2px 6px; font-size: 12px; line-height: 18px; cursor: pointer; }
   .editor-pane-toggle[aria-pressed="true"] { background: var(--cle-main-hover); }
   .tab-pin-toggle[aria-pressed="true"] { color: var(--cle-syntax-function); }
@@ -363,7 +363,7 @@ export const mainPreviewStyles = String.raw`
 
   .preview-panel {
     display: grid;
-    grid-template-rows: 35px minmax(0, 1fr);
+    grid-template-rows: 28px minmax(0, 1fr);
     width: 100%;
     height: 100%;
     min-width: 0;
