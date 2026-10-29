@@ -274,6 +274,11 @@ export interface MainPreviewGitDiffView extends MainPreviewFileBase {
   readonly shortHash: string;
 }
 
+export interface MainPreviewNativeDiffView extends MainPreviewFileBase {
+  readonly kind:"native-diff";
+  readonly threadId:string;
+}
+
 export interface MainPreviewEmptyView extends MainPreviewFileBase {
   readonly kind: "empty";
   readonly sizeBytes: number;
@@ -322,6 +327,7 @@ export type MainPreviewFileView =
   | MainPreviewLoadingView
   | MainPreviewTextView
   | MainPreviewGitDiffView
+  | MainPreviewNativeDiffView
   | MainPreviewEmptyView
   | MainPreviewMediaView
   | MainPreviewModelView

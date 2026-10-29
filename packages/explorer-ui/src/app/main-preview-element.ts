@@ -411,6 +411,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   showEditor(): void { this._setEditorVisible(true); }
 
+  nativeDiffSurface():HTMLElement|undefined {
+    if(!this._connected||this._suspended||!this._editorVisible)return;
+    return this._panelMount.querySelector<HTMLElement>('.native-diff-mount')??undefined;
+  }
+
   _setEditorVisible(open:boolean):void {
     this._editorVisible=open;
     if(!open && this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
@@ -486,7 +491,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._tabList.replaceChildren(fragment);
     const pin = this._required<HTMLButtonElement>('.tab-pin-toggle');
     const pinned = this._state.activePath !== null && this._state.pinnedPaths?.includes(this._state.activePath) === true;
-    pin.disabled = this._state.activePath === null || this._state.activePath.startsWith('git-diff://') || this._state.activePath.startsWith('review-diff://');
+    pin.disabled = this._state.activePath === null || this._state.activePath.startsWith('git-diff://') || this._state.activePath.startsWith('review-diff://') || this._state.activePath.startsWith('native-diff://');
     pin.textContent = pinned ? 'Unpin' : 'Pin';
     pin.title = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
     pin.setAttribute('aria-pressed', String(pinned));
@@ -574,6 +579,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._cancelOfficePreview();
     this._cancelDiagramPreview();
     this._cancelModelPreview();
+    this.removeAttribute('data-native-diff-active');
     if (this._state.activePath === null) {
       if(this._editorVisible) {
         const empty=this.ownerDocument.createElement('div');empty.className='editor-empty';
@@ -587,6 +593,15 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if (!view) {
       this._panelMount.replaceChildren();
       return;
+    }
+
+    if(view.kind==='native-diff'){
+      this.setAttribute('data-native-diff-active','');
+      const mount=this.ownerDocument.createElement('div');mount.className='native-diff-mount';
+      mount.style.cssText='height:100%;width:100%;min-height:0;background:var(--cle-main-bg);pointer-events:none';
+      mount.dataset.threadId=view.threadId;mount.id=this._panelId(view.path);mount.tabIndex=-1;
+      mount.setAttribute('role','tabpanel');mount.setAttribute('aria-labelledby',this._tabId(view.path));mount.setAttribute('aria-label','Native Changes comparison');
+      this._panelMount.replaceChildren(mount);return;
     }
 
     const panel = this.ownerDocument.createElement("section");
@@ -1591,6 +1606,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _metadataFor(view: MainPreviewFileView): string {
     switch (view.kind) {
+      case 'native-diff': return 'Native comparison';
       case "loading":
         return "Loading";
       case "text":

@@ -118,9 +118,13 @@ export function annotationConsensusThreadId(
   const responses = activePageElements(root, RESPONSE_THREAD_SELECTOR)
     .map((element) => element.getAttribute("data-response-annotation-conversation"));
   if (composer.some((value) => !plausibleThreadId(value)) || responses.some((value) => !plausibleThreadId(value))) return null;
-  if (composer.length !== 1 || (!allowMissingResponses && responses.length === 0)) return null;
   const composerIds = [...new Set(composer as string[])];
   const responseIds = [...new Set(responses as string[])];
+  // Changes can mount both normal and floating portals for the same conversation.
+  const nativeDiff=activePageElements(root,'[role="tabpanel"][data-tab-id="diff"][data-app-shell-tab-panel-controller="right"]').length===1;
+  const fixedPortals=activePageElements(root,'[data-above-composer-conversation-id][data-above-composer-fixed-content-portal="true"]');
+  const nativePortalPair=composer.length===2&&fixedPortals.length===1;
+  if ((composer.length!==1&&!((nativeDiff||nativePortalPair)&&composer.length>1&&composerIds.length===1))||(!allowMissingResponses&&responses.length===0))return null;
   if (responseIds.length > 1) return null;
   if (responseIds.length === 1 && composerIds[0] !== responseIds[0]) return null;
   return composerIds[0] ?? null;

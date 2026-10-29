@@ -38,6 +38,15 @@ export interface PreviewWorkspaceControllerPorts {
   readonly syncEditModeButton: () => void;
 }
 export class PreviewWorkspaceController {
+ openNativeDiff():void {
+  const threadId=this.host.context?.threadId,preview=this.host.ensureMainPreview();if(!threadId||!preview)return;
+  const path=`native-diff://${threadId}`;
+  if(!this.previewTabs.some(tab=>tab.path===path)){
+   if(this.previewTabs.length>=MAX_PREVIEW_TABS)this.evictUnpinnedTab();
+   this.tabStore.append({path,name:'Changes',view:{kind:'native-diff',path,name:'Changes',threadId},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false});
+  }
+  this.activePreviewPath=path;preview.showEditor?.();this.syncMainPreview();this.host.renderVisible();
+ }
  restoreDetachedTab(saved:Pick<PreviewTab,"path"|"name"|"view">):PreviewTab {
  const tab:PreviewTab={instanceId:this.tabStore.nextInstanceId(),path:saved.path,name:saved.name,revision:1,timer:undefined,modifiedDuringSave:false,dirty:false,view:saved.view};this.tabStore.append(tab);return tab;
  }

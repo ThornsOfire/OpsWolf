@@ -448,15 +448,27 @@ the inspected English desktop markup; an upstream layout/language change falls
 back to the original cards. Native virtualized cards must be mounted for Undo to
 be available; the recorded diff itself remains readable through history.
 
-The native live **files changed** tooltip is preserved. A normal click on one of
-its files reads a fresh native patch record and opens that diff in the right-side
-editor. Reopening the same live file updates the existing diff tab. The adapter
-requires the complete tooltip filename list to match the latest available patch
-record, with unique basenames; duplicate names, unavailable diffs, and unmatched
-markup retain the original native action. Modified clicks keep native behavior.
-Live lookup reads at most six single-turn pages, never a workspace scan. Applied
-patches from an active response are available to this adapter without publishing
-that response as a completed review. Pending/failed patch applications are excluded.
+The native live **files changed** bubble and hover list keep their original click
+handlers. Clicking the bubble opens the actual Codex comparison in a **Changes**
+tab alongside the editor's files. Clicking a file in the hover list uses Codex's
+own path selection, then focuses that same editor tab. This preserves duplicate
+filenames, native comparison modes, navigation, file tree, refresh, and controls;
+it does not reconstruct the viewer from our recorded text patches. Ordinary
+source tabs remain editable. Comparison views are read-only and cannot be pinned.
+
+The adapter positions the existing native panel without moving or cloning its
+React nodes, copying its source, or accessing private application stores. It
+performs no extra App Server lookup for these live clicks. Native full-view mode
+returns to split mode so chat remains available. The native tab is hidden while
+its editor counterpart owns the view. E, resizing, fullscreen, file-tab switching,
+and closing the Changes tab use the editor shell; closing forwards to the native
+close control. Layout overrides are restored on disposal or a context change.
+Unknown native layouts remain in their original location. This adapter targets
+the inspected English Codex desktop shell and must be rechecked after host updates.
+
+Codex can retain normal and fixed/floating composer portals for the same chat.
+Context resolution accepts that known pair, or the inspected native Changes
+layout, only when all conversation IDs agree. Conflicting chats still fail closed.
 
 Initial history lookup is bounded to forty single-turn pages and ten useful
 reviews. Later reads reuse older cached records. Refresh occurs after a visible

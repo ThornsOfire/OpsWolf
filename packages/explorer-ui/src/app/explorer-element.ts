@@ -1,5 +1,5 @@
 import { ChangeReviewController } from "../features/workspace/change-review";
-import { NativeActivityFiles } from "../features/workspace/native-activity-files";
+import { NativeDiffHost } from "../features/preview/native-diff-host";
 import { chooseEditorClose,requestDirtyEditorClose } from "../features/preview/close-dialog";
 import { applyPluginCardIcons } from '../components/plugin-icons';
 import {attachPluginPins} from '../components/plugin-pins';
@@ -830,7 +830,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#marqueeElement = this.#required<HTMLElement>(".tree-marquee");
     }
     #changeReview:ChangeReviewController|undefined;
-    #activityFiles:NativeActivityFiles|undefined;
+    #nativeDiffHost:NativeDiffHost|undefined;
     connectedCallback(): void {
         if (this.#connected)
             return;
@@ -848,8 +848,18 @@ export class CodeCodexElement extends HTMLElement {
         };
         this.#changeReview??=new ChangeReviewController(reviewPorts);
         this.#changeReview.start();
-        this.#activityFiles??=new NativeActivityFiles(reviewPorts,text=>owner.#announce(text));
-        this.#activityFiles.start();
+        this.#nativeDiffHost??=new NativeDiffHost({element:this,
+            get context(){return owner.#workspaceSession.context;},
+            get enabled(){return reviewPorts.enabled;},
+            hasTab:()=>owner.#previewWorkspace.previewTabs.some(tab=>tab.path===`native-diff://${owner.#workspaceSession.context?.threadId}`),
+            openTab:()=>{
+                const open=()=>owner.#previewWorkspace.openNativeDiff();const editing=owner.#previeweditingSettings;
+                if(editing.drafts.path&&editing.isEditDirty())void owner.#requestEditorClose(editing.drafts.path,open);else open();
+            },
+            closeTab:threadId=>owner.#previewWorkspace.closePreviewTab(`native-diff://${threadId}`,false),
+            target:()=>owner.#mainPreview?.nativeDiffSurface(),
+        });
+        this.#nativeDiffHost.start();
         const appearanceInitializationGeneration = ++this.#appearanceInitializationGeneration;
         this.#requestedPlacement = this.dataset.placement || "inline";
         this.#rememberInlineMount();
@@ -1140,7 +1150,7 @@ export class CodeCodexElement extends HTMLElement {
     }
     #disposeDisconnected(): void {
         this.#changeReview?.dispose();
-        this.#activityFiles?.dispose();
+        this.#nativeDiffHost?.dispose();
         if (this.#customBackgroundClick)
             this.#shadow.removeEventListener('click', this.#customBackgroundClick, true);
         this.#customBackgroundClick = undefined;

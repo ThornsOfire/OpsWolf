@@ -96,6 +96,8 @@ export function cloneView(view: MainPreviewFileView): MainPreviewFileView {
         truncated: view.truncated,
         shortHash: view.shortHash,
       };
+    case "native-diff":
+      return {kind:'native-diff',path:view.path,name,threadId:view.threadId};
     case "empty":
       return {
         kind: "empty",
