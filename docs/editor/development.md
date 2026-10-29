@@ -32,6 +32,7 @@ These commands run from the repository root after UI dependencies are installed.
 
 | Change | Focused check |
 | --- | --- |
+| Composer WPM timing, trusted input policy, IME boundaries, preferences and cleanup | `node scripts/test-typing-meter.mjs`; see [measurement and verification limits](typing-meter.md) |
 | Chat reading anchor, native scroll displacement, reflow, zoom and lifecycle | `node scripts/test-chat-reading.mjs`; see [candidate behavior](chat-reading.md) |
 | Shared bubble hover/focus, dismissal, bounds, colors and editor/E lifecycle | `node scripts/test-tooltips.mjs`; `node scripts/test-editor-pane.mjs` |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |

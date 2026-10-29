@@ -36,6 +36,14 @@ try {
  await ev(`s.focus()`);await browser.command('Input.dispatchKeyEvent',{type:'keyDown',key:'PageUp',code:'PageUp',windowsVirtualKeyCode:33});await browser.command('Input.dispatchKeyEvent',{type:'keyUp',key:'PageUp',code:'PageUp',windowsVirtualKeyCode:33});await delay(400);
  await ev(`window.anchorId=visible();window.anchorOffset=offset(anchorId);document.querySelector('#p4').style.height='170px'`);await settle();
  await check('Keyboard reading remains anchored through later reflow',`Math.abs(offset(anchorId)-anchorOffset)<1.5`);
+ await ev(`document.body.style.zoom='1';document.querySelector('[data-code-codex-reading-control]').shadowRoot.querySelector('button').click();p20.style.height='auto';p20.style.lineHeight='24px';p20.textContent='A long paragraph with stable words and changing line breaks. '.repeat(250);s.scrollTop=p20.offsetTop+200`);await settle();
+ await ev(`window.lineRange=document.caretRangeFromPoint(6,6);lineRange.setEnd(lineRange.startContainer,lineRange.startOffset+1);window.lineOffset=lineRange.getBoundingClientRect().top;document.querySelector('main').style.width='420px'`);await settle();
+ await check('A character anchor preserves the reading line within a rewrapped paragraph',`Math.abs(lineRange.getBoundingClientRect().top-lineOffset)<1.5`);
+ await ev(`window.selectionRange=document.createRange();selectionRange.selectNodeContents(p19);getSelection().removeAllRanges();getSelection().addRange(selectionRange);window.selected=getSelection().toString();p0.style.height='150px'`);await settle();
+ await check('Reading correction leaves selected text available for copy',`getSelection().toString()===selected&&selected.length>0`);
+ await ev(`window.beforeRace=s.scrollTop;s.addEventListener('wheel',()=>setTimeout(()=>{s.scrollTop=s.scrollHeight},30),{once:true})`);
+ await wheel(-200);
+ await check('A native follow jump during an upward wheel gesture does not resume following',`!document.querySelector('[data-code-codex-reading-control]').hidden&&s.scrollTop<=beforeRace+2&&s.scrollHeight-s.clientHeight-s.scrollTop>100`);
  await ev(`window.dispose();window.dispose=install()`);await settle();
  await check('Reinstallation removes previous controls and leases',`document.querySelectorAll('[data-code-codex-reading-control]').length===1&&s.style.overflowAnchor===''`);
  await wheel(-150);

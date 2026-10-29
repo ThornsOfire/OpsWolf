@@ -1,10 +1,13 @@
 /** Owns only paused reading. Native Codex remains responsible for following output. */
 export class ReadingAnchor {
   private anchors: {element: HTMLElement; offset: number}[] = [];
+  private textAnchor: {range: Range; node: Text; offset: number} | undefined;
   private paused = false;
   private disposed = false;
   private frame = 0;
   private userUntil = 0;
+  private inputDirection = 0;
+  private inputBudget = Infinity;
   private dragging = false;
   private lastTop = 0;
   private readonly resize = new ResizeObserver(() => this.schedule());
@@ -66,6 +69,7 @@ export class ReadingAnchor {
       if (this.originalAnchor) this.scroller.style.setProperty('overflow-anchor', this.originalAnchor, this.originalAnchorPriority);
       else this.scroller.style.removeProperty('overflow-anchor');
       this.anchors = [];
+      this.textAnchor = undefined;
     }
     this.ports.pausedChanged(value);
   }
@@ -73,11 +77,17 @@ export class ReadingAnchor {
   private onGesture = (event: Event): void => {
     if (!event.isTrusted || !this.ports.valid()) return;
     this.userUntil = performance.now() + 180;
+    this.inputDirection = 0; this.inputBudget = Infinity;
     if (!this.bottom()) { this.setPaused(true); this.capture(); }
   };
   private onWheel = (event: WheelEvent): void => {
     if (event.ctrlKey || event.deltaY === 0 || this.nestedScroller(event.target)) return;
     this.onGesture(event);
+    if (event.isTrusted) {
+      this.inputDirection = Math.sign(event.deltaY);
+      const unit = event.deltaMode === 1 ? 40 : event.deltaMode === 2 ? this.scroller.clientHeight : 1;
+      this.inputBudget = Math.abs(event.deltaY) * unit * 2 + 32;
+    }
     if (event.isTrusted && event.deltaY < 0 && this.ports.valid()) {
       this.setPaused(true); this.capture();
     }
@@ -87,6 +97,8 @@ export class ReadingAnchor {
     if (event.target instanceof Element && event.target.closest('input,textarea,[contenteditable="true"],button,select')) return;
     if (!['ArrowUp','ArrowDown','PageUp','PageDown','Home','End',' '].includes(event.key) || this.nestedScroller(event.target)) return;
     this.onGesture(event);
+    this.inputDirection = ['ArrowUp','PageUp','Home'].includes(event.key) || event.key === ' ' && event.shiftKey ? -1 : 1;
+    this.inputBudget = ['Home','End'].includes(event.key) ? Infinity : this.scroller.clientHeight * 2;
     if (event.isTrusted && ['ArrowUp','PageUp','Home'].includes(event.key)) { this.setPaused(true); this.capture(); }
   };
   private onPointerDown = (event: PointerEvent): void => {
@@ -104,6 +116,14 @@ export class ReadingAnchor {
   private onScroll = (): void => {
     if (!this.ports.valid()) return;
     if (this.dragging || performance.now() < this.userUntil) {
+      const movement = this.scroller.scrollTop - this.lastTop;
+      // A native auto-follow jump can arrive in the same frame as user input.
+      // Do not interpret an opposite/implausibly large jump as that gesture.
+      if (!this.dragging && this.paused && Math.abs(movement) > 1 &&
+        (this.inputDirection && Math.sign(movement) !== this.inputDirection || Math.abs(movement) > this.inputBudget)) {
+        this.userUntil = 0; this.schedule(); return;
+      }
+      this.inputBudget -= Math.abs(movement);
       this.setPaused(!this.bottom());
       if (this.paused) this.capture();
     } else if (this.paused) this.schedule();
@@ -119,6 +139,23 @@ export class ReadingAnchor {
       const r = e.getBoundingClientRect(); return r.height > 0 && r.bottom > top && r.top < top + this.scroller.getBoundingClientRect().height;
     });
     this.anchors = candidates.slice(0, 4).map(element => ({element, offset: element.getBoundingClientRect().top - top}));
+    this.textAnchor = undefined;
+    const first = candidates[0];
+    if (first) {
+      const rect = first.getBoundingClientRect();
+      // A live text range keeps the same character in view when a long paragraph
+      // rewraps. It neither changes the user's selection nor copies message text.
+      const range = this.scroller.ownerDocument.caretRangeFromPoint(
+        Math.max(rect.left, this.scroller.getBoundingClientRect().left) + 6,
+        Math.max(top + 6, rect.top + 6));
+      if (range?.startContainer instanceof Text && first.contains(range.startContainer) &&
+        range.startOffset < range.startContainer.length) {
+        const node = range.startContainer;
+        range.setEnd(node, range.startOffset + 1);
+        const r = range.getBoundingClientRect();
+        if (r.height > 0) this.textAnchor = {range, node, offset: r.top - top};
+      }
+    }
     this.resize.disconnect();
     this.resize.observe(this.scroller);
     for (const child of this.scroller.children) this.resize.observe(child);
@@ -134,7 +171,12 @@ export class ReadingAnchor {
     if (!anchor) { this.capture(); return; }
     const rect = this.scroller.getBoundingClientRect();
     const scale = rect.height / this.scroller.offsetHeight || 1;
-    const delta = (anchor.element.getBoundingClientRect().top - rect.top - anchor.offset) / scale;
+    const text = this.textAnchor;
+    const textValid = text && text.range.startContainer === text.node && text.node.isConnected &&
+      this.scroller.contains(text.node) && text.range.getBoundingClientRect().height > 0;
+    const delta = textValid
+      ? (text.range.getBoundingClientRect().top - rect.top - text.offset) / scale
+      : (anchor.element.getBoundingClientRect().top - rect.top - anchor.offset) / scale;
     if (Math.abs(delta) > .5) this.scroller.scrollTop += delta;
     this.lastTop = this.scroller.scrollTop;
   }

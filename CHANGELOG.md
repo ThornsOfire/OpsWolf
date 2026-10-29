@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Optional composer typing-speed readout with reset, two-second idle handling and gross five-character WPM. Tracking starts off; paste, undo and citation insertion are excluded. Only the on/off preference persists, and no typing history is recorded.
+
 - Paused chat reading keeps a visible text block anchored during streaming and earlier-content reflow in qualified native layouts. A Jump to latest action returns to native following; cached chats release their anchors. This candidate still needs live-host verification.
 
 - Shared bubble tooltips for the file explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, with keyboard focus, Escape dismissal, theme colors, and viewport-aware positioning.

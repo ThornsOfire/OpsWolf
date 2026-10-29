@@ -1,0 +1,52 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {resolve} from 'node:path';
+import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
+import {launchFixture,delay} from './browser-fixture.mjs';
+const bundle=await build({bundle:true,write:false,format:'iife',stdin:{contents:`import {TypingMeasurement,TypingInputSession,ComposerTypingMeter} from './features/chat/typing-meter';import {UserPreferenceStore} from './core/configuration/user-preferences';import {installComposerTyping} from './host/native-surfaces/composer-typing';Object.assign(window,{TypingMeasurement,TypingInputSession,ComposerTypingMeter,UserPreferenceStore,installComposerTyping});`,resolveDir:resolve(import.meta.dirname,'../packages/explorer-ui/src'),loader:'ts'}});
+const html=`<!doctype html><meta charset="utf-8"><style>[contenteditable]{height:100px;border:1px solid;padding:10px}</style><main class="main-surface"><div data-codex-composer-root><div id="portal" data-above-composer-conversation-id="fixture-thread-one"></div><div contenteditable="true" id="editor">Existing draft</div></div></main><script src="/bundle.js"></script><script>window.clock=0;window.changed=0;window.valid=true;window.meter=new ComposerTypingMeter(editor,()=>changed++,()=>valid,()=>clock);window.snapshot=()=>meter.measurement.snapshot(clock);window.focusEnd=()=>{editor.focus();const r=document.createRange();r.selectNodeContents(editor);r.collapse(false);getSelection().removeAllRanges();getSelection().addRange(r)};focusEnd();window.ready=true;</script>`;
+const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/bundle.js'?'text/javascript':'text/html');res.end(req.url==='/bundle.js'?bundle.outputFiles[0].text:html)});await new Promise(r=>server.listen(0,'127.0.0.1',r));
+const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),ev=x=>browser.evaluate(x),checks=[];
+async function check(name,expr){assert.equal(await ev(expr),true,name);checks.push(name)}
+async function type(text){await ev('focusEnd()');for(const char of text)await browser.command('Input.dispatchKeyEvent',{type:'char',text:char});}
+try {
+ await check('Preloaded draft is never counted',`snapshot().characters===0`);
+ await type('hello');await ev('clock=1000');await type('world');
+ await check('Trusted ordinary typing counts actual inserted characters',`snapshot().characters===10&&snapshot().wpm===120`);
+ await ev('clock=11000');await check('Idle time stops after two seconds',`snapshot().activeMs===3000&&snapshot().wpm===40&&snapshot().idle`);
+ await type('!');await check('Resuming excludes the long idle gap',`snapshot().activeMs===3000&&snapshot().characters===11`);
+ await ev(`document.execCommand('insertText',false,' injected citation ');`);
+ await check('Programmatic native editing insertion is not typing',`snapshot().characters===11`);
+ await ev(`editor.dispatchEvent(new InputEvent('beforeinput',{inputType:'insertText',data:'fake',bubbles:true}));editor.dispatchEvent(new InputEvent('input',{inputType:'insertText',data:'fake',bubbles:true}));`);
+ await check('Synthetic input events cannot inflate typing totals',`snapshot().characters===11`);
+ await browser.command('Input.dispatchKeyEvent',{type:'keyDown',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});await browser.command('Input.dispatchKeyEvent',{type:'keyUp',key:'Backspace',code:'Backspace',windowsVirtualKeyCode:8});
+ await check('Deletion does not claim negative speed or accuracy',`snapshot().characters===11`);
+ await ev(`document.execCommand('undo');document.execCommand('redo')`);
+ await check('Undo and redo do not count as new typing',`snapshot().characters===11`);
+ await ev(`meter.reset();focusEnd();window.endTrusted=null;editor.addEventListener('compositionend',e=>endTrusted=e.isTrusted);`);
+ await browser.command('Input.imeSetComposition',{text:'ni',selectionStart:2,selectionEnd:2});
+ await browser.command('Input.imeSetComposition',{text:'你',selectionStart:1,selectionEnd:1});
+ await check('IME intermediate replacements are not counted',`snapshot().characters===0`);
+ await browser.command('Input.insertText',{text:'你'});await delay(30);
+ await check('Untrusted automated IME completion does not inflate totals',`endTrusted===false&&snapshot().characters===0`);
+ await type('a');await check('Untrusted completion still releases IME state for subsequent typing',`snapshot().characters===1`);
+ await check('Numeric policy counts a genuine IME commit once and ignores interim replacements',`(()=>{const s=new TypingInputSession();s.accept({phase:'composition-start',trusted:true,count:0},0);s.accept({phase:'before',trusted:true,count:5,composing:true,inputType:'insertCompositionText'},300);s.accept({phase:'input',trusted:true,count:5,inputType:'insertCompositionText'},300);s.accept({phase:'composition-end',trusted:true,count:2},1000);s.accept({phase:'before',trusted:true,count:2,inputType:'insertText'},1000);s.accept({phase:'input',trusted:true,count:2,inputType:'insertText'},1000);return s.measurement.snapshot(2000).characters===2})()`);
+ await check('Paste, drop, undo and replacement policy exclude trusted non-typing edits',`(()=>{const s=new TypingInputSession();for(const inputType of ['insertFromPaste','insertFromDrop','historyUndo','historyRedo','insertReplacementText']){s.accept({phase:'before',trusted:true,count:200,inputType},0);s.accept({phase:'input',trusted:true,count:200,inputType},0)}return s.measurement.snapshot(2000).characters===0})()`);
+ await ev('valid=false');await type('x');await check('Stale chat identity clears the measurement',`snapshot().characters===0`);
+ await ev('valid=true;meter.dispose()');await type('y');await check('Disposal removes tracking listeners and clears totals',`snapshot().characters===0`);
+ await ev(`window.store=new UserPreferenceStore(localStorage);window.dispose=installComposerTyping(document,store)`);await delay(50);
+ await check('Integrated control starts off by default',`document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('[data-toggle]').getAttribute('aria-pressed')==='false'&&localStorage.length===0`);
+ await ev(`store.setTypingMeter(true)`);await type('hello');await delay(1700);
+ await check('Enabled meter displays a value beside the composer',`/[0-9]+ WPM/.test(document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent)`);
+ await check('Only the preference is persisted',`localStorage.length===1&&JSON.parse(localStorage.getItem('cursadex:preferences:v1')).typingMeter===true&&!localStorage.getItem('cursadex:preferences:v1').includes('hello')`);
+ await ev(`editor.replaceChildren()`);await delay(60);
+ await check('Native clearing without an input event resets the measurement',`document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent.includes('—')`);
+ await type('new draft');
+ await ev(`portal.setAttribute('data-above-composer-conversation-id','fixture-thread-two')`);await delay(60);
+ await check('Switching chat resets measurement and does not duplicate controls',`document.querySelectorAll('[data-cursadex-typing]').length===1&&document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent.includes('—')`);
+ await ev(`store.reset()`);await type('hidden typing');await delay(100);
+ await check('Turning off clears the readout and disables tracking',`document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent===''`);
+ await ev(`dispose()`);await check('Controller teardown removes owned UI',`document.querySelectorAll('[data-cursadex-typing]').length===0`);
+ await check('Malformed preferences safely default to off',`new UserPreferenceStore({getItem:()=>'{oops',setItem:()=>{}}).current.typingMeter===false`);
+ console.log(JSON.stringify({passed:true,checks},null,2));
+} finally {await browser.close();await new Promise(r=>server.close(r));await stop();}

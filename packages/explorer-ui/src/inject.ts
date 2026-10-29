@@ -1,6 +1,7 @@
 import {nativeSettingsBackgroundCss} from './native-background-surfaces';
 import {collapseNativeSidebarOnStartup} from './native-sidebar';
 import {installChatReading} from './host/native-surfaces/chat-reading';
+import {installComposerTyping} from './host/native-surfaces/composer-typing';
 import { optionalPluginExport } from './utility-plugin-facade';
 import { monitorStartupReadiness } from './startup-readiness';
 import { getBootstrapConfig } from "./bridge";
@@ -725,6 +726,7 @@ export function installInjector(): void {
   installReselectionListener();
   const start = () => {
     installChatReading();
+    installComposerTyping();
     const startupTransitionPromise = getEarlyStartupTransition();
     removeSupersededExplorers();
     const existing = document.querySelector<CodeCodexElement>(EXPLORER_TAG);
