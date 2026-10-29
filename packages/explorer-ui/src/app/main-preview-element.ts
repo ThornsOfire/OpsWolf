@@ -60,6 +60,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
   readonly _editorHeader: EditorHeaderControl;
+  _editorVisible = false;
   _panePreference = { docked: true, width: 560 };
   _paneResizeCleanup: (() => void) | undefined;
   _draggedTabPath: string | undefined;
@@ -135,6 +136,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
           <button type="button" class="tab-pin-toggle" title="Pin this file for this project" aria-pressed="false">Pin</button>
           <button type="button" class="open-files-toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
           <button type="button" class="editor-pane-toggle" title="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
+          <button type="button" class="editor-fullscreen-toggle" title="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
           <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
         </div>
         <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>
@@ -175,16 +177,13 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._tabList.addEventListener('drop', event => this._dropTabDrag(event));
     this._tabList.addEventListener('dragend', () => this._clearTabDrag());
     this._required('.editor-pane-toggle').addEventListener('click', () => {
+      this._setEditorVisible(!this._editorVisible);
+    });
+    this._required('.editor-fullscreen-toggle').addEventListener('click', () => {
       this._panePreference.docked = !this._panePreference.docked;
-      this._savePanePreference();
-      if (this._panePreference.docked && this._state.activePath === null && this._state.tabs[0]) {
-        this.dispatchEvent(new CustomEvent(MAIN_PREVIEW_ACTIVATE_EVENT, { detail: { kind: 'file', path: this._state.tabs[0].path }, bubbles: true, composed: true, cancelable: true }));
-      }
-      this._syncSuppression();
+      this._savePanePreference();this._syncSuppression();
     });
-    this._required('.editor-pane-close').addEventListener('click', () => {
-      this.dispatchEvent(new CustomEvent(MAIN_PREVIEW_ACTIVATE_EVENT, { detail: { kind: 'conversation' }, bubbles: true, composed: true, cancelable: true }));
-    });
+    this._required('.editor-pane-close').addEventListener('click', () => this._setEditorVisible(false));
     const resizeHandle = this._required<HTMLElement>('.editor-pane-resizer');
     resizeHandle.addEventListener('pointerdown', (event) => this._resizePane(event));
     resizeHandle.addEventListener('keydown', (event) => {
@@ -295,6 +294,10 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   setState(state: MainPreviewState): void {
     const nextState = normalizeState(state);
+    if(nextState.activePath!==this._state.activePath) {
+      if(nextState.activePath!==null) this._editorVisible=true;
+      else if(nextState.tabs.length>0) this._editorVisible=false;
+    }
     const previousEditorPath = this._state.editor?.path ?? null;
     const nextEditorPath = nextState.editor?.path ?? null;
     const editorTransition = nextEditorPath !== previousEditorPath;
@@ -366,6 +369,19 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         }
       });
     }
+  }
+
+  showEditor(): void { this._setEditorVisible(true); }
+
+  _setEditorVisible(open:boolean):void {
+    this._editorVisible=open;
+    if(!open && this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
+    if(open && this._state.activePath===null && this._state.tabs[0]) {
+      this._dispatchActivate({kind:'file',path:this._state.tabs[0].path});
+    }
+    // Visibility changes leave the active file, draft, and tab collection intact.
+    if(this._state.activePath===null) this._renderPanel();
+    this._syncSuppression();
   }
 
   _render(): void {
@@ -521,7 +537,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._cancelDiagramPreview();
     this._cancelModelPreview();
     if (this._state.activePath === null) {
-      this._panelMount.replaceChildren();
+      if(this._editorVisible) {
+        const empty=this.ownerDocument.createElement('div');empty.className='editor-empty';
+        empty.textContent='Open a file from the explorer to start editing.';
+        this._panelMount.replaceChildren(empty);
+      } else this._panelMount.replaceChildren();
       return;
     }
 
@@ -2008,11 +2028,22 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _syncSuppression(): void {
     const hasNativeSurface = this.parentElement?.matches(MAIN_SURFACE_SELECTOR) === true;
-    const paneActive = hasNativeSurface && this._connected && !this._suspended && this._panePreference.docked && this._state.activePath !== null && this._state.tabs.length > 0;
+    const paneActive = hasNativeSurface && this._connected && !this._suspended && this._panePreference.docked && this._editorVisible;
     this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
-    this._required('.editor-pane-toggle').setAttribute('aria-pressed', String(this._panePreference.docked));
-    this._editorHeader.sync(hasNativeSurface && this._connected && !this._suspended,this._panePreference.docked,this._state.tabs.length>0);
+    const visible=this._editorVisible && !this._suspended;
+    this.toggleAttribute('data-editor-visible',visible);
+    const toggle=this._required<HTMLButtonElement>('.editor-pane-toggle');
+    toggle.setAttribute('aria-pressed',String(visible));
+    toggle.title=visible?'Close editor':'Open editor';toggle.setAttribute('aria-label',toggle.title);
+    this._editorHeader.sync(hasNativeSurface && this._connected && !this._suspended,visible);
+    const fullscreen=this._required<HTMLButtonElement>('.editor-fullscreen-toggle');
+    fullscreen.title=this._panePreference.docked?'Expand editor':'Restore editor to right pane';
+    fullscreen.setAttribute('aria-label',fullscreen.title);
+    fullscreen.setAttribute('aria-pressed',String(!this._panePreference.docked));
+    fullscreen.innerHTML=this._panePreference.docked
+      ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 2H2v4m8-4h4v4M2 10v4h4m8-4v4h-4"/></svg>'
+      : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M6 2v4H2m12 0h-4V2M2 10h4v4m4 0v-4h4"/></svg>';
     if (this._panePreference.docked && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) {
       this._restoreSuppressedChildren();
       this._syncNativeViewportBounds(this.parentElement, null);
@@ -2026,7 +2057,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     }
     this._editorPane.restore();
     if (this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) this.style.setProperty('--cle-editor-pane-top', `${nativeHeaderInset(this.parentElement)}px`);
-    const parent = this._connected && !this._suspended && this._state.tabs.length > 0 && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)
+    const parent = this._connected && !this._suspended && this._editorVisible && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)
       ? this.parentElement
       : null;
     if (!parent) {

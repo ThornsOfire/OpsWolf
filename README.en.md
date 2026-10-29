@@ -379,11 +379,13 @@ not save automatically. Saving still uses the existing conflict checks and
 512 KiB save limit. Larger files and binary formats remain read-only.
 
 The compact **E** control lives in the native chat-header action row, beside
-New tab, and switches between the right editor pane and expanded editor.
+New tab, and opens or hides the editor. It highlights while the editor is open.
 It falls back to the editor tab row when that header slot is unavailable.
 
 The header E is visible before any file opens and after the last file closes;
-it stays disabled until a file is available. The empty editor does not cover chat.
+it can open an empty editor directly. Closing the editor retains open tabs and
+unsaved drafts in the current session. A separate fullscreen/restore icon inside
+the editor toggles between the right pane and expanded layout.
 
 Dragging a file from the tree into chat or another text field inserts its full
 local path. Dragging inside the tree still moves entries using workspace-relative paths.

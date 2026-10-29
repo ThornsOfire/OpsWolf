@@ -19,12 +19,13 @@ export class EditorHeaderControl {
     this.button=shadow.querySelector('button')!;
     this.button.addEventListener('click',()=>fallback.click());
   }
-  sync(enabled:boolean,docked:boolean,hasFiles:boolean):void {
+  sync(enabled:boolean,open:boolean):void {
     enabled=enabled&&!this.host.closest('[data-app-shell-active-page="false"]');
     this.enabled=enabled;
-    this.button.disabled=!hasFiles;
-    this.button.setAttribute('aria-pressed',String(docked));
-    this.button.title=hasFiles?(docked?'Expand editor':'Dock editor on right'):'Open a file to use the editor';
+    this.button.disabled=false;
+    this.button.setAttribute('aria-pressed',String(open));
+    this.button.title=open?'Close editor':'Open editor';
+    this.button.setAttribute('aria-label',this.button.title);
     if(!enabled){this.dispose();return;}
     if(!this.observer){
       this.observer=new MutationObserver(()=>{

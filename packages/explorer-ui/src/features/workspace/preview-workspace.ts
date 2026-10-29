@@ -54,6 +54,7 @@ export class PreviewWorkspaceController {
       !this.host.ensureMainPreview()
     ) return;
     if(this.host.editingPath!==null&&!this.host.leaveEditing("Open a Git diff and discard your unsaved changes?")) return;
+    this.host.ensureMainPreview()?.showEditor?.();
 
     let tab=this.previewTabs.find((candidate) => candidate.path===tabPath);
     if(!tab) {
@@ -180,8 +181,9 @@ openPreviewPath(relativePath: string, name: string): void {
             !this.host.leaveEditing("Open another file and discard your unsaved changes?")) {
             return;
         }
-        if (!this.host.ensureMainPreview())
-            return;
+        const preview=this.host.ensureMainPreview();
+        if (!preview) return;
+        preview.showEditor?.();
         let tab = this.previewTabs.find((candidate) => candidate.path === relativePath);
         if (!tab) {
             if (this.previewTabs.length >= MAX_PREVIEW_TABS) {

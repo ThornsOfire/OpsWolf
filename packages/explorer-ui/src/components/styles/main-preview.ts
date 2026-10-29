@@ -193,7 +193,7 @@ export const mainPreviewStyles = String.raw`
   .tab-slot[data-tab-drop="after"] { box-shadow: inset -3px 0 var(--cle-main-focus); }
   .editor-pane-close, .editor-pane-resizer { display: none; }
   :host([data-editor-pane-open]) { left: auto !important; right: 0 !important; width: var(--cle-editor-pane-width); border-left: 1px solid var(--cle-main-line); background: var(--cle-main-bg); }
-  :host([data-editor-pane-open]) .editor-pane-close { display: block; }
+  :host([data-editor-visible]) .editor-pane-close { display: block; }
   :host([data-editor-pane]) .conversation { display: none; }
   :host([data-editor-pane]:not([data-editor-pane-open])) .tab-strip { visibility: hidden; }
   :host([data-editor-pane-open]) .editor-pane-resizer { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 4; cursor: col-resize; pointer-events: auto; touch-action: none; }
@@ -1809,5 +1809,7 @@ export const mainPreviewStyles = String.raw`
   .preview-mode-button:disabled { opacity: .5; cursor: default !important; }
   .editor-pane-toggle { width:28px; padding-inline:0 !important; font-weight:600; }
   .editor-pane-toggle[hidden] { display:none !important; }
-  :host(:not([data-has-files])) .surface { display:none !important; }
+  :host(:not([data-editor-visible])) .surface { display:none !important; }
+  .editor-fullscreen-toggle { width:28px; height:24px; display:grid; place-items:center; padding:0 !important; }
+  .editor-empty { height:100%; display:grid; place-items:center; padding:24px; box-sizing:border-box; text-align:center; color:var(--cle-main-muted); background:var(--cle-main-bg); pointer-events:auto; }
 `;

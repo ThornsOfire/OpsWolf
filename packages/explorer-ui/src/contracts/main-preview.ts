@@ -4,4 +4,5 @@ export interface MainPreviewPort {
   readonly isConnected: boolean;
   readonly parentElement: HTMLElement | null;
   setState(state: MainPreviewState): void;
+  showEditor?(): void;
 }
