@@ -84,6 +84,18 @@ The native tab is hidden while its editor counterpart owns presentation. Other e
 
 The Open file event identifies the current diff tab. Application wiring verifies the sender and active tab, applies existing dirty-switch protection, then asks the workspace controller to open/reuse the ordinary source tab. It uses normal native preview permissions and save behavior. The patch content is never used as an editable file body. Missing source creates the ordinary load error while keeping the recorded diff.
 
+## Source citations
+
+`features/preview/citation-model.ts` owns logical line ranges, CR/LF normalization, bounded quote anchors, root checks and the versioned `codex://code-codex/cite?data=...` payload. `contracts/citations.ts` shares the data shape without importing application elements. Each link carries at most 32 ranges and 64,000 encoded characters; a composed insertion is limited to 96,000 characters. Quotes are limited to 4,096 characters per range. Longer selections explicitly fall back to line-only references. Typed line indexes are shared within a grouped resolution, including the newline-heavy 10 MiB case.
+
+`EditorCitations` maps textarea, literal-source or mounted virtual-row selection to full logical lines. Its right-click popover uses normal buttons and keyboard focus. Rendered document selections offer an explicit source transition rather than pretending rendered positions are source lines. Highlights use the CSS Highlight API for inline source and bounded marks for virtual rows. Unique quotes can relocate; changed/missing or ambiguous quotes never receive a guessed highlight. Refresh, hiding and disposal dismiss popovers and release highlights.
+
+`features/workspace/citations.ts` owns the session-only group and user-initiated link handling. It verifies the event's preview owner/path, active context and project root, then delegates navigation to `PreviewWorkspaceController`. Application wiring reuses dirty-switch protection before opening another source. Group activation publishes the requested first source before revealing a hidden editor. File contents still load through the existing authenticated bridge and native policy; citation payloads never replace loaded file bodies.
+
+`host/native-surfaces/composer-citations.ts` requires agreeing active-chat annotations and exactly one visible same-chat composer. Textareas use their native setter/input event; contenteditable uses the browser editing command at the end of the existing draft. No submit action or private React store is used. Unknown/ambiguous layouts fail with Copy citation available. This adapter needs real-host verification after relevant native markup changes.
+
+Queue/highlight state is memory-only. References inserted into a message include absolute paths and bounded quotes, and then follow ordinary chat retention. This feature doesn't add disk snapshots, retention jobs or a new backend route. Moved project roots aren't automatically rewritten; cross-project links are rejected.
+
 ## Storage and ownership
 
 | State | Location/lifetime |
@@ -94,6 +106,8 @@ The Open file event identifies the current diff tab. Application wiring verifies
 | Open unpinned tabs and current draft | In memory in the running editor session |
 | Detached dirty draft handoff | In memory, 10-second TTL with matching chat/bootstrap identity |
 | Native review cache and expansion state | In memory; bounded reviews and readers disposed with the feature |
+| Pending citation group and active highlights | In memory; queue cleared on chat/project change or disposal; active ranges clear with tabs/context |
+| Sent citation paths and bounded quotes | Part of the user's ordinary chat message; no separate extension archive |
 | Original patch history | Codex's existing native history, outside a new extension snapshot archive |
 | Sidebar startup decision | Document-local Symbol; repeated bundle injection doesn't collapse it again |
 | Build outputs, local test captures and developer probes | Ignored `dist/`, `target/`, `artifacts/`; not public source features |

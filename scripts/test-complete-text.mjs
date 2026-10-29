@@ -27,6 +27,12 @@ try{
  await check('Normalizer retains every character of a document larger than 64 KB',`preview.text===fullText&&!preview.truncated&&preview.editable`);
  await check('Rendered Markdown reaches the final checklist',`viewer.shadowRoot.querySelector('.markdown-body').textContent.includes('End-of-session checklist')`);
  await check('Rendered Markdown includes all table rows',`viewer.shadowRoot.querySelectorAll('tr').length===expectedTableRows(fullText)`);
+ await ev(`window.shadow=viewer.shadowRoot;window.heading=shadow.querySelector('.markdown-body h1');window.range=document.createRange();range.selectNodeContents(heading);window.selection=shadow.getSelection?.()??getSelection();selection.removeAllRanges();selection.addRange(range);heading.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,composed:true,clientX:500,clientY:180}));`);
+ await check('Rendered Markdown offers explicit source mapping for citations',`shadow.querySelector('.citation-menu button').textContent==='Show source to cite'`);
+ await ev(`shadow.querySelector('.citation-menu button').click()`);await delay(60);
+ await check('Source citation mode retains the entire Markdown file and offers return to preview',`!shadow.querySelector('.markdown-body')&&shadow.querySelector('.literal-text').textContent===fullText&&shadow.querySelector('.citation-source-return').textContent==='Rendered preview'`);
+ await ev(`shadow.querySelector('.citation-source-return').click()`);await delay(60);
+ await check('Returning from source restores the rendered Markdown table',`shadow.querySelectorAll('tr').length===expectedTableRows(fullText)&&!shadow.querySelector('.citation-source-return')`);
  await ev(`(()=>{const content=viewer.shadowRoot.querySelector('.preview-content');content.scrollTop=content.scrollHeight})()`);
  await check('Scroll viewport reaches the actual end of the rendered document',`(()=>{const content=viewer.shadowRoot.querySelector('.preview-content'),last=viewer.shadowRoot.querySelector('.markdown-body').lastElementChild;return content.scrollTop+content.clientHeight>=content.scrollHeight-1&&last.getBoundingClientRect().bottom<=content.getBoundingClientRect().bottom+1})()`);
  await ev('show(true)');
@@ -39,6 +45,9 @@ try{
  await check('Preview is read only and retains unsaved draft without saving',`!viewer.shadowRoot.querySelector('textarea')&&!viewer.shadowRoot.querySelector('[contenteditable=true]')&&viewer.shadowRoot.querySelector('.markdown-body').textContent.includes('UNSAVED_DRAFT')&&saves.length===0`);
  await ev(`Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Edit').click()`);
  await check('Returning to Edit restores the complete unsaved draft',`viewer.shadowRoot.querySelector('textarea').value.endsWith('UNSAVED_DRAFT')`);
+ await ev(`window.beforeDraft=shadow.querySelector('textarea').value;viewer.setState({...viewer.state,citations:{revision:1,ranges:[{path:'hours.md',startLine:1,endLine:1,quote:'# Hours fixture\\n'}]}})`);await delay(60);
+ await check('Jumping to a citation in Edit preserves the full unsaved draft',`shadow.querySelector('textarea').value===beforeDraft&&shadow.querySelector('textarea').selectionStart===0&&CSS.highlights.size===1`);
+ await ev(`const state=viewer.state;delete state.citations;viewer.setState(state)`);await delay(60);
  await ev(`Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Save').click()`);
  await check('Saving requires explicit Save action',`saves.length===1&&saves[0].path==='hours.md'`);
  await ev(`window.fullText='# Large table\\n\\n| A | B |\\n| --- | --- |\\n'+('| First | Second |\\n'.repeat(30000))+'\\nFINAL_RENDERED_TAIL';window.preview=normalizePreview({kind:'text',text:fullText,sizeBytes:new TextEncoder().encode(fullText).length,truncated:false,editable:false,version:'${version}',lineEnding:'lf'});show(false)`);

@@ -54,6 +54,22 @@ When switching away from a dirty file, choose **Save and switch**, **Discard**, 
 
 Drafts belong to the running session. There is a short, 10-second in-memory recovery handoff for a native UI refresh, subject to matching chat/bootstrap identity. This isn't recovery after quitting or crashing the entire application. Save before restarting.
 
+## Citing source in chat
+
+Select source text and **right-click** for **Cite in chat**, **Add to citation group**, or **Copy citation**. This works with every supported complete text file, including code, JSON, TOML, logs, plain text and Markdown. It doesn't add editing support to a format the native reader doesn't allow. References cover whole logical lines, so wrapped screen rows still map to the original file.
+
+**Cite in chat** appends a Markdown reference to the current chat draft without replacing your existing text or sending it. The label includes the full path and line range so the agent can find it. If the native composer cannot be identified safely, use Copy citation. You choose when to send.
+
+For several selections, use **Add to citation group** on each range, across files if needed. A small tray above the composer lets you remove ranges, clear the group, copy it, or insert it. A group supports up to 32 ranges. Inserting creates one group link plus individual range links. The queue is session memory and clears when the chat/project changes or the extension stops; it creates no extra disk archive.
+
+Click a citation in chat to open its source in the editor and highlight it. Group links open the referenced files and focus the first one; individual links go straight to that range. The normal Preview / Edit / Save controls and dirty-file Save and switch / Discard / Cancel choices remain available. **Clear** removes the active highlights.
+
+References store a normalized whole-line quote up to 4,096 characters inside the link. If lines move, a unique matching quote relocates the highlight. Missing or ambiguous quotes are reported rather than guessed. Larger selections use explicitly labelled line anchors, which cannot follow moved text. An **unsaved draft** label identifies citations taken from edits that haven't been saved; reopening later may not find that text. Ordinary absolute file links with line anchors also work inside the active project.
+
+Rendered Markdown, CSV and diagram previews don't have reliable source-line positions. Select text and right-click **Show source to cite**, or enter Edit for an editable file. **Rendered preview** returns from that source view. Citation navigation uses source automatically; Clear restores the ordinary preview. The virtual plain reader also supports visible selections and jump-back highlights through the 10 MiB reading limit; it cannot select unmounted rows across an arbitrary offscreen span.
+
+Inserted/copied references contain paths and bounded source quotes. Once sent, they follow the chat's normal retention; the extension keeps no separate permanent citation store. Links are scoped to files inside the current project, so another machine or moved project may need a fresh reference. Existing native file/sensitive-path policy still governs loading.
+
 ## Two ways to review changes
 
 ### Persistent Native changes panel

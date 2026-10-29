@@ -30,6 +30,8 @@ import { FileActionsController } from "../features/workspace/file-actions";
 import { PreviewEditingController } from "../features/workspace/preview-editing";
 import { PreviewRequestsController } from "../features/workspace/preview-requests";
 import { PreviewWorkspaceController } from "../features/workspace/preview-workspace";
+import {CitationController} from '../features/workspace/citations';
+import {citationRelativePath} from '../features/preview/citation-model';
 import { TreeInteractionController } from "../features/workspace/tree-interaction";
 import { UpdatesController } from "../features/workspace/updates";
 import { NativeWindowBackground } from "../host/native-surfaces/native-window-background";
@@ -830,6 +832,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#marqueeElement = this.#required<HTMLElement>(".tree-marquee");
     }
     #changeReview:ChangeReviewController|undefined;
+    #citations:CitationController|undefined;
     #nativeDiffHost:NativeDiffHost|undefined;
     connectedCallback(): void {
         if (this.#connected)
@@ -860,6 +863,20 @@ export class CodeCodexElement extends HTMLElement {
             target:()=>owner.#mainPreview?.nativeDiffSurface(),
         });
         this.#nativeDiffHost.start();
+        this.#citations??=new CitationController({element:this,
+            get context(){return owner.#workspaceSession.context;},get enabled(){return reviewPorts.enabled;},
+            get preview(){return owner.#mainPreview;},
+            get sourcePath(){const view=owner.#previewWorkspace.previewTabs.find(t=>t.path===owner.#activePreviewPath)?.view;return view?.kind==='text'&&!view.truncated?view.path:null;},
+            clear:()=>owner.#previewWorkspace.clearCitations(),announce:message=>owner.#announce(message),
+            open:ranges=>{
+                const context=owner.#workspaceSession.context;if(!context)return;
+                const editing=owner.#previeweditingSettings;
+                const open=()=>owner.#previewWorkspace.openCitations(ranges);
+                if(editing.drafts.path&&editing.isEditDirty()&&ranges.some(c=>citationRelativePath(c.path,context.rootPath)!==editing.drafts.path))void owner.#requestEditorClose(editing.drafts.path,open);
+                else open();
+            },
+        });
+        this.#citations.start();
         const appearanceInitializationGeneration = ++this.#appearanceInitializationGeneration;
         this.#requestedPlacement = this.dataset.placement || "inline";
         this.#rememberInlineMount();
@@ -1149,6 +1166,7 @@ export class CodeCodexElement extends HTMLElement {
         });
     }
     #disposeDisconnected(): void {
+          this.#citations?.dispose();
         this.#changeReview?.dispose();
         this.#nativeDiffHost?.dispose();
         if (this.#customBackgroundClick)

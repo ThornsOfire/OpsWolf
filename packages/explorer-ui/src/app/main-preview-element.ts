@@ -1,4 +1,5 @@
 import { WrappedLineNumbers } from "../features/preview/wrapped-line-numbers";
+import {EditorCitations} from '../features/preview/editor-citations';
 let nextInstanceId = 0;
 // Domain extracted from the original explorer composition; behavior and storage contracts retained.
 import type { ParsedPresentation } from "@extend-ai/react-pptx";
@@ -61,6 +62,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
   readonly _editorHeader: EditorHeaderControl;
+  readonly _citationUi:EditorCitations;
   _wrappedLineNumbers: WrappedLineNumbers | null = null;
   _wordWrap = false;
   _editorVisible = false;
@@ -153,6 +155,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._editorHeader=new EditorHeaderControl(this,this._required<HTMLButtonElement>(".editor-pane-toggle"));
     this._tabList = this._required<HTMLElement>(".tab-strip");
     this._panelMount = this._required<HTMLElement>(".panel-mount");
+    const citationOwner=this;
+    this._citationUi=new EditorCitations({element:this,shadow:this._shadow,panel:this._panelMount,get state(){return citationOwner._state;},get reader(){return citationOwner._largeTextReader;},renderSource:()=>this._renderPanel()});
     this._openFilesMenu = this._required('.open-files-menu');
     this._openFilesMenu.addEventListener('beforetoggle', event => {
       if((event as ToggleEvent).newState==='open') this._prepareOpenFilesMenu();
@@ -216,6 +220,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   connectedCallback(): void {
     if (this._connected) return;
     this._connected = true;
+    this._citationUi.start();
     this._languageCleanup = localizeOwnedUi(this._shadow);
     this.ownerDocument.defaultView?.addEventListener("code-codex:plugin-loaded", this._onPluginLoaded);
     if (this._clippedLayout) this.dataset.clippedLayout = "true";
@@ -235,6 +240,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _disposeDisconnected(): void {
+    this._citationUi.dispose();
     if (this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
     this._clearTabDrag();
     this._paneResizeCleanup?.();
@@ -290,6 +296,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       activePath: this._state.activePath,
       tabs: this._state.tabs.map((view) => cloneView(view)),
       enabledPreviewers: [...(this._state.enabledPreviewers ?? [])],
+      ...(this._state.citations?{citations:{revision:this._state.citations.revision,ranges:this._state.citations.ranges.map(c=>({...c}))}}:{}),
       ...(editor
         ? {
           editor: {
@@ -569,6 +576,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _renderPanel(): void {
+    this._citationUi.closeMenu();
+    this._citationUi.refresh();
     this._wrappedLineNumbers?.dispose();this._wrappedLineNumbers=null;
     this._largeTextReader?.dispose();
     this._largeTextReader = null;
@@ -624,14 +633,17 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       view={...view,kind:'text',text:draftEditor.draft,sizeBytes:new TextEncoder().encode(draftEditor.draft).length,truncated:false};
     }
     const markdownPreview = view.kind === "text" &&
+      !this._citationUi.requiresSource() &&
       this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) === true &&
       isMarkdownPreviewPath(view.path) &&
       !editor;
     const csvPreview = (view.kind === "text" || view.kind === "empty") &&
+      !this._citationUi.requiresSource() &&
       this._state.enabledPreviewers?.includes(CSV_PREVIEWER_ID) === true &&
       isCsvPreviewPath(view.path) &&
       !editor;
     const diagramPreview = (view.kind === "text" || view.kind === "empty") &&
+      !this._citationUi.requiresSource() &&
       this._state.enabledPreviewers?.includes(DIAGRAM_PREVIEWER_ID) === true &&
       isDiagramPreviewPath(view.path) &&
       !editor;
@@ -710,7 +722,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _renderViewContent(content: HTMLElement, view: MainPreviewFileView, editor?: MainPreviewEditorState): void {
-    if(view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES && !(isMarkdownPreviewPath(view.path) && this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) && this._largeMarkdownKey === `${view.path}\0${view.version}`)) {
+    const citationSource=this._citationUi.requiresSource();
+    if(view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES && !(!citationSource&&isMarkdownPreviewPath(view.path) && this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) && this._largeMarkdownKey === `${view.path}\0${view.version}`)) {
       content.classList.add('large-text-content');
       const style=this.ownerDocument.createElement('style');style.textContent=largeTextStyles;
       this._largeTextReader=new LargeTextReader(this.ownerDocument,view.text);
@@ -718,7 +731,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       return;
     }
     const optionalKind = (view.kind === 'text' || view.kind === 'empty')
-      ? !editor && isMarkdownPreviewPath(view.path) ? 'markdown' : !editor && isCsvPreviewPath(view.path) ? 'csv' : !editor && isDiagramPreviewPath(view.path) ? 'diagram' : undefined
+      ? !editor && !citationSource && isMarkdownPreviewPath(view.path) ? 'markdown' : !editor && !citationSource && isCsvPreviewPath(view.path) ? 'csv' : !editor && !citationSource && isDiagramPreviewPath(view.path) ? 'diagram' : undefined
       : previewPackageId(view.kind) ? view.kind : undefined;
     const optionalId = optionalKind && previewPackageId(optionalKind);
     if (optionalId && this._state.enabledPreviewers?.includes(`code-codex.${optionalId}`)) {
@@ -797,15 +810,15 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
           content.append(this._statePanel("Empty file", "This file is empty.", "empty", view));
           return;
         }
-        if (this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) && isMarkdownPreviewPath(view.path)) {
+        if (!citationSource && this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) && isMarkdownPreviewPath(view.path)) {
           content.append(this._markdownReader(view));
           return;
         }
-        if (this._state.enabledPreviewers?.includes(CSV_PREVIEWER_ID) && isCsvPreviewPath(view.path)) {
+        if (!citationSource && this._state.enabledPreviewers?.includes(CSV_PREVIEWER_ID) && isCsvPreviewPath(view.path)) {
           content.append(this._csvReader(view));
           return;
         }
-        if (this._state.enabledPreviewers?.includes(DIAGRAM_PREVIEWER_ID) && isDiagramPreviewPath(view.path)) {
+        if (!citationSource && this._state.enabledPreviewers?.includes(DIAGRAM_PREVIEWER_ID) && isDiagramPreviewPath(view.path)) {
           content.append(this._diagramReader(view));
           return;
         }
@@ -2105,6 +2118,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
     const visible=this._editorVisible && !this._suspended;
+    if(!visible)this._citationUi.closeMenu();
     this.toggleAttribute('data-editor-visible',visible);
     const toggle=this._required<HTMLButtonElement>('.editor-pane-toggle');
     toggle.setAttribute('aria-pressed',String(visible));

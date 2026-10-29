@@ -39,6 +39,8 @@ These commands run from the repository root after UI dependencies are installed.
 | Complete inline Markdown/editor delivery and rejecting partial responses | `node scripts/test-complete-text.mjs` |
 | Large text and explicit large Markdown rendering | `node scripts/test-large-text.mjs` |
 | Explorer-to-chat absolute path drag | `node scripts/test-drag-file-path.mjs` |
+| Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
+| Citation integration with the actual explorer and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
 | Native record history, per-file disclosures, coverage, card restoration | `node scripts/test-change-review.mjs` |
 | Hosting actual native comparison DOM in editor layout | `node scripts/test-native-diff-host.mjs` |
 | Diff → current source → edit/save/reopen and missing source | `node scripts/test-diff-source.mjs` |
@@ -91,7 +93,6 @@ Update the appropriate Unreleased changelog entry alongside each meaningful user
 | Idea | Current status |
 | --- | --- |
 | Context meter | Not implemented |
-| Selection/right-click citations into chat and jump-back anchors | Not implemented in the committed editor |
 | Broader editable-format support | Planned; additional formats and priorities are still to be chosen. Track preview, source/structured editing, and save support separately; don't treat a preview plugin as an editor. |
 | Structured Markdown table-cell editing | Source editing exists; a dedicated matrix editor doesn't |
 | Configurable name/logo/appearance branding | Not implemented |

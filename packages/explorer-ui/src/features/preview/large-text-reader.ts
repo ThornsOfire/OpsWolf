@@ -41,6 +41,7 @@ export class LargeTextReader {
   private readonly resize: ResizeObserver;
   private frame=0;
   private disposed=false;
+  private highlights:readonly {readonly start:number;readonly end:number}[]=[];
   constructor(private readonly document: Document,private readonly text:string,private readonly diff=false) {
     this.rows=indexTextRows(text);
     const root=document.createElement('div');root.className='large-text-reader';this.element=root;
@@ -79,6 +80,28 @@ export class LargeTextReader {
   }
   setWordWrap(enabled:boolean):void {
     this.wrapped=enabled;this.reflow();
+  }
+  setHighlights(ranges:readonly {readonly start:number;readonly end:number}[]):void {
+    if(ranges.length===this.highlights.length&&ranges.every((r,i)=>r.start===this.highlights[i]!.start&&r.end===this.highlights[i]!.end))return;
+    this.highlights=ranges;this.render();
+  }
+  revealOffset(offset:number):void {
+    let low=0,high=this.rows.length-1;
+    while(low<high){const mid=Math.ceil((low+high)/2);if(this.rows[mid]!<=offset)low=mid;else high=mid-1;}
+    const height=this.viewport.clientHeight||400,total=this.rows.length*ROW_HEIGHT;
+    this.spacer.style.height=`${Math.max(height,Math.min(MAX_SCROLL_HEIGHT,total))}px`;
+    const logical=Math.max(0,low*ROW_HEIGHT-height/3),travel=Math.max(0,total-height);
+    this.viewport.scrollTop=travel?logical*Math.max(0,Math.min(MAX_SCROLL_HEIGHT,total)-height)/travel:0;this.render();
+  }
+  selectionOffsets(selection:Selection):{start:number;end:number}|null {
+    const offset=(node:Node|null,end:number):number|null=>{
+      const element=node instanceof Element?node:node?.parentElement,row=element?.closest<HTMLElement>('.large-text-row');
+      if(!row||!this.visible.contains(row)||!node)return null;
+      const range=this.document.createRange();range.selectNodeContents(row);try{range.setEnd(node,end);}catch{return null;}
+      return Math.min(this.text.length,Number(row.dataset.offset)+range.toString().length);
+    };
+    const a=offset(selection.anchorNode,selection.anchorOffset),b=offset(selection.focusNode,selection.focusOffset);
+    return a===null||b===null?null:{start:Math.min(a,b),end:Math.max(a,b)};
   }
   private reflow():void {
     const canvas=this.document.createElement('canvas');
@@ -128,7 +151,15 @@ export class LargeTextReader {
       row.dataset.offset=String(this.rows[index]);
       const slice=this.text.slice(this.rows[index],this.rows[index+1]??this.text.length).replace(/[\r\n]+$/,'');
       if(this.diff){if(slice.startsWith('+'))row.dataset.change='add';else if(slice.startsWith('-'))row.dataset.change='remove';}
-      row.textContent=slice||' ';fragment.append(row);
+      const rowStart=this.rows[index]!;
+      const cuts=new Set([0,slice.length]);
+      for(const range of this.highlights)if(range.end>rowStart&&range.start<rowStart+slice.length){cuts.add(Math.max(0,range.start-rowStart));cuts.add(Math.min(slice.length,range.end-rowStart));}
+      const points=[...cuts].sort((a,b)=>a-b);
+      for(let i=0;i<points.length-1;i++){
+        const start=points[i]!,end=points[i+1]!,part=slice.slice(start,end);
+        if(this.highlights.some(r=>r.start<rowStart+end&&r.end>rowStart+start)){const mark=this.document.createElement('mark');mark.textContent=part;mark.style.cssText='background:rgba(232,173,49,.32);color:inherit';row.append(mark);}else row.append(this.document.createTextNode(part));
+      }
+      if(!slice)row.textContent=' ';fragment.append(row);
     }
     this.visible.replaceChildren(fragment);
     this.status.textContent=`${(this.rows[first]??0).toLocaleString()} / ${this.text.length.toLocaleString()} characters · long lines continue`;

@@ -2,6 +2,7 @@
 import { AUDIO_PREVIEWER_ID,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,IMAGE_PREVIEWER_ID,MARKDOWN_PREVIEWER_ID,MODEL_PREVIEWER_ID,NOTEBOOK_PREVIEWER_ID,OFFICE_MIME_TYPES,OFFICE_PREVIEWER_ID,PDF_PREVIEWER_ID,VIDEO_PREVIEWER_ID } from "../../core/preview/configuration";
 import type { DiagramSourceKind,MainPreviewFileView,MainPreviewMediaView,MainPreviewModelView,MainPreviewState,MainPreviewUnavailableReason,OfficeDocumentKind } from "../../file-preview/contracts";
 import { isPluginPackageLoaded,pluginModule } from "../../plugin-runtime";
+import {validCitation} from './citation-model';
 
 
 export function isMarkdownPreviewPath(path: string): boolean {
@@ -182,7 +183,8 @@ export function normalizeState(state: MainPreviewState): MainPreviewState {
       ...(state.editor.error === undefined ? {} : { error: state.editor.error }),
     }
     : undefined;
-  return { activePath, tabs, enabledPreviewers, pinnedPaths: [...new Set(state.pinnedPaths ?? [])], ...(editor ? { editor } : {}) };
+  const citations=state.citations&&Number.isSafeInteger(state.citations.revision)?{revision:state.citations.revision,ranges:state.citations.ranges.filter(c=>validCitation(c)&&seen.has(c.path)).slice(0,32).map(c=>({...c}))}:undefined;
+  return { activePath, tabs, enabledPreviewers, pinnedPaths: [...new Set(state.pinnedPaths ?? [])], ...(editor ? { editor } : {}),...(citations?{citations}:{}) };
 }
 
 

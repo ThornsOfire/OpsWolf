@@ -12,6 +12,8 @@ import { runtimeEvent,runtimeTaskLabel } from "../../runtime-events";
 import { recordCaughtRuntimeError } from "../../runtime-operations";
 import { TabStore } from "../preview/tab-store";
 import { PinnedFiles, projectPinKey } from "../preview/pinned-files";
+import type {CitationState,FileCitation} from '../../contracts/citations';
+import {citationRelativePath} from '../preview/citation-model';
 export interface PreviewWorkspaceControllerPorts {
  readonly element:HTMLElement;
  readonly collapse:(collapsed?:boolean)=>void;
@@ -38,6 +40,17 @@ export interface PreviewWorkspaceControllerPorts {
   readonly syncEditModeButton: () => void;
 }
 export class PreviewWorkspaceController {
+ private citations:CitationState|undefined;
+ private citationRevision=0;
+ openCitations(ranges:readonly FileCitation[]):void {
+  const root=this.host.context?.rootPath;if(!root||!ranges.length||ranges.length>32||!this.host.bridge?.available||!this.host.mainPreviewSurface?.isConnected||(this.host.state!=='ready'&&this.host.state!=='empty'))return;
+  const relative=ranges.map(c=>({citation:c,path:citationRelativePath(c.path,root)}));
+  if(relative.some(c=>!c.path))return;
+  this.citations={revision:++this.citationRevision,ranges:relative.map(c=>({...c.citation,path:c.path!}))};
+  for(const path of new Set(relative.map(c=>c.path!)))this.openPreviewPath(path,path.split('/').at(-1)??path,false);
+  this.activePreviewPath=relative[0]!.path!;this.syncMainPreview();this.host.mainPreview?.showEditor?.();
+ }
+ clearCitations():void {this.citations=undefined;this.syncMainPreview();}
  openNativeDiff():void {
   const threadId=this.host.context?.threadId,preview=this.host.ensureMainPreview();if(!threadId||!preview)return;
   const path=`native-diff://${threadId}`;
@@ -199,7 +212,7 @@ openPreviewTab(row: FlatTreeRow): void {
         }
         this.openPreviewPath(node.relativePath, node.name);
     }
-openPreviewPath(relativePath: string, name: string): void {
+openPreviewPath(relativePath: string, name: string, reveal=true): void {
         if ((this.host.state !== "ready" && this.host.state !== "empty") ||
             !this.host.context ||
             !this.host.bridge?.available ||
@@ -213,7 +226,7 @@ openPreviewPath(relativePath: string, name: string): void {
         }
         const preview=this.host.ensureMainPreview();
         if (!preview) return;
-        preview.showEditor?.();
+        if(reveal)preview.showEditor?.();
         let tab = this.previewTabs.find((candidate) => candidate.path === relativePath);
         if (!tab) {
             if (this.previewTabs.length >= MAX_PREVIEW_TABS) {
@@ -398,6 +411,7 @@ closeAllPreviewTabs(): boolean {
         this.host.announce('Unpinned tabs closed; pinned tabs kept open');return true;
     }
 purgePreviewTabs(renderRows = true): void {
+        this.citations=undefined;
         this.restoredProject = undefined;
         this.previewSessionRevision += 1;
         this.host.clearEditing(false);
@@ -422,6 +436,7 @@ syncMainPreview(): void {
             }
             : undefined;
         this.host.mainPreview?.setState({
+            ...(this.citations?{citations:this.citations}:{}),
             activePath: this.activePreviewPath,
             tabs: this.previewTabs.map((tab) => tab.view),
             enabledPreviewers: [...this.host.enabledPreviewers],

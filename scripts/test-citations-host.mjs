@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createServer} from 'node:http';
+import {launchFixture,delay} from './browser-fixture.mjs';
+import {installedBackgroundFixture} from './background-package-fixture.mjs';
+const root=resolve(import.meta.dirname,'..');
+const html=`<!doctype html><html data-theme="dark"><meta charset="utf-8"><link rel="modulepreload" href="/app-initial-fixture.js"><style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font:13px system-ui}body{display:flex}nav{width:50px;flex:none}[data-app-shell-workspace-row]{display:flex;flex:1;min-width:0}aside{width:200px;flex:none}._Workspace_new{display:contents}._MainContentClip_new{display:flex;flex:1;min-width:0}main{position:relative;flex:1;min-width:0;display:flex;flex-direction:column}header{position:fixed;top:0;left:250px;right:0;height:52px;pointer-events:none}._WorkspaceContent_new{flex:1;padding-top:52px;display:flex;min-height:0}[data-app-shell-workspace-layout]{flex:1;display:flex;flex-direction:column}article{flex:1}[data-thread-scroll-footer]{padding:16px;position:relative}textarea{width:90%;height:80px}
+</style><body><nav data-app-navigation-rail="true"><button data-sidebar-destination="builtin:home" aria-current="page">Home</button></nav><button hidden data-app-shell-sidebar-trigger></button><div data-app-shell-workspace-row="true"><aside class="app-shell-left-panel"><button data-app-action-sidebar-thread-active="true" data-app-action-sidebar-thread-host-id="local" data-app-action-sidebar-thread-kind="local" data-app-action-sidebar-thread-id="local:thread_fixture_001">Fixture</button></aside><div data-app-shell-active-page="true" class="contents"><div class="_Workspace_new" data-app-shell-page-surface="true"><header data-app-shell-titlebar="true"><span data-app-shell-titlebar-content>Citation host</span></header><div class="_MainContentClip_new"><main data-app-shell-main-surface="default"><div class="_WorkspaceContent_new"><div data-app-shell-workspace-layout="split"><article data-response-annotation-conversation="thread_fixture_001"></article><div data-thread-scroll-footer data-codex-composer-root><div data-above-composer-conversation-id="thread_fixture_001"><textarea id="composer">Keep this draft</textarea></div></div></div></div></main></div></div></div></div><script>
+window.errors=[];addEventListener('error',e=>errors.push(e.message));addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
+window.calls=[];window.saved=[];window.files={'src/main.ts':'const original = 1;\\n','notes.txt':'first\\nsecond\\n'};window.failSave=false;
+window.__CODE_CODEX_BOOTSTRAP__={token:'fixture',codexVersion:'26.1023.6123.0',supported:true};
+window.preview=path=>({kind:'text',text:files[path]??'',sizeBytes:new TextEncoder().encode(files[path]??'').length,truncated:false,editable:true,version:'a'.repeat(64),lineEnding:'lf'});
+window.__codeCodex={request:async({method,params})=>{calls.push({method,params});
+if(method==='explorer.settings.get'||method==='explorer.settings.set')return {collapsed:false,panelWidth:260};
+if(method==='explorer.context')return {threadId:params.threadId,rootPath:'C:/Fixture',projectName:'Fixture',rootName:'Fixture',compatible:true};
+if(method==='explorer.list')return {entries:[{name:'notes.txt',relativePath:'notes.txt',kind:'file'}]};
+if(method==='explorer.changes.native')return {review:{id:'turn-fixture',status:'completed',completedMs:1000,messageIds:[],omitted:0,files:[{relativePath:'src/main.ts',kind:'update',content:'--- a/src/main.ts\\n+++ b/src/main.ts\\n@@ -1 +1 @@\\n-old\\n+new\\n'}]},turnId:'turn-fixture',nextCursor:null};
+if(method==='explorer.preview')return preview(params.relativePath);
+if(method==='explorer.preview.save'){saved.push(params);if(failSave)throw {code:'CONFLICT',message:'Fixture version conflict'};files[params.relativePath]=atob(params.contentBase64);return preview(params.relativePath);}return {};}};
+window.url=ranges=>'codex://code-codex/cite?data='+encodeURIComponent(JSON.stringify({v:1,ranges}));window.follow=ranges=>{const a=document.createElement('a');a.href=url(ranges);document.querySelector('article').append(a);a.click();a.remove();};
+</script><script>${installedBackgroundFixture(root)}</script><script src="/explorer.js"></script></body></html>`;
+const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url.endsWith('.js')?'text/javascript':'text/html');res.end(req.url==='/explorer.js'?readFileSync(resolve(root,'packages/explorer-ui/dist/explorer.js')):req.url==='/app-initial-fixture.js'?`export const adapter={appActions:{runInPrimaryWindow:async()=>({mode:'dark'})},clientCoordination:{invalidateQueryCache:async()=>({})}};`:html);});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),ev=e=>browser.evaluate(e),checks=[];
+async function until(expr){for(let i=0;i<150;i++){if(await ev(expr))return;await delay(40);}throw Error('Not ready: '+expr);}
+async function check(name,expr){assert.equal(await ev(`Boolean(${expr})`),true,name);checks.push(name);}
+try{
+ await until(`document.querySelector('[data-code-codex-change-review]')?.shadowRoot.querySelector('.toggle')?.textContent.includes('1 file')`);
+ await ev(`window.review=document.querySelector('[data-code-codex-change-review]').shadowRoot;review.querySelector('.toggle').click();review.querySelector('.file-name').click();window.viewer=document.querySelector('main [data-code-codex-owned]');window.q=s=>viewer.shadowRoot.querySelector(s);window.mode=text=>[...viewer.shadowRoot.querySelectorAll('.preview-mode-button')].find(b=>b.textContent===text);mode('Open file').click()`);await until(`!!mode('Edit')`);
+ await ev(`mode('Edit').click();window.editor=q('.code-editor');editor.value='const dirty = 2;\\n';editor.dispatchEvent(new Event('input',{bubbles:true}));editor.setSelectionRange(0,10);editor.dispatchEvent(new MouseEvent('contextmenu',{bubbles:true,composed:true,clientX:1100,clientY:260}));[...viewer.shadowRoot.querySelectorAll('.citation-menu button')].find(b=>b.textContent==='Cite in chat').click()`);
+ await check('Real explorer wiring accepts selection and appends full location plus draft marker',`document.querySelector('#composer').value.startsWith('Keep this draft')&&document.querySelector('#composer').value.includes('C:/Fixture/src/main.ts:1 (unsaved draft)')`);
+ await ev(`window.target=[{path:'C:/Fixture/notes.txt',startLine:2,endLine:2,quote:'second\\n'}];follow(target)`);await until(`!!document.querySelector('[data-code-codex-close-dialog]')`);
+ await check('Citation navigation uses existing custom Save and switch dialog',`document.querySelector('[data-code-codex-close-dialog]').shadowRoot.querySelector('[data-choice=save]').textContent==='Save and switch'&&viewer._state.activePath==='src/main.ts'`);
+ await ev(`document.querySelector('[data-code-codex-close-dialog]').shadowRoot.querySelector('[data-choice=cancel]').click()`);await delay(50);
+ await check('Cancel keeps the dirty file and draft untouched',`q('.code-editor').value==='const dirty = 2;\\n'&&viewer._state.activePath==='src/main.ts'&&saved.length===0`);
+ await ev(`failSave=true;follow(target)`);await until(`!!document.querySelector('[data-code-codex-close-dialog]')`);
+ await ev(`document.querySelector('[data-code-codex-close-dialog]').shadowRoot.querySelector('[data-choice=save]').click()`);await until(`saved.length===1&&!viewer._state.editor.saving`);
+ await check('Failed save prevents citation navigation and retains complete draft',`viewer._state.activePath==='src/main.ts'&&q('.code-editor').value==='const dirty = 2;\\n'&&!viewer._state.tabs.some(t=>t.path==='notes.txt')`);
+ await ev(`failSave=false;follow(target)`);await until(`!!document.querySelector('[data-code-codex-close-dialog]')`);
+ await ev(`document.querySelector('[data-code-codex-close-dialog]').shadowRoot.querySelector('[data-choice=save]').click()`);await until(`viewer._state.activePath==='notes.txt'&&q('.preview-metadata')?.textContent.includes('Cited')`);
+ await check('Verified save completes before opening and highlighting the target',`saved.length===2&&files['src/main.ts']==='const dirty = 2;\\n'&&viewer._state.citations.ranges[0].path==='notes.txt'&&CSS.highlights.size===1&&mode('Edit')`);
+ await ev(`mode('Edit').click()`);await delay(60);
+ await check('Cited file remains a normal editable source tab',`q('.code-editor').value==='first\\nsecond\\n'&&q('.code-editor').selectionStart===6`);
+ await check('Composer and bridge remain usable without browser errors',`document.querySelector('#composer').value.startsWith('Keep this draft')&&calls.some(c=>c.method==='explorer.preview'&&c.params.relativePath==='notes.txt')&&errors.length===0`);
+ console.log(JSON.stringify({passed:true,checks},null,2));
+}catch(error){console.error(await ev(`({errors,calls,saved,state:viewer?.state,dialog:document.querySelector('[data-code-codex-close-dialog]')?.shadowRoot.textContent})`));throw error;}
+finally{await browser.close();await new Promise(r=>server.close(r));}
