@@ -2189,7 +2189,19 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if (observerRoot !== this._nativeTitleObserverRoot) {
       this._nativeTitleObserver?.disconnect();
       this._nativeTitleObserverRoot = observerRoot;
-      this._nativeTitleObserver = new MutationObserver(() => this._syncSuppression());
+      this._nativeTitleObserver = new MutationObserver(records => {
+        const titleNode = (node: Node): boolean => node instanceof Element &&
+          (node.matches('header, [data-app-shell-titlebar-content]') ||
+            !!node.querySelector('header, [data-app-shell-titlebar-content]'));
+        // Native tab adapters insert their own controls into this same header.
+        // Their mutations must not trigger another complete layout pass.
+        const relevant = records.some(record => {
+          const target = record.target instanceof Element ? record.target : record.target.parentElement;
+          return !!target?.closest('[data-app-shell-titlebar-content]') ||
+            (record.type === 'childList' && [...record.addedNodes, ...record.removedNodes].some(titleNode));
+        });
+        if (relevant) this._syncSuppression();
+      });
       this._nativeTitleObserver.observe(observerRoot, {
         childList: true, subtree: true, characterData: observerRoot !== document.body,
       });

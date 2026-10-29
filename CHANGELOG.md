@@ -58,7 +58,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
-- The editor's conversation tab tracks the active native chat title while docked as well as expanded, including renames and cached-chat switches. Ambiguous native titles keep the generic label, and docking leaves the native title visible.
+- The editor's conversation tab tracks the active native chat title while docked as well as expanded, including renames, replacement titles and cached-chat switches. Ambiguous native titles keep the generic label, and docking leaves the native title visible. Unrelated header controls do not trigger a title/layout feedback loop.
 
 - Moving an existing chat into a different local project updates the explorer root after metadata revalidation, including empty destination folders. Resolutions no longer retain a process-lifetime cwd cache. Refresh and visible-chat background checks detect same-chat moves; dirty or saving editor drafts defer the switch, and stale responses cannot retarget another chat. Explicit launcher workspace overrides remain fixed.
 - Embedded browser pages now follow editor/explorer divider movement even when their size stays unchanged. Qualified browser inner frames fit the available pane width, and geometry changes notify the native resize handler instead of leaving the webpage frozen behind its toolbar.

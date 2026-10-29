@@ -28,7 +28,7 @@ window.url=ranges=>'codex://code-codex/cite?data='+encodeURIComponent(JSON.strin
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url.endsWith('.js')?'text/javascript':'text/html');res.end(req.url==='/explorer.js'?readFileSync(resolve(root,'packages/explorer-ui/dist/explorer.js')):req.url==='/markdown.js'?markdownPlugin:req.url==='/app-initial-fixture.js'?`export const adapter={appActions:{runInPrimaryWindow:async()=>({mode:'dark'})},clientCoordination:{invalidateQueryCache:async()=>({})}};`:html);});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),ev=e=>browser.evaluate(e),checks=[];
 async function until(expr){for(let i=0;i<150;i++){if(await ev(expr))return;await delay(40);}throw Error('Not ready: '+expr);}
-async function check(name,expr){assert.equal(await ev(`Boolean(${expr})`),true,name);checks.push(name);}
+async function check(name,expr){assert.equal(await ev(`Boolean(${expr})`),true,name);checks.push(name);console.log('PASS '+name);}
 try{
  await until(`document.querySelector('[data-code-codex-change-review]')?.shadowRoot.querySelector('.toggle')?.textContent.includes('1 file')`);
  await ev(`window.review=document.querySelector('[data-code-codex-change-review]').shadowRoot;review.querySelector('.toggle').click();review.querySelector('.file-name').click();window.viewer=document.querySelector('main [data-code-codex-owned]');window.q=s=>viewer.shadowRoot.querySelector(s);window.mode=text=>[...viewer.shadowRoot.querySelectorAll('.preview-mode-button')].find(b=>b.textContent===text);mode('Open file').click()`);await until(`!!mode('Edit')`);
