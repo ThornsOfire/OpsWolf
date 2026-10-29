@@ -34,6 +34,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- Wrapped source-line numbers stay aligned at application UI zoom levels such as 120%, in both Edit and read-only source views. Gutter measurements compare heights in the same CSS units and retain fractional content widths at wrap boundaries.
 - Replacing an editor before deferred cleanup finishes can no longer preserve the old editor's hidden-chat attributes or width reservations as native defaults. Restore/E release the chat correctly, and the replacement keeps its header controls.
 - Editor controls overlapping native controls or blocking tab-switch/close targets in docked and expanded layouts. ([hit targets](https://github.com/ThornsOfire/code-codex/commit/166efa2), [expanded layout](https://github.com/ThornsOfire/code-codex/commit/ae2ecc3))
 - Partial text previews ending before the actual file did. Incomplete/oversized responses are rejected explicitly; syntax-highlighting budgets don't cut off the underlying source. ([complete documents](https://github.com/ThornsOfire/code-codex/commit/1931679), [source coverage](https://github.com/ThornsOfire/code-codex/commit/1f69d8d))

@@ -14,7 +14,12 @@ export class WrappedLineNumbers {
   private render():void {
     if(this.disposed||!this.source.isConnected)return;
     const document=this.source.ownerDocument,style=document.defaultView!.getComputedStyle(this.source);
-    const width=this.source.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+    const padding=parseFloat(style.paddingLeft)+parseFloat(style.paddingRight);
+    const border=parseFloat(style.borderLeftWidth)+parseFloat(style.borderRightWidth);
+    const scrollbar=Math.max(0,this.source.offsetWidth-this.source.clientWidth-border);
+    // clientWidth rounds away fractional CSS pixels, enough to change a wrap
+    // at a word boundary. Preserve the computed width before subtracting chrome.
+    const width=parseFloat(style.width)-(style.boxSizing==='border-box'?padding+border:0)-scrollbar;
     if(width<=0)return;
     const lineHeight=parseFloat(style.lineHeight),lines=this.text().split(/\r\n|\r|\n/);
     const canvas=document.createElement('canvas'),context=canvas.getContext('2d');
@@ -31,7 +36,9 @@ export class WrappedLineNumbers {
       const node=document.createElement('div');node.textContent=line||'\u200b';measure.append(node);candidates.push({index,node});
     }
     this.source.parentElement!.append(measure);
-    for(const candidate of candidates)heights[candidate.index]=Math.max(1,Math.round(candidate.node.getBoundingClientRect().height/lineHeight));
+    // Computed height and line-height share CSS units. Bounding rectangles include
+    // ancestor zoom, which otherwise adds/removes phantom wrapped gutter rows.
+    for(const candidate of candidates)heights[candidate.index]=Math.max(1,Math.round(parseFloat(document.defaultView!.getComputedStyle(candidate.node).height)/lineHeight));
     measure.remove();
     const numbers:string[]=[];
     for(let index=0;index<lines.length;index++)numbers.push(String(index+1)+'\n'.repeat(heights[index]!-1));

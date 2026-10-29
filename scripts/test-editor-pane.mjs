@@ -124,6 +124,25 @@ try {
   await check('Wrapped gutter numbers original lines and aligns the second line', `q('.code-line-numbers').dataset.lineCount==='3'&&numbersAlign()&&q('.code-line-numbers').textContent.includes('\\n\\n')`);
   await ev(`viewer._panePreference.width=340;viewer._syncSuppression()`);await delay(120);
   await check('Wrapped line numbers realign when the pane is resized', `numbersAlign()`);
+  await ev(`numberedSource+='\\n'+('Additional logical source line\\n'.repeat(80));state.tabs=state.tabs.map(t=>t.path===file.path?{...t,text:numberedSource,sizeBytes:numberedSource.length}:t);state.editor.draft=numberedSource`);
+  for(const zoom of [0.8,1.2,1.5,2.25]){
+    await ev(`document.querySelector('main').style.zoom='${zoom}';show()`);await delay(100);
+    await check(`Wrapped editable gutter aligns logical lines at CSS zoom ${zoom}`,`numbersAlign()`);
+    await ev(`delete state.editor;show()`);await delay(100);
+    await check(`Wrapped source gutter aligns logical lines at CSS zoom ${zoom}`,`(()=>{const code=q('.literal-text'),g=q('.code-line-numbers');return Math.abs(lineRect(code,code.textContent.indexOf('SECOND_LOGICAL_LINE'))-lineRect(g,g.textContent.indexOf('\\n2')+1))<1})()`);
+    await ev(`state.editor={path:file.path,draft:numberedSource,saving:false};show()`);
+  }
+  for(const display of [{width:1920,height:1080,deviceScaleFactor:1},{width:3840,height:2160,deviceScaleFactor:2.25}]){
+    await browser.command('Emulation.setDeviceMetricsOverride',{...display,mobile:false});
+    for(const zoom of [1.2,1.75]){
+      await ev(`document.querySelector('main').style.width=(innerWidth-200)+'px';document.querySelector('main').style.zoom='${zoom}';viewer._panePreference.width=560;state.editor={path:file.path,draft:numberedSource,saving:false};show()`);await delay(100);
+      await check(`Wrapped Edit aligns at ${display.width}x${display.height}, scale ${display.deviceScaleFactor}, zoom ${zoom}`,`numbersAlign()`);
+      await ev(`delete state.editor;show()`);await delay(100);
+      await check(`Wrapped source aligns at ${display.width}x${display.height}, scale ${display.deviceScaleFactor}, zoom ${zoom}`,`(()=>{const code=q('.literal-text'),g=q('.code-line-numbers');return Math.abs(lineRect(code,code.textContent.indexOf('SECOND_LOGICAL_LINE'))-lineRect(g,g.textContent.indexOf('\\n2')+1))<1})()`);
+    }
+  }
+  await browser.command('Emulation.clearDeviceMetricsOverride');
+  await ev(`document.querySelector('main').style.width='1200px';document.querySelector('main').style.zoom='1';viewer._panePreference.width=340;state.editor={path:file.path,draft:numberedSource,saving:false};show()`);await delay(100);
   await check('Wrap preference persists locally', `localStorage.getItem('code-codex:word-wrap:v1')==='true'`);
   await ev(`delete state.editor;show()`);await delay(60);
   await check('Read-only source also wraps within the pane', `getComputedStyle(q('.literal-text')).whiteSpace==='pre-wrap'&&q('.preview-content').scrollWidth<=q('.preview-content').clientWidth+1`);
