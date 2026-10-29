@@ -399,3 +399,10 @@ including the virtual large-file reader. It retains the current draft and caret
 selection and remembers the preference locally. While wrapping, the fixed-line
 number gutter and minimap are hidden to avoid misleading line alignment; source
 syntax highlighting remains available.
+
+Closing a dirty file tab offers **Save and close**, **Discard**, and **Cancel**.
+Closing all tabs offers **Save all and close** instead. The current editor keeps
+one active draft; save-all saves that pending draft before closing the tab set.
+A failed save or version conflict leaves the tabs and draft open. Clean tabs close
+without a prompt. Closing waits for a successful save and checks that the same
+workspace and draft still own the request.

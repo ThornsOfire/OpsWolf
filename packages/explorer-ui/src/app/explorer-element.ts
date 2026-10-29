@@ -1,3 +1,4 @@
+import { requestDirtyEditorClose } from "../features/preview/close-dialog";
 import { applyPluginCardIcons } from '../components/plugin-icons';
 import {attachPluginPins} from '../components/plugin-pins';
 import {AsciiTilesSettingsController,asciiTilesCardMarkup,asciiTilesPanelMarkup} from '../features/plugin-settings/ascii-tiles';
@@ -2839,13 +2840,56 @@ export class CodeCodexElement extends HTMLElement {
             this.#previewWorkspace.syncMainPreview();
         this.#treeinteractionSettings.renderVisible();
     };
+    #editorClosePending=false;
+    async #requestEditorClose(path?:string):Promise<void> {
+        if(this.#editorClosePending)return;
+        const editing=this.#previeweditingSettings;
+        if(editing.drafts.saving){this.#announce('Wait for the current save to finish');return;}
+        const close=()=>{
+            if(path===undefined)this.#previewWorkspace.closeAllPreviewTabs();
+            else this.#previewWorkspace.closePreviewTab(path);
+        };
+        const draftPath=editing.drafts.path;
+        if(!draftPath || (path!==undefined&&path!==draftPath) || !editing.isEditDirty()){close();return;}
+        const generation=this.#workspaceSession.generation;
+        const context=this.#workspaceSession.context;
+        const bridge=this.#workspaceSession.bridge;
+        const preview=this.#mainPreview;
+        const editSession=editing.drafts.session;
+        let released=false;
+        const targets=path===undefined?[...this.#previewWorkspace.tabStore.items]:this.#previewWorkspace.tabStore.items.filter(tab=>tab.path===path);
+        const current=()=>this.#connected&&!this.#dismissed&&this.#workspaceSession.generation===generation&&
+            this.#workspaceSession.context===context&&this.#workspaceSession.bridge===bridge&&this.#mainPreview===preview&&
+            targets.every(tab=>this.#previewWorkspace.tabStore.items.includes(tab))&&
+            (path!==undefined||targets.length===this.#previewWorkspace.tabStore.items.length)&&
+            (released?editing.drafts.path===null:editing.drafts.path===draftPath&&editing.drafts.session===editSession);
+        this.#editorClosePending=true;
+        try {
+            await requestDirtyEditorClose({
+                document:this.ownerDocument,all:path===undefined,
+                fileName:this.#previewWorkspace.tabStore.items.find(tab=>tab.path===draftPath)?.name??draftPath,
+                isCurrent:current,
+                save:async()=>{
+                    if(editing.drafts.path!==draftPath)return false;
+                    await editing.saveEditing(false);
+                    if(!current()||editing.drafts.path!==draftPath||editing.drafts.saving||editing.drafts.error||editing.isEditDirty())return false;
+                    editing.clearEditing(false);released=true;return true;
+                },
+                discard:()=>{if(editing.drafts.path===draftPath){editing.clearEditing(false);released=true;}},
+                close,
+            });
+        } catch(error) {
+            recordCaughtRuntimeError("#requestEditorClose",error);
+            this.#announce("The close action could not finish. Your tabs have been kept open.");
+        } finally {this.#editorClosePending=false;}
+    }
     #onMainPreviewCloseAll = (event: Event): void => {
-        if(event.target===this.#mainPreview) this.#previewWorkspace.closeAllPreviewTabs();
+        if(event.target===this.#mainPreview) void this.#requestEditorClose();
     };
     #onMainPreviewClose = (event: CustomEvent<unknown>): void => {
+        if(event.target!==this.#mainPreview)return;
         const detail = asRecord(event.detail);
-        if (typeof detail?.path === "string")
-            this.#previewWorkspace.closePreviewTab(detail.path);
+        if (typeof detail?.path === "string") void this.#requestEditorClose(detail.path);
     };
     #onMainPreviewDraft = (event: CustomEvent<unknown>): void => {
         if (event.target !== this.#mainPreview)
