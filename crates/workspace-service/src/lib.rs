@@ -3,7 +3,8 @@
 //! In addition to read-only directory metadata, this crate exposes narrow text
 //! preview, save, and bounded workspace-entry mutations. Native policy
 //! classifies the relative file name, denies sensitive and non-text classes,
-//! and permits at most 64 KiB of strict UTF-8 text. Saving requires the version
+//! and permits up to 10 MiB of strict UTF-8 text through bounded chunks.
+//! Inline responses and saves remain limited to 512 KiB. Saving requires the version
 //! returned by a complete preview and can update only that existing file. A
 //! separate allowlisted media API exposes bounded, versioned chunks for images,
 //! videos, PDFs, audio, Jupyter notebooks, Office documents, and glTF models
@@ -33,9 +34,9 @@ pub use preview::{
     MAX_AUDIO_PREVIEW_BYTES, MAX_IMAGE_PREVIEW_BYTES, MAX_MEDIA_CHUNK_BYTES,
     MAX_MODEL_PREVIEW_BYTES, MAX_MODEL_RESOURCE_AGGREGATE_BYTES, MAX_MODEL_RESOURCE_BYTES,
     MAX_NOTEBOOK_PREVIEW_BYTES, MAX_OFFICE_PREVIEW_BYTES, MAX_PDF_PREVIEW_BYTES, MAX_PREVIEW_BYTES,
-    MAX_VIDEO_PREVIEW_BYTES, MEDIA_CHUNK_BYTES, MediaChunk, MediaInfo, MediaKind,
+    MAX_VIDEO_PREVIEW_BYTES, MAX_TEXT_FILE_BYTES, MEDIA_CHUNK_BYTES, MediaChunk, MediaInfo, MediaKind,
     MediaPreviewNotice, ModelResourceChunkRequest, ModelResourceInfo, PreviewKind,
-    PreviewLineEnding, PreviewResult, PreviewUnsupportedReason,
+    PreviewLineEnding, PreviewResult, PreviewUnsupportedReason, TextTransferInfo,
 };
 pub use settings::{
     PreparedSettings, SETTINGS_CANDIDATE_PREFIX, SETTINGS_CANDIDATE_SUFFIX,

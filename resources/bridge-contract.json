@@ -69,6 +69,10 @@
       "effect": "read"
     },
     {
+      "name": "explorer.preview.chunk",
+      "effect": "read"
+    },
+    {
       "name": "explorer.preview.save",
       "effect": "workspace-write"
     },

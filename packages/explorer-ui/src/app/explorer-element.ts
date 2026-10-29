@@ -2773,6 +2773,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.addEventListener("cle-main-preview-activate", this.#onMainPreviewActivate as EventListener);
         preview.addEventListener("cle-main-preview-close", this.#onMainPreviewClose as EventListener);
         preview.addEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
+        preview.addEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
         preview.addEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.addEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
         preview.addEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
@@ -2791,6 +2792,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.removeEventListener("cle-main-preview-activate", this.#onMainPreviewActivate as EventListener);
         preview.removeEventListener("cle-main-preview-close", this.#onMainPreviewClose as EventListener);
         preview.removeEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
+        preview.removeEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
         preview.removeEventListener("cle-main-preview-save", this.#onMainPreviewSave as EventListener);
         preview.removeEventListener("cle-main-preview-reload", this.#onMainPreviewReload as EventListener);
         preview.removeEventListener("cle-main-preview-reorder", this.#onMainPreviewReorder as EventListener);
@@ -2847,6 +2849,12 @@ export class CodeCodexElement extends HTMLElement {
         this.#previeweditingSettings.drafts.text = detail.text;
         this.#previeweditingSettings.drafts.revision += 1;
         this.#previeweditingSettings.syncEditModeButton();
+    };
+    #onMainPreviewEdit = (event: CustomEvent<unknown>): void => {
+        if(event.target !== this.#mainPreview) return;
+        const detail=asRecord(event.detail);
+        if(detail?.path === this.#activePreviewPath && !this.#previeweditingSettings.drafts.path)
+            this.#previeweditingSettings.toggleEditing();
     };
     #onMainPreviewSave = (event: CustomEvent<unknown>): void => {
         if (event.target !== this.#mainPreview)

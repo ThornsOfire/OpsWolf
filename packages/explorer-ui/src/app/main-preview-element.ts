@@ -9,6 +9,8 @@ import { getBootstrapConfig } from "../bridge";
 import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { mainPreviewStyles } from "../components/styles/main-preview";
 import { EDITOR_PANE_KEY, EditorPaneLayout, nativeHeaderInset, readEditorPanePreference } from "../features/preview/editor-pane";
+import { INLINE_TEXT_BYTES } from "../core/preview/text-configuration";
+import { LargeTextReader,largeTextStyles } from "../features/preview/large-text-reader";
 import { MAX_PREVIEW_TEXT_UNITS } from "../core/configuration/explorer";
 import { CONVERSATION_ICON,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,MAIN_PREVIEW_ACTIVATE_EVENT,MAIN_PREVIEW_CLOSE_EVENT,MAIN_PREVIEW_DRAFT_EVENT,MAIN_PREVIEW_RELOAD_EVENT,MAIN_PREVIEW_SAVE_EVENT,MAIN_PREVIEW_TAG,MARKDOWN_PREVIEWER_ID } from "../core/preview/configuration";
 import { cloneView,firstVisibleLineOffset,formatBytes,isCsvPreviewPath,isDiagramPreviewPath,isMarkdownPreviewPath,isMediaPreviewView,normalizeState,officeDocumentKind,previewerIdForMediaKind,previewMethod,previewPackageId,restoreAttribute,selectionOffsetWithin,sourceLineCount,textPositionAtOffset,unsupportedCopy } from "../features/preview/view-state";
@@ -50,6 +52,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   readonly _syntaxCache = new Map<string, { source: string; highlight: SyntaxHighlight }>();
 
   _codeMinimap: CodeMinimap | null = null;
+  _largeTextReader: LargeTextReader | null = null;
+  _largeMarkdownKey: string | undefined;
+  _draftPreviewPath: string | undefined;
 
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
@@ -220,6 +225,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
     this._connected = false;
+    this._largeTextReader?.dispose();
+    this._largeTextReader = null;
     this._codeMinimap?.dispose();
     this._codeMinimap = null;
     this.ownerDocument.defaultView?.removeEventListener("code-codex:plugin-loaded", this._onPluginLoaded);
@@ -287,6 +294,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const previousEditorPath = this._state.editor?.path ?? null;
     const nextEditorPath = nextState.editor?.path ?? null;
     const editorTransition = nextEditorPath !== previousEditorPath;
+    if(editorTransition) this._draftPreviewPath=undefined;
     const enteringEditor = nextEditorPath !== null && nextEditorPath !== previousEditorPath;
     const preserveActiveViewport = nextState.activePath !== null && nextState.activePath === this._state.activePath;
     const readerViewport = editorTransition || preserveActiveViewport
@@ -498,6 +506,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _renderPanel(): void {
+    this._largeTextReader?.dispose();
+    this._largeTextReader = null;
     this._codeMinimap?.dispose();
     this._codeMinimap = null;
     this._cancelPdfPreview();
@@ -510,7 +520,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       return;
     }
 
-    const view = this._state.tabs.find((candidate) => candidate.path === this._state.activePath);
+    let view = this._state.tabs.find((candidate) => candidate.path === this._state.activePath);
     if (!view) {
       this._panelMount.replaceChildren();
       return;
@@ -530,7 +540,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const displayPath = view.kind === "git-diff" ? view.sourcePath : view.path;
     const location = this._textSpan(displayPath, "preview-location");
     location.title = displayPath;
-    const editor = this._state.editor?.path === view.path ? this._state.editor : undefined;
+    const draftEditor = this._state.editor?.path === view.path ? this._state.editor : undefined;
+    const editor = this._draftPreviewPath === view.path ? undefined : draftEditor;
+    if(draftEditor && !editor && (view.kind==='text'||view.kind==='empty')) {
+      view={...view,kind:'text',text:draftEditor.draft,sizeBytes:new TextEncoder().encode(draftEditor.draft).length,truncated:false};
+    }
     const markdownEditing = Boolean(
       editor &&
       (view.kind === "text" || view.kind === "empty") &&
@@ -549,14 +563,45 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       this._state.enabledPreviewers?.includes(DIAGRAM_PREVIEWER_ID) === true &&
       isDiagramPreviewPath(view.path) &&
       !editor;
-    const metadata = `${markdownEditing ? "Rendered Markdown edit · " : markdownPreview ? "Markdown preview · " : csvPreview ? "CSV preview · " : diagramPreview ? "Diagram preview · " : ""}${this._metadataFor(view)}`;
+    const metadata = `${view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES ? this._largeMarkdownKey === `${view.path}\0${view.version}` ? "Large file · rendered · read only · " : "Large file · plain text · read only · " : markdownEditing ? "Rendered Markdown edit · " : markdownPreview ? "Markdown preview · " : csvPreview ? "CSV preview · " : diagramPreview ? "Diagram preview · " : ""}${this._metadataFor(view)}`;
     metaBar.append(location, this._textSpan(metadata, "preview-metadata"));
+    const action=(label:string,title:string,callback:()=>void,disabled=false):HTMLButtonElement=>{
+      const button=this.ownerDocument.createElement('button');button.type='button';button.textContent=label;
+      button.className='preview-mode-button';button.title=title;button.disabled=disabled;
+      button.style.cssText='flex:none;padding:2px 6px;font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;cursor:pointer';
+      button.addEventListener('click',callback);metaBar.append(button);return button;
+    };
+    if(view.kind==='text'||view.kind==='empty') {
+      const path=view.path;
+      if(view.editable || draftEditor) {
+        const previewButton=action('Preview','Read only; unsaved draft is retained',()=>{this._draftPreviewPath=path;this._renderPanel();});
+        previewButton.setAttribute('aria-pressed',String(!editor));
+        const editButton=action('Edit','Enable editing',()=>{
+          this._draftPreviewPath=undefined;
+          if(draftEditor) this._renderPanel();
+          else this._dispatchPathEvent<MainPreviewPathDetail>('cle-main-preview-edit',{path});
+        },draftEditor?.saving===true);
+        editButton.setAttribute('aria-pressed',String(Boolean(editor)));
+        if(draftEditor) action(draftEditor.saving?'Saving':'Save','Save the complete draft to disk',()=>{
+          this._dispatchPathEvent<MainPreviewPathDetail>(MAIN_PREVIEW_SAVE_EVENT,{path});
+        },draftEditor.saving);
+      }
+      if(view.kind==='text'&&view.sizeBytes>INLINE_TEXT_BYTES&&isMarkdownPreviewPath(path)&&this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID)) {
+        const key=`${path}\0${view.version}`;
+        const rendered=this._largeMarkdownKey===key;
+        action(rendered?'Plain text':'Render Markdown',rendered?'Return to the fast plain-text view':'Render the complete document and tables; large documents may take time',()=>{
+          this._largeMarkdownKey=rendered?undefined:key;this._renderPanel();
+        });
+      }
+    }
+
 
     const content = this.ownerDocument.createElement("div");
     content.className = "preview-content";
     if (editor) content.classList.add("editor-mode");
     if (markdownEditing) content.classList.add("markdown-editor-mode");
     this._renderViewContent(content, view, editor);
+    if(draftEditor && !editor) this._appendEditorError(content, view, draftEditor);
     const source = content.querySelector<HTMLElement>(".code-editor,.literal-text");
     if (source && (view.kind === "text" || view.kind === "empty")) {
       const surface = this.ownerDocument.createElement("div");
@@ -588,6 +633,13 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _renderViewContent(content: HTMLElement, view: MainPreviewFileView, editor?: MainPreviewEditorState): void {
+    if(view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES && !(isMarkdownPreviewPath(view.path) && this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) && this._largeMarkdownKey === `${view.path}\0${view.version}`)) {
+      content.classList.add('large-text-content');
+      const style=this.ownerDocument.createElement('style');style.textContent=largeTextStyles;
+      this._largeTextReader=new LargeTextReader(this.ownerDocument,view.text);
+      content.append(style,this._largeTextReader.element);
+      return;
+    }
     const optionalKind = (view.kind === 'text' || view.kind === 'empty')
       ? isMarkdownPreviewPath(view.path) ? 'markdown' : !editor && isCsvPreviewPath(view.path) ? 'csv' : !editor && isDiagramPreviewPath(view.path) ? 'diagram' : undefined
       : previewPackageId(view.kind) ? view.kind : undefined;

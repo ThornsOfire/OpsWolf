@@ -14,8 +14,12 @@ use crate::path_guard::{
     validate_relative,
 };
 
-// Complete documents only. Larger files are rejected explicitly, never sliced.
+// Inline text and saves retain their existing bounded bridge budget.
 pub const MAX_PREVIEW_BYTES: usize = 512 * 1024;
+// Larger complete text files are transferred in version-checked chunks.
+pub const MAX_TEXT_FILE_BYTES: usize = 10 * 1024 * 1024;
+#[path = "preview/text_transfer.rs"]
+mod text_transfer;
 // Two MiB keeps the base64-encoded bridge response comfortably below the
 // CDP message ceiling while bounding a 128-MiB preview to 64 chunks.
 pub const MEDIA_CHUNK_BYTES: usize = 2 * 1024 * 1024;
@@ -133,6 +137,15 @@ pub struct PreviewResult {
     pub version: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub line_ending: Option<PreviewLineEnding>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub text_transfer: Option<TextTransferInfo>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TextTransferInfo {
+    pub chunk_size: usize,
+    pub chunk_count: u64,
 }
 
 impl PreviewResult {
@@ -153,6 +166,7 @@ impl PreviewResult {
             reason: None,
             version,
             line_ending: Some(line_ending),
+            text_transfer: None,
         }
     }
 
@@ -166,6 +180,7 @@ impl PreviewResult {
             reason: Some(reason),
             version: None,
             line_ending: None,
+            text_transfer: None,
         }
     }
 }
@@ -245,7 +260,7 @@ fn cache_office_validation(key: OfficeValidationCacheKey) {
 }
 
 impl Workspace {
-    /// Reads a small, text-only preview through the retained workspace
+    /// Reads complete text through the retained workspace
     /// capability. The renderer never controls the byte ceiling.
     pub fn preview(&self, relative_path: &str) -> Result<PreviewResult, WorkspaceError> {
         self.preview_with_after_read(relative_path, || {})
@@ -825,11 +840,11 @@ impl Workspace {
             return Ok(PreviewResult::unsupported(
                 reason,
                 initial_size,
-                initial_size > MAX_PREVIEW_BYTES as u64,
+                initial_size > MAX_TEXT_FILE_BYTES as u64,
             ));
         }
 
-        let read_limit = MAX_PREVIEW_BYTES.saturating_add(1);
+        let read_limit = MAX_TEXT_FILE_BYTES.saturating_add(1);
         let mut bytes = Vec::with_capacity(read_limit);
         Read::by_ref(&mut file)
             .take(read_limit as u64)
@@ -837,14 +852,14 @@ impl Workspace {
             .map_err(|error| map_io(&error))?;
         let final_metadata = file.metadata().map_err(|error| map_io(&error))?;
         let size_bytes = final_metadata.len();
-        let truncated = bytes.len() > MAX_PREVIEW_BYTES || size_bytes > MAX_PREVIEW_BYTES as u64;
+        let truncated = bytes.len() > MAX_TEXT_FILE_BYTES || size_bytes > MAX_TEXT_FILE_BYTES as u64;
         let sample_has_more_bytes = size_bytes > bytes.len() as u64;
         let contains_nul = bytes.contains(&0);
         let sample_is_valid_or_potentially_incomplete = match std::str::from_utf8(&bytes) {
             Ok(_) => true,
             Err(error) => sample_has_more_bytes && error.error_len().is_none(),
         };
-        bytes.truncate(MAX_PREVIEW_BYTES);
+        bytes.truncate(MAX_TEXT_FILE_BYTES);
         drop(file);
         after_read();
         self.ensure_root_valid()?;
@@ -869,6 +884,22 @@ impl Workspace {
         }
         if size_bytes != bytes.len() as u64 {
             return Err(WorkspaceError::Conflict);
+        }
+        if bytes.len() > MAX_PREVIEW_BYTES {
+            return Ok(PreviewResult {
+                kind: PreviewKind::Text,
+                text: None,
+                size_bytes,
+                truncated: false,
+                editable: false,
+                reason: None,
+                version: Some(content_version(&bytes)),
+                line_ending: Some(classify_line_ending(&bytes)),
+                text_transfer: Some(TextTransferInfo {
+                    chunk_size: MEDIA_CHUNK_BYTES,
+                    chunk_count: size_bytes.div_ceil(MEDIA_CHUNK_BYTES as u64),
+                }),
+            });
         }
         let text = match std::str::from_utf8(&bytes) {
             Ok(text) => text.to_owned(),
@@ -1949,7 +1980,7 @@ mod tests {
     #[test]
     fn oversized_utf8_never_returns_a_partial_prefix() {
         let (directory, workspace) = fixture();
-        let mut contents = vec![b'a'; MAX_PREVIEW_BYTES - 1];
+        let mut contents = vec![b'a'; MAX_TEXT_FILE_BYTES - 1];
         contents.extend_from_slice("é-tail".as_bytes());
         fs::write(directory.path().join("large.txt"), &contents).expect("large text");
 
@@ -1977,7 +2008,11 @@ mod tests {
         assert!(exact.editable);
         assert!(exact.version.is_some());
 
-        assert_eq!(workspace.preview("over.txt").expect_err("oversized file").code(), crate::ErrorCode::ContentTooLarge);
+        let over = workspace.preview("over.txt").expect("transferred preview");
+        assert!(over.text.is_none());
+        assert!(over.text_transfer.is_some());
+        assert!(!over.editable);
+        assert!(!over.truncated);
     }
 
     #[test]
@@ -1985,7 +2020,7 @@ mod tests {
         let (directory, workspace) = fixture();
         let path = directory.path().join("huge.txt");
         let mut file = fs::File::create(&path).expect("huge file");
-        file.write_all(&vec![b'z'; MAX_PREVIEW_BYTES + 1])
+        file.write_all(&vec![b'z'; MAX_TEXT_FILE_BYTES + 1])
             .expect("preview prefix");
         const HUGE_SIZE: u64 = 32 * 1024 * 1024;
         file.set_len(HUGE_SIZE).expect("extend huge file");
@@ -2014,14 +2049,14 @@ mod tests {
     #[test]
     fn rejects_a_nul_in_the_truncation_sentinel_byte() {
         let (directory, workspace) = fixture();
-        let mut contents = vec![b'a'; MAX_PREVIEW_BYTES];
+        let mut contents = vec![b'a'; MAX_TEXT_FILE_BYTES];
         contents.push(0);
         fs::write(directory.path().join("sentinel.txt"), contents).expect("sentinel file");
 
         let result = workspace.preview("sentinel.txt").expect("sentinel result");
         assert_eq!(result.kind, PreviewKind::Unsupported);
         assert_eq!(result.reason, Some(PreviewUnsupportedReason::Binary));
-        assert_eq!(result.size_bytes, (MAX_PREVIEW_BYTES + 1) as u64);
+        assert_eq!(result.size_bytes, (MAX_TEXT_FILE_BYTES + 1) as u64);
         assert!(result.truncated);
         assert!(result.text.is_none());
     }
@@ -2029,7 +2064,7 @@ mod tests {
     #[test]
     fn validates_utf8_in_the_sentinel_but_allows_a_potentially_incomplete_sequence() {
         let (directory, workspace) = fixture();
-        let mut invalid = vec![b'a'; MAX_PREVIEW_BYTES];
+        let mut invalid = vec![b'a'; MAX_TEXT_FILE_BYTES];
         invalid.push(0xff);
         fs::write(directory.path().join("invalid-sentinel.txt"), invalid)
             .expect("invalid sentinel file");
@@ -2045,7 +2080,7 @@ mod tests {
         assert!(invalid_result.truncated);
         assert!(invalid_result.text.is_none());
 
-        let mut incomplete_eof = vec![b'b'; MAX_PREVIEW_BYTES - 1];
+        let mut incomplete_eof = vec![b'b'; MAX_TEXT_FILE_BYTES - 1];
         incomplete_eof.extend_from_slice(&[0xf0, 0x9f]);
         fs::write(directory.path().join("incomplete-eof.txt"), incomplete_eof)
             .expect("incomplete eof file");
@@ -2061,7 +2096,7 @@ mod tests {
         assert!(incomplete_eof_result.truncated);
         assert!(incomplete_eof_result.text.is_none());
 
-        let mut potentially_incomplete = vec![b'c'; MAX_PREVIEW_BYTES - 1];
+        let mut potentially_incomplete = vec![b'c'; MAX_TEXT_FILE_BYTES - 1];
         potentially_incomplete.extend_from_slice(&[0xf0, 0x9f, 0x92, 0xa9]);
         fs::write(
             directory.path().join("potentially-incomplete.txt"),

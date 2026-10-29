@@ -1,4 +1,5 @@
 // Domain extracted from the original explorer composition; behavior and storage contracts retained.
+import { MAX_TEXT_FILE_BYTES, INLINE_TEXT_BYTES } from "../../core/preview/text-configuration";
 import { ExplorerBridgeError } from "../../bridge";
 import { MAX_MEDIA_CHUNK_BYTES,MAX_PREVIEW_TEXT_UNITS } from "../../core/configuration/explorer";
 import { type MediaPreviewRoute,type NormalizedMediaInfo,type NormalizedPreview,type PreviewUnavailableReason } from "../../contracts/explorer-model";
@@ -8,6 +9,31 @@ import { POWERPOINT_FULL_FIDELITY_NOTICE } from "../../core/preview/configuratio
 import { type MainPreviewFileView, type MainPreviewLineEnding } from "../../file-preview/contracts";
 import { recordCaughtRuntimeError } from "../../runtime-operations";
 
+
+export interface TextTransfer {
+  readonly sizeBytes: number;
+  readonly version: string;
+  readonly lineEnding: MainPreviewLineEnding;
+  readonly chunkSize: number;
+  readonly chunkCount: number;
+}
+
+export function normalizeTextTransfer(raw: unknown): TextTransfer|undefined {
+  const object=asRecord(raw);
+  if(!object || object.textTransfer===undefined) return undefined;
+  const transfer=asRecord(object.textTransfer);
+  if(object.kind!=="text" || object.text!==undefined || object.truncated!==false || object.editable!==false ||
+    !Number.isSafeInteger(object.sizeBytes) || (object.sizeBytes as number)<=INLINE_TEXT_BYTES ||
+    (object.sizeBytes as number)>MAX_TEXT_FILE_BYTES || typeof object.version!=="string" ||
+    !/^[0-9a-f]{64}$/.test(object.version) || !normalizeLineEnding(object.lineEnding) || !transfer ||
+    !Number.isSafeInteger(transfer.chunkSize) || (transfer.chunkSize as number)<=0 ||
+    (transfer.chunkSize as number)>MAX_MEDIA_CHUNK_BYTES ||
+    transfer.chunkCount!==Math.ceil((object.sizeBytes as number)/(transfer.chunkSize as number))) {
+    throw new ExplorerBridgeError({code:"INVALID_REQUEST",message:"The text transfer metadata was not valid."});
+  }
+  return {sizeBytes:object.sizeBytes as number,version:object.version,
+    lineEnding:normalizeLineEnding(object.lineEnding)!,chunkSize:transfer.chunkSize as number,chunkCount:transfer.chunkCount as number};
+}
 
 export function normalizePreview(raw: unknown): NormalizedPreview {
   const object=asRecord(raw);
@@ -30,12 +56,12 @@ export function normalizePreview(raw: unknown): NormalizedPreview {
     throw new ExplorerBridgeError({ code: "INVALID_REQUEST",message: "The preview text was not valid." });
   }
   if(object.truncated) throw new ExplorerBridgeError({code:'PREVIEW_INCOMPLETE',message:'The complete file was not received. No partial preview is shown. Reopen with the updated custom launcher.'});
-  if(object.text.length>MAX_PREVIEW_TEXT_UNITS) throw new ExplorerBridgeError({code:'CONTENT_TOO_LARGE',message:'This file exceeds the in-app text limit. No partial preview is shown.'});
+  if(sizeBytes>MAX_TEXT_FILE_BYTES || object.text.length>MAX_TEXT_FILE_BYTES) throw new ExplorerBridgeError({code:'CONTENT_TOO_LARGE',message:'This file exceeds the in-app text limit. No partial preview is shown.'});
   const capped=object.text;
   const truncated=false;
   const version=typeof object.version==="string"&&/^[0-9a-f]{64}$/.test(object.version)? object.version:undefined;
   const lineEnding=normalizeLineEnding(object.lineEnding);
-  const editable=object.editable===true&&!truncated&&Boolean(version)&&lineEnding!==undefined&&lineEnding!=="mixed";
+  const editable=sizeBytes<=INLINE_TEXT_BYTES&&object.text.length<=MAX_PREVIEW_TEXT_UNITS&&object.editable===true&&!truncated&&Boolean(version)&&lineEnding!==undefined&&lineEnding!=="mixed";
   return {
     kind: "text",
     text: capped,

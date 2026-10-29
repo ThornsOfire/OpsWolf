@@ -36,6 +36,82 @@ impl NativeBridge {
 }
 
 impl NativeBridge {
+    pub(super) async fn preview_chunk(
+        &self,
+        params: Value,
+        epoch: u64,
+    ) -> Result<Value, BridgeError> {
+        let params: MediaChunkParams = serde_json::from_value(params).map_err(|error| {
+            operation_error(
+                BridgeError::invalid_request(),
+                "preview_chunk",
+                format!(
+                    "category={:?}; line={}; column={}; rejected payload omitted",
+                    error.classify(),
+                    error.line(),
+                    error.column()
+                ),
+            )
+        })?;
+        if params.length == 0
+            || params.length > MAX_MEDIA_CHUNK_BYTES
+            || params.offset >= params.expected_size_bytes
+            || !valid_content_version(&params.expected_version)
+        {
+            return Err(BridgeError::invalid_request());
+        }
+
+        let context = {
+            let state = lock_unpoisoned(&self.inner.state);
+            self.ensure_epoch(epoch)?;
+            state.current.clone().ok_or_else(no_context_error)?
+        };
+        if context.lifecycle_epoch != epoch {
+            return Err(no_context_error());
+        }
+        let workspace = context.workspace.clone();
+        let chunk = tokio::task::spawn_blocking(move || {
+            workspace.preview_chunk(
+                &params.relative_path,
+                params.offset,
+                params.length,
+                params.expected_size_bytes,
+                &params.expected_version,
+            )
+        })
+        .await;
+        self.ensure_active_context(&context, epoch)?;
+        let chunk = chunk
+            .map_err(|error| {
+                operation_error(
+                    internal_error(),
+                    "preview_chunk",
+                    format!(
+                        "exceptionType={}; cause={error}",
+                        std::any::type_name_of_val(&error)
+                    ),
+                )
+            })?
+            .map_err(map_workspace_error)?;
+        serde_json::to_value(MediaChunkResult {
+            offset: chunk.offset,
+            data_base64: BASE64_STANDARD.encode(chunk.data),
+            eof: chunk.eof,
+        })
+        .map_err(|error| {
+            operation_error(
+                internal_error(),
+                "preview_chunk",
+                format!(
+                    "exceptionType={}; cause={error}",
+                    std::any::type_name_of_val(&error)
+                ),
+            )
+        })
+    }
+}
+
+impl NativeBridge {
     pub(super) async fn media_chunk(
         &self,
         params: Value,

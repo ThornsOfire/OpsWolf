@@ -11,7 +11,7 @@ import { type MainPreviewFileView,type MainPreviewModelResource } from "../../fi
 import { runtimeEvent,runtimeTaskLabel } from "../../runtime-events";
 import { beginRuntimeOperation,recordCaughtRuntimeError,runtimeErrorDetails } from "../../runtime-operations";
 import { ModelPreviewSourceError,inspectModelPreviewSource } from "../preview/model-source";
-import { mediaPreviewError,normalizeMediaChunk,normalizeMediaInfo,normalizePreview } from "../preview/responses";
+import { mediaPreviewError,normalizeMediaChunk,normalizeMediaInfo,normalizeTextTransfer,normalizePreview } from "../preview/responses";
 export interface PreviewRequestsControllerPorts {
   readonly session: Readonly<WorkspaceSession<WorkspaceBridge>>;
   readonly previewTabs: readonly PreviewTab[];
@@ -54,7 +54,7 @@ export class PreviewRequestsController {
         this.canApplyPreview(tab,bridge,context,mainPreview,generation,sessionRevision,instanceId,revision);
       const preview=mediaRoute
         ? await this.requestMediaPreview(tab.path,bridge,mediaRoute,canContinue)
-        :normalizePreview(await bridge.request<unknown>("explorer.preview",{ relativePath: tab.path }));
+        :await this.requestTextPreview(tab.path,bridge,canContinue);
       if(!preview||!canContinue()) return;
       tab.view=this.host.previewView(tab,preview);
       this.host.syncMainPreview();
@@ -68,13 +68,52 @@ export class PreviewRequestsController {
       const code=errorCode(error);
       const message=mediaRoute? mediaPreviewError(error):code==='PREVIEW_INCOMPLETE'
         ? 'The complete file was not received. No partial preview is shown. Reopen with the updated custom launcher.'
-        :code==='CONTENT_TOO_LARGE' ? 'This file exceeds the 512 KB in-app text limit. No partial document is shown.' :undefined;
+        :code==='CONTENT_TOO_LARGE' ? 'This file exceeds the 10 MiB in-app text limit. No partial document is shown.' :undefined;
       tab.view=message
         ? { kind: "error",path: tab.path,name: tab.name,code,message }
         :{ kind: "error",path: tab.path,name: tab.name,code };
       this.host.syncMainPreview();
       this.host.announce(`Preview could not load for ${tab.name}`);
     } finally { diagnostic.finish('discarded',{ reason: 'Preview result no longer belongs to the active selection' }); }
+  }
+  async requestTextPreview(
+    relativePath: string,
+    bridge: WorkspaceBridge,
+    canContinue: () => boolean,
+  ): Promise<NormalizedPreview|undefined> {
+    for(let attempt=0;attempt<2;attempt+=1) {
+      if(!canContinue()) return undefined;
+      try {
+        const raw=await bridge.request<unknown>("explorer.preview",{relativePath});
+        if(!canContinue()) return undefined;
+        const info=normalizeTextTransfer(raw);
+        if(!info) return normalizePreview(raw);
+        const bytes=new Uint8Array(info.sizeBytes);
+        let offset=0;
+        for(let index=0;index<info.chunkCount;index+=1) {
+          if(!canContinue()) return undefined;
+          const length=Math.min(info.chunkSize,info.sizeBytes-offset);
+          const chunk=await bridge.request<unknown>("explorer.preview.chunk",{
+            relativePath,offset,length,expectedSizeBytes:info.sizeBytes,expectedVersion:info.version,
+          });
+          if(!canContinue()) return undefined;
+          const validated=normalizeMediaChunk(chunk,offset,length,info.sizeBytes);
+          bytes.set(validated.bytes,offset);
+          offset+=validated.bytes.length;
+        }
+        if(offset!==info.sizeBytes) throw new ExplorerBridgeError({code:"PREVIEW_INCOMPLETE",message:"Incomplete text transfer."});
+        let text: string;
+        try { text=new TextDecoder("utf-8",{fatal:true}).decode(bytes); }
+        catch { throw new ExplorerBridgeError({code:"INVALID_REQUEST",message:"The complete text was not valid UTF-8."}); }
+        if(text.includes("\0")) throw new ExplorerBridgeError({code:"INVALID_REQUEST",message:"The text contained binary data."});
+        return normalizePreview({kind:"text",text,sizeBytes:info.sizeBytes,truncated:false,
+          editable:false,version:info.version,lineEnding:info.lineEnding});
+      } catch(error) {
+        if(attempt===0&&errorCode(error)==="CONFLICT"&&canContinue()) continue;
+        throw error;
+      }
+    }
+    return undefined;
   }
   async requestMediaPreview(
     relativePath: string,

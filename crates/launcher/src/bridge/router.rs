@@ -127,6 +127,7 @@ impl BridgeHandler for NativeBridge {
                 "explorer.git.commit" => self.git_commit(request.params, epoch).await,
                 "explorer.git.diff" => self.git_diff(request.params, epoch).await,
                 "explorer.preview" => self.preview(request.params, epoch).await,
+                "explorer.preview.chunk" => self.preview_chunk(request.params, epoch).await,
                 "explorer.preview.save" => self.preview_save(request.params, epoch).await,
                 "explorer.media.info" => self.media_info(request.params, epoch).await,
                 "explorer.media.chunk" => self.media_chunk(request.params, epoch).await,

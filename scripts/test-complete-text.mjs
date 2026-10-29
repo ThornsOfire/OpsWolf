@@ -34,7 +34,19 @@ try{
  await ev(`window.drafts=[];viewer.addEventListener('cle-main-preview-draft',e=>drafts.push(e.detail));const editor=viewer.shadowRoot.querySelector('textarea');editor.value+='\\nCOMPLETE_EDIT_TAIL';editor.dispatchEvent(new Event('input',{bubbles:true}));`);
  await check('An edit beyond the former cutoff preserves the full draft',`drafts.length===1&&drafts[0].text.endsWith('COMPLETE_EDIT_TAIL')&&drafts[0].text.length>65536`);
  await check('Legacy truncated native responses are rejected instead of shown',`(()=>{try{normalizePreview({kind:'text',text:fullText.slice(0,65536),sizeBytes:${bytes.length},truncated:true})}catch(e){return e.code==='PREVIEW_INCOMPLETE'}return false})()`);
- await check('Oversized response is rejected without slicing',`(()=>{try{normalizePreview({kind:'text',text:'x'.repeat(512*1024+1),sizeBytes:512*1024+1,truncated:false})}catch(e){return e.code==='CONTENT_TOO_LARGE'}return false})()`);
+ await check('Oversized response is rejected without slicing',`(()=>{try{normalizePreview({kind:'text',text:'x'.repeat(10*1024*1024+1),sizeBytes:10*1024*1024+1,truncated:false})}catch(e){return e.code==='CONTENT_TOO_LARGE'}return false})()`);
+ await ev(`window.saves=[];viewer.addEventListener('cle-main-preview-save',e=>saves.push(e.detail));viewer.setState({...viewer.state,editor:{path:'hours.md',draft:fullText+'\\nUNSAVED_DRAFT',saving:false}});Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Preview').click()`);
+ await check('Preview is read only and retains unsaved draft without saving',`!viewer.shadowRoot.querySelector('textarea')&&!viewer.shadowRoot.querySelector('[contenteditable=true]')&&viewer.shadowRoot.querySelector('.literal-text').textContent.endsWith('UNSAVED_DRAFT')&&saves.length===0`);
+ await ev(`Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Edit').click()`);
+ await check('Returning to Edit restores the complete unsaved draft',`viewer.shadowRoot.querySelector('textarea').value.endsWith('UNSAVED_DRAFT')`);
+ await ev(`Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Save').click()`);
+ await check('Saving requires explicit Save action',`saves.length===1&&saves[0].path==='hours.md'`);
+ await ev(`window.fullText='# Large table\\n\\n| A | B |\\n| --- | --- |\\n'+('| First | Second |\\n'.repeat(30000))+'\\nFINAL_RENDERED_TAIL';window.preview=normalizePreview({kind:'text',text:fullText,sizeBytes:new TextEncoder().encode(fullText).length,truncated:false,editable:false,version:'${version}',lineEnding:'lf'});show(false)`);
+ await check('Large Markdown defaults to complete plain text',`!!viewer.shadowRoot.querySelector('.large-text-reader')&&!viewer.shadowRoot.querySelector('.markdown-body')`);
+ await ev(`Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Render Markdown').click()`);
+ await check('Opt-in rendering includes every table row and final text',`viewer.shadowRoot.querySelectorAll('tr').length===expectedTableRows(fullText)&&viewer.shadowRoot.querySelector('.markdown-body').textContent.includes('FINAL_RENDERED_TAIL')`);
+ await ev(`Array.from(viewer.shadowRoot.querySelectorAll('.preview-mode-button')).find(b=>b.textContent==='Plain text').click()`);
+ await check('Rendered large Markdown returns to plain text',`!!viewer.shadowRoot.querySelector('.large-text-reader')&&!viewer.shadowRoot.querySelector('.markdown-body')`);
  await check('No unhandled browser errors',`errors.length===0`);
  console.log(JSON.stringify({passed:true,bytes:bytes.length,localFixture:Boolean(input),checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop();}

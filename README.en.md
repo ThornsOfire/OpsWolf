@@ -358,3 +358,21 @@ UI composition lives in `packages/explorer-ui/src/app/`; `contracts/`, `core/`, 
 Run `node scripts/check-architecture.mjs`, `node --test scripts/test-refactor-contracts.mjs scripts/test-plugin-publication.mjs`, and `cargo test --workspace --locked`. Installer workers are generated from source templates; check them with `node scripts/generate-installer.mjs` and `scripts/check-worker-protocol.ps1`.
 
 Startup plugin sources now include ASCII Tiles Background and Custom Background, reading the selected custom image/video and its parameters without changing normal backgrounds. Market cards support persistent per-category pins in click order. Pin glyphs use50% opacity. Exact updated assets are published at their catalog tags.
+
+
+## Custom editor branch: complete text files
+
+This branch reads complete UTF-8 text files up to **10 MiB**. Files above 512 KiB
+are transferred in version-checked chunks and open in a read-only plain-text
+viewer with virtual scrolling. Long source lines continue on bounded display rows;
+Copy all preserves the original text. No partial document is displayed.
+
+For large Markdown files, **Render Markdown** explicitly renders the entire
+loaded document, including tables; **Plain text** returns to the fast viewer.
+Rendering a large document can take time. The Markdown preview plugin must be enabled.
+
+Supported editable text files up to 512 KiB have **Preview**, **Edit**, and **Save**
+controls in the editor pane. Preview is read-only and can show the current unsaved
+draft; returning to Edit retains it. Switching between these pane controls does
+not save automatically. Saving still uses the existing conflict checks and
+512 KiB save limit. Larger files and binary formats remain read-only.
