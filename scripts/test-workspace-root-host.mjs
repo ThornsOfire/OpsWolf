@@ -35,6 +35,18 @@ const positions=rect(e).left>=rect(document.querySelector('aside')).right&&rect(
 const row=shadow.querySelector('[role=treeitem]');row.click();
 await wait(()=>main.querySelector('[data-code-codex-owned]')?.shadowRoot?.querySelectorAll('[role=tab]').length>=2);
 const preview=main.querySelector('[data-code-codex-owned]'),ps=preview.shadowRoot;
+const mode=text=>[...ps.querySelectorAll('.preview-mode-button')].find(b=>b.textContent===text);
+await wait(()=>!!mode('Edit'));mode('Edit').click();
+await wait(()=>!!ps.querySelector('.code-editor'));
+const editor=ps.querySelector('.code-editor'),originalText=editor.value;
+editor.value=originalText+'\\nKeep this local edit';editor.dispatchEvent(new Event('input',{bubbles:true}));
+const contextCallsBefore=calls.filter(x=>x==='explorer.context').length;
+const checksBefore=calls.filter(x=>x==='explorer.context.check').length;
+roots.thread_current_001='C:/Fixture/dirty-destination';e.refresh();
+await wait(()=>calls.filter(x=>x==='explorer.context.check').length>checksBefore);await delay(100);
+const dirtyRootDeferred=shadow.querySelector('.project-name')?.textContent==='C:/Fixture/projectless'&&editor.value===originalText+'\\nKeep this local edit'&&calls.filter(x=>x==='explorer.context').length===contextCallsBefore&&!document.querySelector('[data-code-codex-close-dialog]');
+// Revert only this synthetic edit; no file save or real workspace is involved.
+roots.thread_current_001='C:/Fixture/projectless';editor.value=originalText;editor.dispatchEvent(new Event('input',{bubbles:true}));mode('Preview').click();
 
 const label=ps.querySelector('[data-tab-kind=conversation] .tab-label')?.textContent;
 document.documentElement.setAttribute('data-code-codex-particle-image-background','');
@@ -61,7 +73,7 @@ await wait(()=>e.dataset.state==='ready'&&shadow.querySelector('.project-name')?
 const returnedRoot=true;
 await delay(1900);
 const rootResynced=calls.filter(x=>x==='explorer.list').length>=3;
-const result={moduleBootstrapRetained:window.fixtureBootstrapIntact,readyBeforeWatch,rootResynced,positions,label,maskClear,fileTransparent,clickable,movedEmptyRoot,otherRoot,returnedRoot,switchInline:e.dataset.placement==='inline',calls,errors:testErrors};
+const result={moduleBootstrapRetained:window.fixtureBootstrapIntact,readyBeforeWatch,rootResynced,positions,label,maskClear,fileTransparent,clickable,dirtyRootDeferred,movedEmptyRoot,otherRoot,returnedRoot,switchInline:e.dataset.placement==='inline',calls,errors:testErrors};
 window.fixtureResult=result;
 }catch(error){window.fixtureResult={error:String(error),errors:testErrors,calls};}})();`;
 const html=`<!doctype html><html data-theme="dark"><head><meta charset="UTF-8"><link rel="modulepreload" href="/app-initial-current-ui.js"><style>
@@ -80,4 +92,4 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser,result;
 try{browser=await launchFixture(`http://127.0.0.1:${server.address().port}/`);for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}assert.ok(result,'fixture completed');writeFileSync(join(root,'artifacts/workspace-root-host-result.json'),JSON.stringify(result,null,2));const shot=await browser.command('Page.captureScreenshot');writeFileSync(join(root,'artifacts/workspace-root-host.png'),Buffer.from(shot.data,'base64'));}finally{await browser?.close();await new Promise(r=>server.close(r));}
 console.log({...result,calls:result.calls.length});
-assert.equal(result.error,undefined);for(const key of ['moduleBootstrapRetained','readyBeforeWatch','rootResynced','positions','maskClear','fileTransparent','clickable','movedEmptyRoot','otherRoot','returnedRoot','switchInline'])assert.equal(result[key],true,key);assert.deepEqual(result.errors,[]);
+assert.equal(result.error,undefined);for(const key of ['moduleBootstrapRetained','readyBeforeWatch','rootResynced','positions','maskClear','fileTransparent','clickable','dirtyRootDeferred','movedEmptyRoot','otherRoot','returnedRoot','switchInline'])assert.equal(result[key],true,key);assert.deepEqual(result.errors,[]);

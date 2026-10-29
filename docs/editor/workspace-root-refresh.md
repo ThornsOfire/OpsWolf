@@ -36,6 +36,14 @@ The unchanged broader `test-codex-current-ui.mjs` has a conversation-title asser
 
 No live host acceptance has been claimed. Isolated fixture browsers/servers were closed. No new dependencies were downloaded. No app/backend/session restart, live bundle injection, installation replacement, remote write, merge, or push was performed.
 
+## Combined candidate validation
+
+The owner supplied `d59b483` for integration into the planned-development candidate. It was cherry-picked as `e4fe78b`, preserving the candidate's existing review, settings, appearance, Rain and activity features. Import-list and development-table conflicts were resolved by retaining both additions.
+
+On the combined candidate, the 16 root-controller checks, 13 context-resolver tests, 11 focused native bridge tests, full explorer host fixture, TypeScript, architecture and UI build passed. The host fixture also edits a synthetic file through the actual editor, changes its same-chat metadata root, and verifies that Refresh retains the original workspace and complete dirty text without opening a discard dialog or issuing a context replacement. Reverting that synthetic draft allows the existing empty-root and switch-away/back journey to continue. This adds integration coverage to the controller's simulated dirty/saving gate; it does not test a real owner's project move.
+
+All six native release executables built with locked, offline dependencies. Existing compiler warnings remain. The everyday installation was not replaced; the owner still chooses deployment and restart after review.
+
 ## Activation and current stale panel
 
 The installed companion retains the old cache in process memory. Neither another ordinary directory Refresh nor switching chats is a reliable eviction mechanism; a UI-only reload would still use that companion. There is no verified supported in-place repair for that existing process without altering the live environment.
