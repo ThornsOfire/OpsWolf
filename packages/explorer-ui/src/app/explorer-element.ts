@@ -1,5 +1,6 @@
 import { ChangeReviewController } from "../features/workspace/change-review";
 import { nativeReviewRevisions } from "../features/workspace/native-review-revisions";
+import { RootRevalidation } from "../features/workspace/root-revalidation";
 import { attachTooltips } from "../components/tooltips";
 import { NativeDiffHost } from "../features/preview/native-diff-host";
 import { NativeMiddlePages } from "../features/preview/native-middle-pages";
@@ -480,6 +481,7 @@ export class CodeCodexElement extends HTMLElement {
     readonly #blackHoleSettingsCloseButton: HTMLButtonElement;
     #languageCleanup: (() => void) | undefined;
     #pinCleanup: (()=>void) | undefined;
+    #rootRevalidation: RootRevalidation | undefined;
     #tooltipCleanup: (()=>void) | undefined;
     #languageSubscription: (() => void) | undefined;
     readonly #blackHoleNumericControls = new Map<BlackHoleNumericSettingKey, Readonly<{
@@ -1203,6 +1205,7 @@ export class CodeCodexElement extends HTMLElement {
         });
     }
     #disposeDisconnected(): void {
+        this.#rootRevalidation?.dispose();
           this.#citations?.dispose();
         this.#changeReview?.dispose();
         this.#nativeDiffHost?.dispose();
@@ -1325,7 +1328,9 @@ export class CodeCodexElement extends HTMLElement {
         }
         if (this.#state === "loading")
             return;
-        void this.#refreshLoadedDirectories();
+        void (async () => {
+            if (!await this.#rootRevalidation?.check()) await this.#refreshLoadedDirectories();
+        })();
     }
     collapse(collapsed = true): void {
         if (this.#settings.collapsed !== collapsed)
@@ -1637,6 +1642,16 @@ export class CodeCodexElement extends HTMLElement {
             if (homeView)
                 void this.#switchThread(threadId);
         });
+        this.#rootRevalidation ??= new RootRevalidation({
+            snapshot: () => {
+                const {context, bridge, generation} = this.#workspaceSession;
+                return this.#connected && this.#homeViewActive && (this.#state === 'ready' || this.#state === 'empty') && context && bridge ? {context, bridge, generation} : undefined;
+            },
+            canSwitch: () => !this.#previeweditingSettings.isEditDirty() && !this.#previeweditingSettings.drafts.saving,
+            changed: () => this.#switchThread(this.#workspaceSession.threadId, true),
+            deferred: () => this.#announce('Workspace folder changed. Save or discard your current edit, then refresh the explorer.'),
+        });
+        this.#rootRevalidation.start();
     }
     #required<T extends Element>(selector: string): T {
         const element = this.#shadow.querySelector<T>(selector);
@@ -2431,7 +2446,7 @@ export class CodeCodexElement extends HTMLElement {
             }
             this.#previewWorkspace.purgePreviewTabs(false);
             const selectionChanged = threadId !== this.#workspaceSession.threadId;
-            if (selectionChanged) {
+            if (selectionChanged || force) {
                 this.#treeinteractionSettings.clearFileFilter(false);
                 this.#treeinteractionSettings.clearSelection(false);
                 if (this.#treeinteractionSettings.allRowCount > 0)

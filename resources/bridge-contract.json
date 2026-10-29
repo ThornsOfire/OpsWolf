@@ -49,6 +49,10 @@
       "effect": "session-state"
     },
     {
+      "name": "explorer.context.check",
+      "effect": "read"
+    },
+    {
       "name": "explorer.list",
       "effect": "read"
     },

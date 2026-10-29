@@ -121,6 +121,7 @@ impl BridgeHandler for NativeBridge {
                     Ok(json!({"accepted":events.len()}))
                 }
                 "explorer.context" => self.context(request.params, epoch).await,
+                "explorer.context.check" => self.context_check(request.params, epoch).await,
                 "explorer.context.clear" => self.context_clear(request.params, epoch),
                 "explorer.list" => self.list(request.params, epoch).await,
                 "explorer.changes.native" => self.changes_native(request.params, epoch).await,

@@ -1,0 +1,45 @@
+import assert from 'node:assert/strict';
+import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
+import {createServer} from 'node:http';
+import {launchFixture} from './browser-fixture.mjs';
+const bundle=await build({stdin:{resolveDir:process.cwd(),contents:`
+import {RootRevalidation} from './packages/explorer-ui/src/features/workspace/root-revalidation';
+window.RootRevalidation=RootRevalidation;
+`},bundle:true,write:false,format:'iife'});
+const server=createServer((q,r)=>{r.setHeader('Content-Type','text/html');r.end('<html><body><script>'+bundle.outputFiles[0].text+'</script></body></html>');});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
+try {
+ browser=await launchFixture('http://127.0.0.1:'+server.address().port); const ev=code=>browser.evaluate(code);const checks=[];
+ const check=async(name,code)=>{assert.ok(await ev(code),name);checks.push(name);};
+ await ev(`window.calls=[];window.moved=0;window.notices=0;window.dirty=false;window.failure=false;window.metadata={threadId:'thread-a',rootPath:'C:/scratch'};window.ctx={threadId:'thread-a',rootPath:'C:/scratch'};window.generation=1;window.hold=null;window.release=null;
+ window.bridge={request:async(method,params)=>{calls.push({method,params});if(failure)throw Error('unavailable');if(hold)return await new Promise(r=>release=r);return metadata;}};
+ window.snapshot=()=>({context:ctx,bridge,generation});
+ window.controller=new RootRevalidation({snapshot:()=>snapshot(),canSwitch:()=>!dirty,changed:async()=>{moved++;ctx={...metadata};generation++;},deferred:()=>notices++});controller.start();`);
+ await ev('controller.check()');await check('Unchanged metadata does not reset the tree','moved===0&&calls.length===1');
+ await ev(`metadata={threadId:'thread-a',rootPath:'C:/new-project'};controller.check()`);
+ await check('Same-chat project move updates root','moved===1&&ctx.rootPath===metadata.rootPath');
+ await ev(`ctx={threadId:'thread-b',rootPath:'C:/other'};metadata={...ctx};generation++;controller.check()`);
+ await check('Switch to other chat preserves its root','moved===1&&ctx.rootPath===\'C:/other\'');
+ await ev(`ctx={threadId:'thread-a',rootPath:'C:/new-project'};metadata={...ctx};generation++;controller.check()`);
+ await check('Returning to moved chat keeps new root','moved===1&&ctx.rootPath===\'C:/new-project\'');
+ await ev(`dirty=true;metadata={threadId:'thread-a',rootPath:'C:/third'};controller.check();`);await ev('controller.check()');
+ await check('Dirty/saving gate defers without resetting or repeated notices','moved===1&&notices===1&&ctx.rootPath===\'C:/new-project\'');
+ await ev('dirty=false;controller.check()');await check('Clean draft allows deferred update','moved===2&&ctx.rootPath===\'C:/third\'');
+ await ev(`hold=true;window.pending=controller.check();window.same=controller.check()===pending;`);
+ await check('Concurrent probes share one request','same&&!!release');
+ await ev(`ctx={threadId:'thread-b',rootPath:'C:/other'};generation++;release({threadId:'thread-a',rootPath:'C:/stale'});pending`);
+ await check('Late reply cannot retarget another chat','moved===2&&ctx.threadId===\'thread-b\'');
+ await ev(`hold=false;metadata={threadId:'wrong-thread',rootPath:'C:/wrong'};controller.check()`);await check('Mismatched response identity is rejected','moved===2');
+ await ev(`metadata={threadId:'thread-b'};controller.check()`);await check('Malformed metadata is rejected','moved===2');
+ await ev(`failure=true;controller.check()`);await check('Unavailable metadata preserves context','moved===2&&ctx.rootPath===\'C:/other\'');
+ await ev(`failure=false;hold=true;window.pending=controller.check();void 0;`);await ev(`controller.dispose();controller.start();release({threadId:'thread-b',rootPath:'C:/late'});pending`);
+ await check('Disposal/restart rejects prior-lifetime reply','moved===2');
+ await ev(`hold=false;metadata={threadId:'thread-b',rootPath:'C:/focus-change'};window.dispatchEvent(new Event('focus'));`);await ev('controller.check()');
+ await check('Focus revalidates the active chat','moved===3&&ctx.rootPath===\'C:/focus-change\'');
+ await ev(`metadata={threadId:'thread-b',rootPath:'C:/poll-change'};`);
+ await ev(`new Promise(resolve=>setTimeout(resolve,16_000))`);
+ await check('Scheduled probe detects same-chat root changes without user input','moved===4&&ctx.rootPath===\'C:/poll-change\'');
+ await check('Only metadata requests are issued','calls.every(c=>c.method===\'explorer.context.check\'&&Object.keys(c.params).length===0)');
+ await ev('controller.dispose();window.before=calls.length;window.dispatchEvent(new Event(\'focus\'));');await check('Disposal removes wake listener','calls.length===before');
+ console.log(JSON.stringify({passed:true,checks},null,2));
+}finally{await browser?.close();await new Promise(r=>server.close(r));stop();}

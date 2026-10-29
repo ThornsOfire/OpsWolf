@@ -58,6 +58,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- Moving an existing chat into a different local project updates the explorer root after metadata revalidation, including empty destination folders. Resolutions no longer retain a process-lifetime cwd cache. Refresh and visible-chat background checks detect same-chat moves; dirty or saving editor drafts defer the switch, and stale responses cannot retarget another chat. Explicit launcher workspace overrides remain fixed.
 - Embedded browser pages now follow editor/explorer divider movement even when their size stays unchanged. Qualified browser inner frames fit the available pane width, and geometry changes notify the native resize handler instead of leaving the webpage frozen behind its toolbar.
 - Native browser/file panes respect the editor's reserved width instead of overlapping its documents and resize handle. In the qualified shell layout, the native tab bar and right-aligned controls share that boundary, and the docked editor divider extends through the tab-header band. Hiding or expanding the editor restores native sizing.
 - Edit-to-Preview now uses the current unsaved source text immediately, without requiring an application rerender to refresh the editor's draft snapshot.

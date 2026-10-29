@@ -6,7 +6,7 @@ use serde_json::{Value, json};
 
 use tokio::io::AsyncBufRead;
 
-use super::{Inner, MAX_MESSAGE_BYTES, ResolverError, diagnostic, parse_started_notification};
+use super::{Inner, MAX_MESSAGE_BYTES, ResolverError, diagnostic};
 
 pub(super) async fn read_loop<R>(
     inner: Weak<Inner>,
@@ -83,15 +83,6 @@ pub(super) async fn read_loop<R>(
                 let _ = sender.send(result);
             }
             continue;
-        }
-        if message.get("method").and_then(Value::as_str) == Some("thread/started") {
-            if let Some(workspace) = parse_started_notification(&message) {
-                inner
-                    .workspaces
-                    .write()
-                    .await
-                    .insert(workspace.thread_id, workspace.cwd);
-            }
         }
         let _ = inner.notifications.send(message);
     }

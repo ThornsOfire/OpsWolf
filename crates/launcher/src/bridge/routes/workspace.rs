@@ -17,6 +17,24 @@ use workspace_service::{
 };
 
 impl NativeBridge {
+    /// Read current thread metadata without replacing the workspace or watcher.
+    pub(super) async fn context_check(&self, params: Value, epoch: u64) -> Result<Value, BridgeError> {
+        require_empty_object(&params)?;
+        self.ensure_epoch(epoch)?;
+        let context = lock_unpoisoned(&self.inner.state).current.clone().ok_or_else(no_context_error)?;
+        self.ensure_active_context(&context, epoch)?;
+        let cwd = if self.inner.manual_workspace.is_some() {
+            context.workspace.root_path().to_path_buf()
+        } else {
+            let thread = context.thread_id.as_deref().ok_or_else(no_context_error)?;
+            let resolver = self.inner.resolver.as_ref().ok_or_else(no_context_error)?;
+            resolver.resolve_thread(thread).await.map_err(map_resolver_error)?.cwd
+        };
+        let workspace = Workspace::open(cwd).map_err(map_workspace_error)?;
+        self.ensure_active_context(&context, epoch)?;
+        Ok(json!({"threadId": context.thread_id, "rootPath": workspace.root_path().to_string_lossy()}))
+    }
+
     pub(super) async fn context(&self, params: Value, epoch: u64) -> Result<Value, BridgeError> {
         self.ensure_epoch(epoch)?;
         let params: ContextParams = serde_json::from_value(params).map_err(|error| {

@@ -2,7 +2,9 @@
 //!
 //! The desktop renderer owns the notion of the *active* thread. This client
 //! accepts that thread ID and uses `thread/read` (with `thread/list` fallback)
-//! to resolve its stable `cwd` field. It does not inspect Codex databases.
+//! to resolve its current `cwd` field. A chat's cwd can change after a project
+//! move, so resolutions are never served from a process-lifetime path cache.
+//! It does not inspect Codex databases.
 
 use std::collections::HashMap;
 mod review;
@@ -18,7 +20,7 @@ use serde_json::{Value, json};
 use thiserror::Error;
 use tokio::io::{AsyncBufRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader};
 use tokio::process::Command;
-use tokio::sync::{Mutex, RwLock, broadcast, oneshot};
+use tokio::sync::{Mutex, broadcast, oneshot};
 
 #[cfg(windows)]
 use process_wrap::tokio::{CreationFlags, JobObject};
@@ -177,7 +179,6 @@ struct Inner {
     pending: Mutex<HashMap<u64, oneshot::Sender<Result<Value, ResolverError>>>>,
     next_id: AtomicU64,
     timeout: Duration,
-    workspaces: RwLock<HashMap<String, PathBuf>>,
     notifications: broadcast::Sender<Value>,
     child: Mutex<Option<Box<dyn TokioChildWrapper>>>,
     // The read loop owns another Arc to this slot. A launch guard therefore
@@ -298,7 +299,6 @@ impl AppServerClient {
             pending: Mutex::new(HashMap::new()),
             next_id: AtomicU64::new(1),
             timeout: DEFAULT_REQUEST_TIMEOUT,
-            workspaces: RwLock::new(HashMap::new()),
             notifications,
             child: Mutex::new(None),
             _lifetime_guard: lifetime_guard.clone(),
@@ -338,12 +338,6 @@ impl AppServerClient {
 
     pub async fn resolve_thread(&self, thread_id: &str) -> Result<ThreadWorkspace, ResolverError> {
         validate_thread_id(thread_id)?;
-        if let Some(cwd) = self.inner.workspaces.read().await.get(thread_id).cloned() {
-            return Ok(ThreadWorkspace {
-                thread_id: thread_id.to_owned(),
-                cwd,
-            });
-        }
 
         match self
             .request(
@@ -354,7 +348,6 @@ impl AppServerClient {
         {
             Ok(result) => {
                 let workspace = parse_thread_workspace(&result, "thread", thread_id)?;
-                self.cache(&workspace).await;
                 Ok(workspace)
             }
             Err(error) if matches!(error.kind(), ResolverError::Remote { .. }) => {
@@ -393,7 +386,6 @@ impl AppServerClient {
                         thread_id: thread_id.to_owned(),
                         cwd: PathBuf::from(cwd),
                     };
-                    self.cache(&workspace).await;
                     return Ok(workspace);
                 }
             }
@@ -414,13 +406,6 @@ impl AppServerClient {
         Err(ResolverError::NoWorkspace)
     }
 
-    async fn cache(&self, workspace: &ThreadWorkspace) {
-        self.inner
-            .workspaces
-            .write()
-            .await
-            .insert(workspace.thread_id.clone(), workspace.cwd.clone());
-    }
 
     pub async fn request(&self, method: &str, params: Value) -> Result<Value, ResolverError> {
         let id = self.inner.next_id.fetch_add(1, Ordering::Relaxed);
@@ -719,6 +704,18 @@ mod tests {
                 )
                 .await
                 .expect("thread response");
+            for (thread_id, cwd) in [
+                ("thread-1", "C:/work/new-project"),
+                ("thread-2", "C:/work/other-project"),
+                ("thread-1", "C:/work/new-project"),
+            ] {
+                line.clear();
+                reader.read_line(&mut line).await.expect("fresh thread read");
+                let request: Value = serde_json::from_str(&line).unwrap();
+                assert_eq!(request["method"], "thread/read");
+                assert_eq!(request["params"], json!({"threadId":thread_id,"includeTurns":false}));
+                server_write.write_all(format!("{}\n", json!({"id":request["id"],"result":{"thread":{"id":thread_id,"cwd":cwd}}})).as_bytes()).await.unwrap();
+            }
         });
 
         let client = AppServerClient::connect_io(BufReader::new(client_read), client_write)
@@ -726,6 +723,9 @@ mod tests {
             .expect("connect");
         let workspace = client.resolve_thread("thread-1").await.expect("resolve");
         assert_eq!(workspace.cwd, PathBuf::from(r"C:\work\demo"));
+        assert_eq!(client.resolve_thread("thread-1").await.unwrap().cwd, PathBuf::from("C:/work/new-project"));
+        assert_eq!(client.resolve_thread("thread-2").await.unwrap().cwd, PathBuf::from("C:/work/other-project"));
+        assert_eq!(client.resolve_thread("thread-1").await.unwrap().cwd, PathBuf::from("C:/work/new-project"));
         server.await.expect("server task");
     }
 
@@ -867,7 +867,7 @@ mod test_imports {
         AsyncBufRead, AsyncBufReadExt, AsyncReadExt, AsyncWrite, AsyncWriteExt, BufReader,
     };
     pub(super) use tokio::process::Command;
-    pub(super) use tokio::sync::{Mutex, RwLock, broadcast, oneshot};
+    pub(super) use tokio::sync::{Mutex, broadcast, oneshot};
     #[cfg(windows)]
     pub(super) use windows::Win32::System::Threading::CREATE_NO_WINDOW;
 }
@@ -883,4 +883,4 @@ use client::read_loop;
 #[path = "workspace_context.rs"]
 mod workspace_context;
 
-use workspace_context::{parse_started_notification, parse_thread_workspace, validate_thread_id};
+use workspace_context::{parse_thread_workspace, validate_thread_id};

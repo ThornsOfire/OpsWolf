@@ -792,6 +792,59 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn context_check_is_read_only_and_preserves_manual_override() {
+        let (_directory, bridge) = manual_bridge().await;
+        let before = lock_unpoisoned(&bridge.inner.state).current.clone().unwrap();
+        let value = bridge.handle(request("explorer.context.check", json!({}))).await.unwrap();
+        assert_eq!(value["rootPath"], before.workspace.root_path().to_string_lossy().as_ref());
+        let after = lock_unpoisoned(&bridge.inner.state).current.clone().unwrap();
+        assert_eq!(before.revision, after.revision);
+        assert!(Arc::ptr_eq(&before.workspace, &after.workspace));
+        assert_eq!(bridge.handle(request("explorer.context.check", json!({"rootPath":"untrusted"}))).await.unwrap_err().code, "INVALID_REQUEST");
+    }
+
+    #[tokio::test]
+    async fn context_check_detects_same_thread_move_without_retargeting_io() {
+        let old = TempDir::new().unwrap();
+        let new = TempDir::new().unwrap();
+        let other = TempDir::new().unwrap();
+        let settings = TempDir::new().unwrap();
+        let expected_new = Workspace::open(new.path()).unwrap().root_path().to_path_buf();
+        let (client_stream, server_stream) = duplex(32 * 1024);
+        let (client_read, client_write) = split(client_stream);
+        let (server_read, mut server_write) = split(server_stream);
+        let old_path = old.path().to_path_buf();
+        let new_path = new.path().to_path_buf();
+        let other_path = other.path().to_path_buf();
+        let server = tokio::spawn(async move {
+            let mut reader = BufReader::new(server_read);
+            let init = read_json_line(&mut reader).await;
+            write_json_line(&mut server_write, json!({"id":init["id"],"result":{}})).await;
+            read_json_line(&mut reader).await;
+            for (id, path) in [("thread-a",old_path),("thread-a",new_path.clone()),("thread-a",new_path.clone()),("thread-b",other_path),("thread-a",new_path)] {
+                let req = read_json_line(&mut reader).await;
+                assert_eq!(req["method"], "thread/read");
+                assert_eq!(req["params"]["threadId"], id);
+                write_json_line(&mut server_write,json!({"id":req["id"],"result":{"thread":{"id":id,"cwd":path}}})).await;
+            }
+        });
+        let resolver = AppServerClient::connect_io(BufReader::new(client_read),client_write).await.unwrap();
+        let bridge = NativeBridge::new(Some(resolver),None,SettingsStore::new(settings.path().join("settings.json")),Settings::default());
+        bridge.handle(request("explorer.context",json!({"threadId":"thread-a"}))).await.unwrap();
+        let original = lock_unpoisoned(&bridge.inner.state).current.clone().unwrap();
+        let checked = bridge.handle(request("explorer.context.check",json!({}))).await.unwrap();
+        assert_eq!(checked["rootPath"], expected_new.to_string_lossy().as_ref());
+        assert!(Arc::ptr_eq(&original.workspace,&lock_unpoisoned(&bridge.inner.state).current.clone().unwrap().workspace));
+        let moved = bridge.handle(request("explorer.context",json!({"threadId":"thread-a"}))).await.unwrap();
+        assert_eq!(moved["rootPath"],checked["rootPath"]);
+        let second = bridge.handle(request("explorer.context",json!({"threadId":"thread-b"}))).await.unwrap();
+        assert_ne!(second["rootPath"],moved["rootPath"]);
+        let returned = bridge.handle(request("explorer.context",json!({"threadId":"thread-a"}))).await.unwrap();
+        assert_eq!(returned["rootPath"],moved["rootPath"]);
+        server.await.unwrap();
+    }
+
+    #[tokio::test]
     async fn language_rpc_preserves_files_rejects_invalid_fields_and_conflicts() {
         let (directory, bridge) = manual_bridge().await;
         let language_path = directory.path().join("settings/ui-language.json");

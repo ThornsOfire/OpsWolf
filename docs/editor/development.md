@@ -39,6 +39,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Personal identity profiles, local logo upload/fallback, explicit save and next-document application | `node scripts/test-identity-profiles.mjs`; see [identity scope and Windows/Discord boundaries](identity.md) |
 | Composer WPM timing, trusted input policy, IME boundaries, preferences and cleanup | `node scripts/test-typing-meter.mjs`; see [measurement and verification limits](typing-meter.md) |
 | Chat reading anchor, native scroll displacement, reflow, zoom and lifecycle | `node scripts/test-chat-reading.mjs`; see [candidate behavior](chat-reading.md) |
+| Same-chat project/cwd moves, empty destination, deferred dirty drafts and stale metadata replies | `node scripts/test-root-revalidation.mjs`; `node scripts/test-workspace-root-host.mjs`; `cargo test -p context-resolver --locked --offline`; `cargo test -p code-codex --bin code-codex context_ --locked --offline -- --test-threads=1` |
 | Shared bubble hover/focus, dismissal, bounds, colors and editor/E lifecycle | `node scripts/test-tooltips.mjs`; `node scripts/test-editor-pane.mjs` |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
 | Native browser/file boundaries, titlebar controls, tab switching, divider drags, embedded-surface position/size notifications and cleanup at zoom | `node scripts/test-native-pane-boundary.mjs` |

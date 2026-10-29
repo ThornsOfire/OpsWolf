@@ -28,20 +28,6 @@ pub(super) fn parse_thread_workspace(
     })
 }
 
-pub(super) fn parse_started_notification(message: &Value) -> Option<ThreadWorkspace> {
-    let thread = message.get("params")?.get("thread")?;
-    let thread_id = thread.get("id")?.as_str()?;
-    validate_thread_id(thread_id).ok()?;
-    let cwd = thread.get("cwd")?.as_str()?.trim();
-    if cwd.is_empty() {
-        return None;
-    }
-    Some(ThreadWorkspace {
-        thread_id: thread_id.to_owned(),
-        cwd: PathBuf::from(cwd),
-    })
-}
-
 pub(super) fn validate_thread_id(thread_id: &str) -> Result<(), ResolverError> {
     if thread_id.is_empty()
         || thread_id.len() > 256
