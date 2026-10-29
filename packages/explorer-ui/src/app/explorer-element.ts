@@ -861,6 +861,8 @@ export class CodeCodexElement extends HTMLElement {
             },
             closeTab:threadId=>owner.#previewWorkspace.closePreviewTab(`native-diff://${threadId}`,false),
             target:()=>owner.#mainPreview?.nativeDiffSurface(),
+            preview:()=>owner.#mainPreview,
+            setWordWrap:enabled=>owner.#mainPreview?.setNativeWordWrapState(enabled),
         });
         this.#nativeDiffHost.start();
         this.#citations??=new CitationController({element:this,

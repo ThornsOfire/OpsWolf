@@ -8,6 +8,8 @@ export interface NativeDiffHostPorts {
  readonly openTab:()=>void;
  readonly closeTab:(threadId:string)=>void;
  readonly target:()=>HTMLElement|undefined;
+ readonly preview:()=>HTMLElement|undefined;
+ readonly setWordWrap:(enabled:boolean|undefined)=>void;
 }
 class StyleLease {
  private values=new Map<HTMLElement,Map<string,{value:string;priority:string;applied:string}>>();
@@ -35,17 +37,28 @@ export class NativeDiffHost {
  start():void {
   if(!this.disposed)return;this.disposed=false;
   const document=this.ports.element.ownerDocument;
-  this.observer=new MutationObserver(this.schedule);this.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','aria-hidden','aria-label','data-state','data-preview-tabs','data-app-shell-active-page','data-editor-visible','data-editor-pane-open','data-native-diff-active','data-app-shell-workspace-layout','data-app-shell-right-panel-full-width']});
-  document.addEventListener('click',this.onClick,true);document.defaultView?.addEventListener('resize',this.schedule);
+  this.observer=new MutationObserver(this.schedule);this.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['hidden','aria-hidden','aria-label','aria-pressed','disabled','aria-disabled','data-state','data-preview-tabs','data-app-shell-active-page','data-editor-visible','data-editor-pane-open','data-native-diff-active','data-app-shell-workspace-layout','data-app-shell-right-panel-full-width']});
+  document.addEventListener('click',this.onClick,true);document.addEventListener('cle-main-preview-native-wrap',this.onWrap);document.defaultView?.addEventListener('resize',this.schedule);
   this.resize=new ResizeObserver(this.schedule);this.schedule();
   this.styleObserver=new MutationObserver(records=>{if(records.some(r=>r.target instanceof HTMLElement&&(this.layout.changed(r.target)||this.activeLayout.changed(r.target))))this.schedule();});
  }
  dispose():void {
   this.disposed=true;this.observer?.disconnect();this.observer=undefined;this.resize?.disconnect();this.resize=undefined;this.styleObserver?.disconnect();this.styleObserver=undefined;
   this.ports.element.ownerDocument.removeEventListener('click',this.onClick,true);this.ports.element.ownerDocument.defaultView?.removeEventListener('resize',this.schedule);
+  this.ports.element.ownerDocument.removeEventListener('cle-main-preview-native-wrap',this.onWrap);
   this.ports.element.ownerDocument.defaultView?.cancelAnimationFrame(this.frame);this.frame=0;this.release();this.key='';this.attempted=undefined;
  }
  private currentKey():string {const c=this.ports.context;return !this.disposed&&this.ports.enabled&&c?c.threadId+'\0'+c.rootPath:'';}
+ private wrapButton():HTMLButtonElement|undefined {
+  const buttons=[...this.panel?.querySelectorAll<HTMLButtonElement>('button[aria-label="Word wrap"][aria-pressed]')??[]].filter(button=>!button.disabled&&button.getAttribute('aria-disabled')!=='true'&&!button.closest('[hidden],[aria-hidden="true"]')&&['true','false'].includes(button.getAttribute('aria-pressed')??''));
+  return buttons.length===1?buttons[0]:undefined;
+ }
+ private onWrap=(event:Event):void=>{
+  if(event.target!==this.ports.preview()||!this.currentKey()||this.currentKey()!==this.key||!this.ports.target()||!this.panel||annotationConsensusThreadId(this.panel.closest('[data-app-shell-active-page="true"]')??this.ports.element.ownerDocument,true)!==this.ports.context?.threadId)return;
+  const enabled=(event as CustomEvent<{enabled?:unknown}>).detail?.enabled,button=this.wrapButton();
+  if(typeof enabled==='boolean'&&button&&(button.getAttribute('aria-pressed')==='true')!==enabled)button.click();
+  this.schedule();
+ };
  private activeElement<T extends HTMLElement=HTMLElement>(selector:string):T|undefined {
   return [...this.ports.element.ownerDocument.querySelectorAll<T>(selector)].find(e=>!e.closest('[data-app-shell-active-page="false"]'));
  }
@@ -59,6 +72,7 @@ export class NativeDiffHost {
  };
  private schedule=():void=>{if(this.disposed||this.frame)return;this.frame=this.ports.element.ownerDocument.defaultView!.requestAnimationFrame(()=>{this.frame=0;this.refresh();});};
  private release():void {
+  this.ports.setWordWrap(undefined);
   this.resize?.disconnect();this.styleObserver?.disconnect();this.observedTarget=undefined;this.observedWorkspace=undefined;this.activeLayout.restore();this.layout.restore();this.probe?.remove();this.probe=undefined;
   if(this.aside){if(this.ownedAttribute===null)this.aside.removeAttribute('data-code-codex-owned');else this.aside.setAttribute('data-code-codex-owned',this.ownedAttribute);}
   this.panel=undefined;this.aside=undefined;this.threadId='';
@@ -101,7 +115,8 @@ export class NativeDiffHost {
   this.layout.set(nativeTab,'display','none');
   const expand=this.activeElement('header button[aria-label="Enter full view"]');if(expand)this.layout.set(expand,'display','none');
   const target=this.ports.target(),bounds=target?.getBoundingClientRect();
-  if(!target||!bounds||bounds.width<1||bounds.height<1){this.activeLayout.restore();this.layout.set(aside,'display','none');return;}
+  if(!target||!bounds||bounds.width<1||bounds.height<1){this.ports.setWordWrap(undefined);this.activeLayout.restore();this.layout.set(aside,'display','none');return;}
+  const wrap=this.wrapButton();this.ports.setWordWrap(wrap?wrap.getAttribute('aria-pressed')==='true':undefined);
   this.layout.set(aside,'display','block');
   this.activeLayout.set(workspace,'overflow','visible');this.activeLayout.set(workspace,'z-index','32');this.activeLayout.set(workspace,'pointer-events','none');
   if(viewport)this.activeLayout.set(viewport,'pointer-events','auto');

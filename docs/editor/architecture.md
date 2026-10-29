@@ -76,6 +76,8 @@ The host verifies active-page and same-thread markers, native tab/controller own
 
 The actual comparison stays under its original native DOM parent. Scoped style leases position it over the editor's native-diff mount target. A hidden geometry probe measures native origin/zoom; ResizeObserver follows the editor surface. Native layout writes that would displace the view are reconciled. No native source is copied and no private React store is accessed.
 
+Word wrapping is also native-owned. The editor emits an explicit request only while its Changes tab is active. The host verifies preview ownership, active context and target, then invokes the unique enabled `Word wrap` button when its `aria-pressed` state differs. Observing native state updates the editor indicator in either direction without a reciprocal click. Missing, ambiguous or unrecognized controls report unavailable and disable the custom action. Source-file wrap preferences are independent; no forced CSS overrides are applied to native diff rows.
+
 The native tab is hidden while its editor counterpart owns presentation. Other editor tabs and E hide the comparison without destroying its native state. Closing the editor Changes tab forwards to the original native close button. A native full-view comparison returns to split layout to keep chat available. Disposal/context changes restore leased styles and owned markers. Unknown layouts keep their native presentation.
 
 ## Opening a diff's current source

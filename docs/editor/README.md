@@ -90,6 +90,8 @@ The native bubble can appear during an active response. Clicking it opens Codex'
 
 Switching to another file hides the comparison without closing it. Returning to Changes preserves native viewer state where the host permits it. E hides it with the editor; fullscreen and resizing follow the editor layout. Closing Changes uses the original native close control.
 
+In Changes, the editor's word-wrap button reflects the native viewer's actual setting and forwards changes to its original Word wrap control. Using either control updates the editor indicator. Ordinary source tabs retain their separate saved wrap preference. If the native wrap control cannot be recognized safely, the editor button is disabled for Changes; native viewer controls remain available.
+
 ### Coverage and retention
 
 The persistent panel covers completed native patch items for eligible files inside the active project, including ordinary files outside Git. Shell commands and manual edits aren't guaranteed to appear. Sensitive, oversized, unsupported, and outside-project records can be omitted or unavailable. Unknown native cards remain in chat instead of being hidden without a working replacement.

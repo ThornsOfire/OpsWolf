@@ -65,6 +65,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   readonly _citationUi:EditorCitations;
   _wrappedLineNumbers: WrappedLineNumbers | null = null;
   _wordWrap = false;
+  _nativeWordWrap:boolean|undefined;
   _editorVisible = false;
   _panePreference = { docked: true, width: 560 };
   _paneResizeCleanup: (() => void) | undefined;
@@ -198,6 +199,10 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       this.dispatchEvent(new CustomEvent('cle-main-preview-close-all',{bubbles:true,composed:true}));
     });
     this._required('.word-wrap-toggle').addEventListener('click', () => {
+      if(this._state.tabs.find(view=>view.path===this._state.activePath)?.kind==='native-diff'){
+        if(this._nativeWordWrap!==undefined)this.dispatchEvent(new CustomEvent('cle-main-preview-native-wrap',{bubbles:true,composed:true,detail:{enabled:!this._nativeWordWrap}}));
+        return;
+      }
       this._wordWrap=!this._wordWrap;this._syncWordWrap();
       try { this.ownerDocument.defaultView?.localStorage.setItem('code-codex:word-wrap:v1',String(this._wordWrap)); } catch { /* Preference remains active for this session. */ }
     });
@@ -405,8 +410,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _syncWordWrap(): void {
     this.toggleAttribute('data-word-wrap',this._wordWrap);
     const toggle=this._required<HTMLButtonElement>('.word-wrap-toggle');
-    toggle.setAttribute('aria-pressed',String(this._wordWrap));
-    toggle.title=this._wordWrap?'Disable word wrap':'Enable word wrap';toggle.setAttribute('aria-label',toggle.title);
+    const native=this._state.tabs.find(view=>view.path===this._state.activePath)?.kind==='native-diff';
+    const wrapped=native?this._nativeWordWrap:this._wordWrap;
+    toggle.disabled=native&&wrapped===undefined;
+    toggle.setAttribute('aria-pressed',String(wrapped===true));
+    toggle.title=toggle.disabled?'Word wrap unavailable for this native viewer':wrapped?'Disable word wrap':'Enable word wrap';toggle.setAttribute('aria-label',toggle.title);
     const textarea=this._panelMount.querySelector<HTMLTextAreaElement>('.code-editor');
     if(textarea){textarea.wrap=this._wordWrap?'soft':'off';if(this._wordWrap)textarea.scrollLeft=0;this._syncEditorScroll(textarea);}
     this._codeMinimap?.setEnabled(this._minimapEnabled&&!this._wordWrap);
@@ -425,6 +433,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   showEditor(): void { this._setEditorVisible(true); }
+
+  setNativeWordWrapState(enabled:boolean|undefined):void {
+    if(this._nativeWordWrap===enabled)return;
+    this._nativeWordWrap=enabled;this._syncWordWrap();
+  }
 
   nativeDiffSurface():HTMLElement|undefined {
     if(!this._connected||this._suspended||!this._editorVisible)return;
