@@ -1,0 +1,24 @@
+name: Changelog
+on:
+  pull_request:
+  push:
+    branches: [main, feature/right-editor-pane]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  changelog:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Test changelog validation and change-range policy
+        run: node --test scripts/test-changelog.mjs
+      - name: Check notes for this change
+        run: node scripts/check-changelog.mjs --event "$GITHUB_EVENT_PATH"

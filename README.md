@@ -6,6 +6,8 @@ I wanted a file tree on the left, chat in the middle, and an editor on the right
 
 So yeah, that escalated pretty quickly lol.
 
+Want to see how we got here? The [changelog](CHANGELOG.md) tracks the notable changes, and [contributing guide](CONTRIBUTING.md) explains how we keep it up to date.
+
 This is an experimental fork of [Rice-dog/code-codex](https://github.com/Rice-dog/code-codex). The original devs built the launcher, workspace bridge, file explorer, and plugin system that made this possible. We've been building an editor workflow on top of that foundation.
 
 **The actual editor code lives on [`feature/right-editor-pane`](https://github.com/ThornsOfire/code-codex/tree/feature/right-editor-pane).** The GitHub homepage on `main` has this overview; the build commands below select the right branch for you.
