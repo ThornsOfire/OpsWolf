@@ -98,6 +98,7 @@ $script:RemovalUiText = @'
   "black hole background": "黑洞",
   "blinking squares background": "闪烁方块",
   "cloud train background": "云间列车",
+  "code rain background": "代码雨背景",
   "codex startup transition": "Codex 启动动画",
   "csv preview": "CSV 表格预览",
   "custom background": "自定义背景",

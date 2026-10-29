@@ -1,0 +1,1 @@
+Original user videos and thumbnails stay in the existing local IndexedDB library and native media storage. No derived movie cache or advanced project is used. Default startup media remains independently downloadable.

@@ -6,6 +6,7 @@ import {sourcePackage} from './plugin-source-definition.mjs';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const sourceFiles = ['renderer.mjs', 'state.mjs', 'LICENSE'];
+const id = 'code-rain';
 
 /** Reviewed local source only: compilation never fetches from the source URL. */
 export async function verifyCodeRainSource(root) {
@@ -26,8 +27,8 @@ export async function verifyCodeRainSource(root) {
   return provenance;
 }
 
-export async function buildCodeRain(root, options, outputRoot = resolve(root, 'dist/plugins'), definition = sourcePackage('code-rain')) {
-  if (definition.id !== 'code-rain' || definition.api !== 1 || definition.category !== 'appearance' ||
+export async function buildCodeRain(root, options, outputRoot = resolve(root, 'dist/plugins'), definition = sourcePackage(id)) {
+  if (definition.id !== id || definition.api !== 1 || definition.category !== 'appearance' ||
       !/^\d+\.\d+\.\d+$/.test(definition.version)) throw Error('Invalid Code Rain package definition');
   const provenance = await verifyCodeRainSource(root);
   const asset = `CodeCodex-background-code-rain-${definition.version}.js`;

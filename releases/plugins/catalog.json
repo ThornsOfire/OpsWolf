@@ -529,12 +529,12 @@
     "name": "Codex Startup Transition",
     "category": "appearance",
     "api": 1,
-    "version": "1.1.27",
-    "releaseTag": "v0.5.19",
-    "asset": "CodeCodex-plugin-codex-startup-transition-1.1.27.js",
-    "relativePath": "CodeCodex-plugin-codex-startup-transition-1.1.27.js",
-    "size": 38281,
-    "sha256": "15c117ceba380815d38928d76c7e40f08c19f952cca37605d4c56b0d7740af82",
+    "version": "1.1.28",
+    "releaseTag": "plugin-assets-2026-10-29",
+    "asset": "CodeCodex-plugin-codex-startup-transition-1.1.28.js",
+    "relativePath": "CodeCodex-plugin-codex-startup-transition-1.1.28.js",
+    "size": 38318,
+    "sha256": "78127348b8eadd37f5684638c14499d0594cfbc03a2d057fd9a60e7b7e2bfb04",
     "resources": [],
     "capabilities": [
       "startup",
@@ -779,5 +779,25 @@
     "sha256": "0fb2418cb92a1cf81724f10034881dcafae0e0d6de01d6ef620d1db47869d8da",
     "resources": [],
     "source": "https://github.com/Rice-dog/code-codex"
+  },
+  {
+    "id": "code-rain",
+    "name": "Code Rain Background",
+    "category": "appearance",
+    "api": 1,
+    "version": "0.1.1",
+    "releaseTag": "plugin-assets-2026-10-29",
+    "capabilities": [
+      "background",
+      "startup",
+      "preview"
+    ],
+    "asset": "CodeCodex-background-code-rain-0.1.1.js",
+    "relativePath": "CodeCodex-background-code-rain-0.1.1.js",
+    "size": 10422,
+    "sha256": "751c10db39c69748738c36cc8fce3e7cc8afaf1ab8e2dfe6cae08a26861af639",
+    "resources": [],
+    "source": "https://github.com/ThornsOfire/OpsWolf-Code-Rain",
+    "sourceCommit": "4d68d1fcdddd458d08be1523497b4f2a7af57f55"
   }
 ]

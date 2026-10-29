@@ -1,5 +1,6 @@
 /** Market-only artwork. Kept outside downloadable renderers and their input closures. */
 const glyphs = {
+  'code-rain': '<path d="M3 1v5m0 3v3M8 3v6m0 3v3M13 1v3m0 3v5M2 6h2M7 9h2M12 12h2"/>',
   'custom-background': '<rect x="2" y="2.5" width="12" height="11" rx="2"/><circle cx="5.5" cy="6" r="1"/><path d="m3 12 3.5-3.5 2 2L11 8l2 2.5"/>',
   'ascii-tiles': '<path d="m3 2 5 1-1 5-5-1zM9 3l5 1-1 5-5-1zM2 9l5 1-1 4-5-1zM8 10l5 1-1 3-5-1zM4.5 4l-1 2M4 5.5h1.5"/>',
   'surface-opacity': '<rect x="2" y="2" width="8" height="8" rx="1.5"/><rect x="6" y="6" width="8" height="8" rx="1.5"/><path d="m7 9 2-2m-2 5 5-5m-2 6 3-3"/>',

@@ -7,3 +7,6 @@ releases/plugins/** -text -whitespace
 
 # Vendored Code Rain inputs are verified against exact reviewed source bytes.
 packages/explorer-ui/vendor/opswolf-code-rain/** -text
+
+# Shader text is embedded verbatim; checkout line endings must not change bundles.
+packages/explorer-ui/src/effects/**/*.frag text eol=lf

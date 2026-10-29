@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Optional Code Rain background candidate, built from pinned MIT-licensed OpsWolf Code Rain sources through the verified plugin system. Its settings include colors, glyphs, motion, presets, pause and timed/looped blends; only explicit Save persists the rain settings. Native appearance changes stop the effect, disabling restores its prior theme lease, and hidden/reduced-motion/high-contrast behavior limits animation. Startup selection includes Rain. Package import and browser integration are locally tested; live Codex presentation and publication remain pending.
+
 - Shared tree/editor/settings color roles, public `--cursadex-*` theme hooks and live inherited native colors, with light/dark fallbacks and system high-contrast colors. Explicit light appearance wins over a dark OS preference. The high-contrast source mirror retains geometry for wrapped line numbers; document paper and native viewer rendering stay separate. Arbitrary marketplace themes still need compatibility checks.
 
 - Cursadex settings in the renamed application menu, with shared typing-speed, source-wrap, minimap and first-chat sidebar-collapse preferences. Existing wrap/minimap choices migrate without deleting old keys. Preference reset is separate from saved preview-link warning reset; storage failures remain usable for the session. Inherited Code-Codex tools and credit remain available.

@@ -1,0 +1,20 @@
+{
+  "id": "code-rain",
+  "name": "Code Rain Background",
+  "category": "appearance",
+  "api": 1,
+  "version": "0.1.1",
+  "releaseTag": "plugin-assets-2026-10-29",
+  "capabilities": [
+    "background",
+    "startup",
+    "preview"
+  ],
+  "asset": "CodeCodex-background-code-rain-0.1.1.js",
+  "relativePath": "CodeCodex-background-code-rain-0.1.1.js",
+  "size": 10422,
+  "sha256": "751c10db39c69748738c36cc8fce3e7cc8afaf1ab8e2dfe6cae08a26861af639",
+  "resources": [],
+  "source": "https://github.com/ThornsOfire/OpsWolf-Code-Rain",
+  "sourceCommit": "4d68d1fcdddd458d08be1523497b4f2a7af57f55"
+}

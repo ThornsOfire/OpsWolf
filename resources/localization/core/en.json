@@ -118,5 +118,6 @@
   "plugin.name.office-preview": "Office Preview",
   "plugin.name.notebook-preview": "Jupyter Notebook Preview",
   "plugin.name.model-preview": "3D Model Preview",
-  "plugin.name.ascii-tiles": "ASCII Tiles Background"
+  "plugin.name.ascii-tiles": "ASCII Tiles Background",
+  "plugin.name.code-rain": "Code Rain Background"
 }

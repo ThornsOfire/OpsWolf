@@ -30,6 +30,7 @@ export class CodeRainBackgroundController {
   #saved=JSON.stringify(this.#settings);
   #initialized=false;
   #disposed=false;
+  #stoppedForExternalThemeChange=false;
   #enabled=false;
   #pending=false;
   #paused=false;
@@ -45,6 +46,8 @@ export class CodeRainBackgroundController {
   #lastNotice=0;
   constructor(private readonly ports:CodeRainRuntimePorts) {}
   get enabled():boolean{return this.#enabled;}
+  get disposed():boolean{return this.#disposed;}
+  get stoppedForExternalThemeChange():boolean{return this.#stoppedForExternalThemeChange;}
   get pending():boolean{return this.#pending;}
   get error():string|undefined{return this.#error;}
   get storageError():string|undefined{return this.#storageError;}
@@ -75,6 +78,7 @@ export class CodeRainBackgroundController {
     if(this.#operation)return this.#operation;
     if(this.#enabled||this.#pending)return;
     const generation=++this.#generation;
+    this.#stoppedForExternalThemeChange=false;
     this.#preserveOnCancel=false;
     this.#pending=true;this.#error=undefined;this.#notify();
     const operation=this.#enable(generation);this.#operation=operation;
@@ -147,9 +151,13 @@ export class CodeRainBackgroundController {
       this.#saved=JSON.stringify(this.#settings);this.#storageError=undefined;this.#notify();return true;
     }catch(error){this.#storageError=error instanceof Error?error.message:'Code Rain settings could not be saved';this.#notify();return false;}
   }
-  async dispose():Promise<void>{
+  async stopForExternalThemeChange():Promise<void>{
+    await this.disable(true);
+    this.#stoppedForExternalThemeChange=true;this.#error='Code Rain stopped because the native appearance changed';this.#notify();
+  }
+  async dispose(preserveTheme=false):Promise<void>{
     if(this.#disposed)return;this.#disposed=true;
-    try{await this.disable();}finally{this.#listeners.clear();}
+    try{await this.disable(preserveTheme);}finally{this.#listeners.clear();}
   }
   #teardown():void{
     this.#enabled=false;this.#phase='';

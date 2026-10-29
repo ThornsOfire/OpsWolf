@@ -58,6 +58,9 @@ await mkdir(resolve(root, "dist/demo"), { recursive: true });
 
 const options = {
   absWorkingDir: root,
+  // Keep dependency inputs relative to this checkout when node_modules is a
+  // local junction. The distribution verifier still validates the same bytes.
+  preserveSymlinks: true,
   alias: {
     // JSZip's browser field points at an opaque Browserify bundle. Build its
     // audited source graph so every shipped transitive remains visible in the

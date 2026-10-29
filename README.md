@@ -16,6 +16,8 @@ This is an unofficial community project, independent of OpenAI and the original 
 
 ## What we've added so far
 
+The local development candidate also includes an optional Code Rain background with its own motion, color, preset and transition controls. It uses the normal verified plugin system; no published Rain download is available yet. See the [integration guide and verification limits](docs/editor/code-rain-integration.md).
+
 ### An editor that lives beside the chat
 
 - Files open in a resizable right editor pane, so you can keep talking to the agent while looking at your work.

@@ -1,4 +1,5 @@
 import {buildAsciiTiles} from './build-ascii-tiles.mjs';
+import {buildCodeRain} from './build-code-rain.mjs';
 import {readFile,writeFile,mkdir,cp,rm} from 'node:fs/promises';
 import {resolve,relative} from 'node:path';
 import {randomUUID} from 'node:crypto';
@@ -21,6 +22,7 @@ export async function rebuildPlugins(root,options,selection){
  try{
   const catalog=await buildBackgroundPackages(root,options,stage);
   catalog.push(await buildAsciiTiles(root,options,stage));
+  catalog.push(await buildCodeRain(root,options,stage));
   catalog.push(await buildCustomBackground(root,options,stage));
   catalog.push(...await buildUtilityPackages(root,options,stage));
   catalog.push(await buildStartupPackage(root,options,stage));

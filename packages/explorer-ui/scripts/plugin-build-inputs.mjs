@@ -16,9 +16,10 @@ export async function fingerprintBuildMetadata(root,id) {
  return result;
 }
 export async function additionalBuildInputs(root,p) {
- const builder=p.id==='ascii-tiles'?'build-ascii-tiles.mjs':p.id==='custom-background'?'build-custom-background.mjs':p.id==='codex-startup-transition'?'build-startup-package.mjs':p.category==='file-preview'?'file-preview-packages.mjs':p.capabilities?.includes('background')?'background-packages.mjs':'utility-packages.mjs';
+ const builder=p.id==='code-rain'?'build-code-rain.mjs':p.id==='ascii-tiles'?'build-ascii-tiles.mjs':p.id==='custom-background'?'build-custom-background.mjs':p.id==='codex-startup-transition'?'build-startup-package.mjs':p.category==='file-preview'?'file-preview-packages.mjs':p.capabilities?.includes('background')?'background-packages.mjs':'utility-packages.mjs';
  const files=['scripts/'+builder,'scripts/build.mjs','scripts/rebuild-plugins.mjs','scripts/plugin-source-definition.mjs','scripts/plugin-build-inputs.mjs','scripts/plugin-distribution.mjs','../../THIRD_PARTY_NOTICES_EN.md'];
  if(p.id==='codex-startup-transition')files.push('src/startup-transition.css');
+ if(p.id==='code-rain')files.push('vendor/opswolf-code-rain/provenance.json','vendor/opswolf-code-rain/LICENSE');
  if(p.id==='pixel-sculpt')files.push('src/pixel-sculpt-default.png');
  if(p.id==='office-preview')for(const name of ['native-parser-worker.js','pptx_wasm_bg.wasm'])files.push('node_modules/@extend-ai/react-pptx/dist/'+name);
  const media=await json(resolve(root,'default-media/manifest.json'));

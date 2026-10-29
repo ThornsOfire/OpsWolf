@@ -10,6 +10,8 @@
 
 # Release output
 /artifacts/
+# Locally generated build provenance; identities and input hashes live in the lock.
+/releases/plugins/**/*.metafile.json
 /installer/bin/
 /installer/obj/
 

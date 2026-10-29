@@ -1,0 +1,63 @@
+import assert from 'node:assert/strict';
+import {mkdirSync,writeFileSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {delay} from './browser-fixture.mjs';
+
+/** Exercise the production UI/runtime; the parent fixture owns native RPC mocks. */
+export async function checkCodeRain({browser,shadow,check,wait,root}) {
+  const e=browser.evaluate;
+  const card=`${shadow}.querySelector('[data-appearance-plugin="code-codex.code-rain-background"]')`;
+  const button=`${card}.querySelector('.preview-extension-action')`;
+  const panel=`${shadow}.querySelector('#cle-code-rain-settings')`;
+  const action=name=>`${panel}.querySelector('[data-rain-action="${name}"]')`;
+  const input=name=>`${panel}.querySelector('#cle-rain-${name}')`;
+  const runtime=`window[Symbol.for('cursadex:code-rain-runtime:v1')]`;
+  const reopen=async()=>{await e(`${shadow}.host.openPreviewMarket();${card}.querySelector('.code-rain-settings').click()`);await delay(250);};
+  await check('Rain cold controls use the normal package gate',`${button}.textContent==='Download'&&${card}.querySelector('.code-rain-settings').disabled`);
+  await e(`${button}.click()`);await wait(`${button}.textContent==='Enable'`,'Rain download completes');
+  await check('Rain installation alone is inert',`!document.querySelector('[data-code-codex-rain-layer]')&&!localStorage.getItem('cursadex:code-rain:v1')`);
+  await e(`${button}.click()`);await wait(`${runtime}.enabled&&${button}.textContent==='Disable'&&!${button}.disabled`,'Rain enables');
+  await check('Rain replaces the previous background through the coordinator',`!document.documentElement.hasAttribute('data-code-codex-glow-horizon-background')&&!document.querySelector('[data-code-codex-glow-horizon-layer]')&&document.querySelectorAll('[data-code-codex-rain-layer] canvas').length===1&&${button}.textContent==='Disable'`);
+  await check('Rain decoration does not intercept mouse input',`getComputedStyle(document.querySelector('[data-code-codex-rain-layer]')).pointerEvents==='none'`);
+  await e(`${card}.querySelector('.code-rain-settings').click()`);
+  await check('Rain settings open with all agreed controls',`${panel}.matches(':popover-open')&&${panel}.querySelectorAll('[data-rain-control]').length===12&&${input('preset')}.options.length===4`);
+  await e(`${input('speed')}.value='21';${input('speed')}.dispatchEvent(new Event('input',{bubbles:true}))`);
+  await check('Settings change live without autosaving',`${runtime}.settings.speed===21&&${runtime}.dirty&&!localStorage.getItem('cursadex:code-rain:v1')`);
+  await e(`${input('glyphs')}.value='ABC123';${input('glyphs')}.dispatchEvent(new Event('change',{bubbles:true}));${action('save')}.click()`);
+  await check('Explicit Save persists the current rain settings',`JSON.parse(localStorage.getItem('cursadex:code-rain:v1')).rain.speed===21&&${runtime}.settings.glyphs==='ABC123'&&!${runtime}.dirty`);
+  await e(`${input('glyphs')}.value='bad characters';${input('glyphs')}.dispatchEvent(new Event('change',{bubbles:true}))`);
+  await check('Invalid glyph entry keeps the previous value',`${runtime}.settings.glyphs==='ABC123'&&${input('glyphs')}.value==='ABC123'`);
+  await e(`${action('pause')}.click();${input('preset')}.value='1';${input('duration')}.value='0.5';${input('hold')}.value='0';${action('blend')}.click()`);await delay(100);
+  await check('Pause holds an initiated blend',`${runtime}.paused&&${runtime}.transitionPhase==='Transitioning'&&${runtime}.settings.speed===21&&${action('pause')}.textContent==='Resume'`);
+  await e(`${action('pause')}.click()`);await wait(`${runtime}.transitionPhase===''`,'Rain blend completes');
+  await check('Blend leaves the saved snapshot intact',`${runtime}.dirty&&JSON.parse(localStorage.getItem('cursadex:code-rain:v1')).rain.speed===21`);
+  await e(`${action('reset')}.click()`);
+  await check('Reset current affects the session until Save',`${runtime}.settings.speed===12&&${runtime}.dirty&&JSON.parse(localStorage.getItem('cursadex:code-rain:v1')).rain.speed===21`);
+  await browser.command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:false});await delay(100);
+  // The existing host intentionally closes the market and its panels on resize.
+  await reopen();
+  await check('Rain settings fit when opened in a narrow viewport',`(()=>{const r=${panel}.getBoundingClientRect();return ${panel}.matches(':popover-open')&&r.width>300&&r.height>100&&r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight&&${panel}.scrollWidth<=r.width+1})()`);
+  const artifacts=resolve(root,'artifacts/code-rain-integration');mkdirSync(artifacts,{recursive:true});
+  writeFileSync(resolve(artifacts,'settings-narrow.png'),Buffer.from((await browser.command('Page.captureScreenshot')).data,'base64'));
+  await browser.command('Emulation.clearDeviceMetricsOverride');await delay(100);await reopen();
+  await browser.command('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});await delay(100);
+  await check('Forced colors hide decorative Rain',`getComputedStyle(document.querySelector('[data-code-codex-rain-layer]')).display==='none'`);
+  await browser.command('Emulation.setEmulatedMedia',{features:[]});
+  await e(`${panel}.querySelector('.code-rain-close').click()`);
+  await check('Closing settings retains unsaved changes and returns focus',`!${panel}.matches(':popover-open')&&${runtime}.dirty&&${shadow}.activeElement===${card}.querySelector('.code-rain-settings')`);
+  await e(`${button}.click()`);await wait(`!${runtime}.enabled&&!${runtime}.pending`,'Rain disabled');
+  await check('Disabling removes the owned surface without changing chat draft',`!document.querySelector('[data-code-codex-rain-layer]')&&document.querySelector('textarea').value==='Native draft'`);
+  await e(`window.fixtureAppearanceMode='light';document.documentElement.dataset.theme='light';${button}.click()`);await wait(`${runtime}.enabled`,'Rain enables from light');
+  await check('Rain acquires dark appearance through the native adapter',`fixtureAppearanceMode==='dark'&&document.documentElement.dataset.theme==='dark'`);
+  await e(`${button}.click()`);await wait(`!${runtime}.pending&&fixtureAppearanceMode==='light'`,'Light appearance restored');
+  await check('Disable restores the preceding light preference',`document.documentElement.dataset.theme==='light'&&!document.querySelector('[data-code-codex-rain-layer]')`);
+  await e(`${button}.click()`);await wait(`${runtime}.enabled`,'Rain reenabled');
+  await e(`window.fixtureAppearanceMode='light';document.documentElement.dataset.theme='light'`);await wait(`${runtime}.stoppedForExternalThemeChange`,'External appearance change stops Rain');
+  await check('External appearance choice wins and clears enabled preference',`!${runtime}.enabled&&fixtureAppearanceMode==='light'&&${button}.textContent==='Enable'&&!document.querySelector('[data-code-codex-rain-layer]')`);
+  await e(`${button}.click()`);await wait(`${runtime}.enabled`,'Rain explicitly reenabled after external change');
+  await e(`${card}.querySelector('.code-rain-settings').click()`);await delay(100);
+  writeFileSync(resolve(artifacts,'settings-desktop.png'),Buffer.from((await browser.command('Page.captureScreenshot')).data,'base64'));
+  await e(`${panel}.querySelector('.code-rain-close').click();${button}.click()`);await wait(`!${runtime}.pending&&!${runtime}.enabled`,'Final Rain cleanup');
+  await check('Repeated enable uses the verified package once',`calls.filter(c=>c.method==='explorer.plugins.load'&&c.params.id==='code-rain').length===1&&calls.filter(c=>c.method==='explorer.plugins.install'&&c.params.id==='code-rain').length===1`);
+  assert.deepEqual(await e('errors'),[],'Rain produced no asynchronous errors');
+}
