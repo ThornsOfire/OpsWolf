@@ -1804,4 +1804,7 @@ export const mainPreviewStyles = String.raw`
     .markdown-body { padding: 22px 18px 16px; }
     .markdown-truncated { padding-inline: 18px; }
   }
+  .preview-meta-bar .preview-metadata { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .preview-mode-button[aria-pressed="true"] { background: var(--cle-main-line) !important; }
+  .preview-mode-button:disabled { opacity: .5; cursor: default !important; }
 `;

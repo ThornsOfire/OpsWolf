@@ -545,12 +545,6 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if(draftEditor && !editor && (view.kind==='text'||view.kind==='empty')) {
       view={...view,kind:'text',text:draftEditor.draft,sizeBytes:new TextEncoder().encode(draftEditor.draft).length,truncated:false};
     }
-    const markdownEditing = Boolean(
-      editor &&
-      (view.kind === "text" || view.kind === "empty") &&
-      this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) === true &&
-      isMarkdownPreviewPath(view.path),
-    );
     const markdownPreview = view.kind === "text" &&
       this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) === true &&
       isMarkdownPreviewPath(view.path) &&
@@ -563,7 +557,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       this._state.enabledPreviewers?.includes(DIAGRAM_PREVIEWER_ID) === true &&
       isDiagramPreviewPath(view.path) &&
       !editor;
-    const metadata = `${view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES ? this._largeMarkdownKey === `${view.path}\0${view.version}` ? "Large file · rendered · read only · " : "Large file · plain text · read only · " : markdownEditing ? "Rendered Markdown edit · " : markdownPreview ? "Markdown preview · " : csvPreview ? "CSV preview · " : diagramPreview ? "Diagram preview · " : ""}${this._metadataFor(view)}`;
+    const metadata = `${view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES ? this._largeMarkdownKey === `${view.path}\0${view.version}` ? "Large file · rendered · read only · " : "Large file · plain text · read only · " : markdownPreview ? "Markdown preview · " : csvPreview ? "CSV preview · " : diagramPreview ? "Diagram preview · " : ""}${this._metadataFor(view)}`;
     metaBar.append(location, this._textSpan(metadata, "preview-metadata"));
     const action=(label:string,title:string,callback:()=>void,disabled=false):HTMLButtonElement=>{
       const button=this.ownerDocument.createElement('button');button.type='button';button.textContent=label;
@@ -599,7 +593,6 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const content = this.ownerDocument.createElement("div");
     content.className = "preview-content";
     if (editor) content.classList.add("editor-mode");
-    if (markdownEditing) content.classList.add("markdown-editor-mode");
     this._renderViewContent(content, view, editor);
     if(draftEditor && !editor) this._appendEditorError(content, view, draftEditor);
     const source = content.querySelector<HTMLElement>(".code-editor,.literal-text");
@@ -641,7 +634,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       return;
     }
     const optionalKind = (view.kind === 'text' || view.kind === 'empty')
-      ? isMarkdownPreviewPath(view.path) ? 'markdown' : !editor && isCsvPreviewPath(view.path) ? 'csv' : !editor && isDiagramPreviewPath(view.path) ? 'diagram' : undefined
+      ? !editor && isMarkdownPreviewPath(view.path) ? 'markdown' : !editor && isCsvPreviewPath(view.path) ? 'csv' : !editor && isDiagramPreviewPath(view.path) ? 'diagram' : undefined
       : previewPackageId(view.kind) ? view.kind : undefined;
     const optionalId = optionalKind && previewPackageId(optionalKind);
     if (optionalId && this._state.enabledPreviewers?.includes(`code-codex.${optionalId}`)) {
@@ -662,11 +655,6 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       }
     }
     if (editor && (view.kind === "text" || view.kind === "empty")) {
-      if (this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID) && isMarkdownPreviewPath(view.path)) {
-        content.append(this._markdownEditor(view, editor));
-        this._appendEditorError(content, view, editor);
-        return;
-      }
       const stack = this.ownerDocument.createElement("div");
       stack.className = "code-editor-stack";
       const lineNumbers = this._lineNumberGutter(stack, editor.draft, "code-editor-line-numbers");

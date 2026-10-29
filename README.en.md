@@ -372,7 +372,8 @@ loaded document, including tables; **Plain text** returns to the fast viewer.
 Rendering a large document can take time. The Markdown preview plugin must be enabled.
 
 Supported editable text files up to 512 KiB have **Preview**, **Edit**, and **Save**
-controls in the editor pane. Preview is read-only and can show the current unsaved
+controls in the editor pane. Edit uses the source text, including Markdown table
+syntax. Preview is read-only and can show the current unsaved
 draft; returning to Edit retains it. Switching between these pane controls does
 not save automatically. Saving still uses the existing conflict checks and
 512 KiB save limit. Larger files and binary formats remain read-only.
