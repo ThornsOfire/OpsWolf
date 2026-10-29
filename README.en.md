@@ -413,43 +413,44 @@ Switching away from a dirty file through tabs or the file tree offers **Save and
 switch**, **Discard**, and **Cancel**. A failed save keeps the current file and draft.
 
 
-### Completion change reviews
+### Native completion change reviews
 
-A compact **Latest recorded changes** panel mounts above the active chat composer
-when an observed response ends with file changes. Expand it for per-file unified
-diffs and addition/removal counts. Clicking a filename opens its recorded diff in
-the custom editor, including files outside Git repositories. Dirty editor drafts
-use the existing Save and switch / Discard / Cancel flow before opening a diff.
-The panel preserves unsent composer text. Responses with no observed changes keep
-the most recent useful review.
+A compact **Native changes** panel stays above the active chat composer. It reads
+persisted native `fileChange` records through the official read-only App Server
+`thread/turns/list` interface. Expand it for per-file patches; clicking a file
+opens its diff in the custom right-side editor. The existing dirty-editor
+Save and switch / Discard / Cancel flow still applies. Unsent chat text is untouched.
+A response without native patches keeps the latest meaningful review available.
 
-This is a local workspace snapshot feature: it reports workspace changes observed
-during a response, including simultaneous manual or other-process edits; it does
-not claim sole agent attribution. It starts from the visible chat's response
-activity, so background chats are not independently monitored. Starting/restarting
-mid-response, unreadable paths, scan limits, or writes racing with the initial
-capture are marked as incomplete coverage. Existing pre-installation responses
-cannot be reconstructed retroactively.
+This replaces the earlier workspace-snapshot prototype. It performs no workspace
+scan and writes no extra before/after copies or diff history to disk. Native chat
+history remains the source of truth; its lifetime is controlled by Codex. The
+panel holds up to ten recent reviews in memory and releases them on disposal.
+Closing a diff tab releases that view; no custom seven-day archive is created.
 
-Snapshots follow the workspace's ignore rules and native sensitive-file policy.
-Private AppData, generated/build output, dependency folders, and project artifacts
-are excluded. UTF-8 text diffs support files up to 10 MiB. Binary or unavailable
-content is listed explicitly without pretending a text diff exists. Each scan is
-bounded to 25,000 entries, depth 24, about 10 seconds, and 64 MiB of text. Reviews
-hold up to 2,000 changed entries / 256 KiB of path metadata, 32 MiB of before/after
-text, and a 64 MiB record. Partial coverage and unavailable diffs remain visible.
+Coverage follows native patch records, including ordinary files outside Git.
+Shell/script writes and manual edits may not appear. This is not a complete
+filesystem audit. Interrupted/failed responses show only their completed patch
+items. Multiple patches to one file are shown sequentially, with patch line counts,
+rather than being presented as a single reconstructed net edit. Missing, binary,
+sensitive, outside-project, oversized, and unsupported patches are explicit.
 
-Only changed-file before/after copies are persisted. The starting snapshot stays
-in memory. Private history lives beside the discovered settings file under
-`change-history`, with hashed project directories; no personal Desktop path is
-required. No new network service is used. Retention is the newest **10 reviews per
-project**, no older than **7 days**, under a **200 MiB total** disk budget. Oldest
-records are removed before incoming writes. Expiration runs on history activity
-and approximately once a minute while the active chat is idle; stopped apps clean
-up on their next use. **Clear history** deletes only that project's review copies,
-including the active temporary capture, and never project/source files. Diffs
-already opened in editor tabs remain in memory until those tabs close.
+Only cards whose message IDs match fully loaded native review records are hidden
+from the feed. Their **View changes** action is redirected to our editor, and the
+panel's **Undo / Reapply** button forwards the user's click to the existing native
+control. Code-Codex does not implement its own patch-reversal engine. Unmatched or
+partially readable cards stay visible with their original behavior. On a read
+failure or extension disposal, hidden cards are restored. The card adapter targets
+the inspected English desktop markup; an upstream layout/language change falls
+back to the original cards. Native virtualized cards must be mounted for Undo to
+be available; the recorded diff itself remains readable through history.
 
-Per-turn App Server file-change events were evaluated against the installed app;
-command-based edits require snapshots to cover this workflow. Protocol reference:
-[official App Server documentation](https://learn.chatgpt.com/docs/app-server).
+Initial history lookup is bounded to forty single-turn pages and ten useful
+reviews. Later reads reuse older cached records. Refresh occurs after a visible
+response finishes, on explicit **Refresh**, and at most once a minute while idle.
+Each review holds at most 128 project-scoped files and 1 MiB of diff content.
+The existing App Server transport has a 4 MiB message limit; an oversized response
+shows an unavailable/retry state instead of silently claiming complete coverage.
+No personal Desktop path or new network service is required.
+
+Protocol reference: [official App Server documentation](https://learn.chatgpt.com/docs/app-server).

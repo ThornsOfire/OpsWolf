@@ -1,16 +1,20 @@
 import {WorkspaceBridge} from '../../bridge';
 import type {ExplorerContext} from '../../contracts/bridge';
 import {asRecord} from '../../core/bridge/response-validation';
-import {normalizeMediaChunk} from '../preview/responses';
-import {createReviewDiff,type ReviewDiff} from '../preview/review-diff';
 import {LargeTextReader,largeTextStyles} from '../preview/large-text-reader';
-export interface ReviewFile {relativePath:string;kind:string;beforeBytes:number;afterBytes:number;textAvailable:boolean;}
-export interface ReviewSummary {id:string;createdMs:number;complete:boolean;unavailable:number;files:ReviewFile[];}
-export function normalizeReview(raw:unknown):ReviewSummary|null {
-  if(raw===null)return null;const value=asRecord(raw);
-  if(!value||typeof value.id!=='string'||!/^\d{13}-[0-9a-f]{16}$/.test(value.id)||!Array.isArray(value.files)||value.files.length>25_000||typeof value.complete!=='boolean'||!Number.isSafeInteger(value.createdMs))throw Error('Invalid review metadata');
-  for(const item of value.files){const file=asRecord(item);if(!file||typeof file.relativePath!=='string'||!file.relativePath||/[\0\r\n:]/.test(file.relativePath)||file.relativePath.startsWith('/')||file.relativePath.includes('\\')||file.relativePath.split('/').some(part=>part==='..')||typeof file.textAvailable!=='boolean'||!['added','modified','deleted'].includes(String(file.kind))||![file.beforeBytes,file.afterBytes].every(size=>typeof size==='number'&&Number.isSafeInteger(size)&&size>=0))throw Error('Invalid review file');}
-  return value as unknown as ReviewSummary;
+export interface NativeReviewFile {relativePath:string;kind:string;content:string|null;}
+export interface NativeReview {id:string;completedMs:number|null;status:string;messageIds:string[];omitted:number;files:NativeReviewFile[];}
+interface NativePage {review:NativeReview|null;nextCursor:string|null;turnId:string|null;}
+const identifier=(value:unknown):value is string=>typeof value==='string'&&/^[a-zA-Z0-9_-]{1,128}$/.test(value);
+export function normalizeNativePage(raw:unknown):NativePage {
+ const page=asRecord(raw);if(!page||!(page.nextCursor===null||typeof page.nextCursor==='string'&&page.nextCursor.length<=4096)||!(page.turnId===null||identifier(page.turnId)))throw Error('Invalid native review page');
+ if(page.review===null)return page as unknown as NativePage;
+ const r=asRecord(page.review);
+ if(!r||!identifier(r.id)||r.id!==page.turnId||!['completed','interrupted','failed'].includes(String(r.status))||!(r.completedMs===null||Number.isSafeInteger(r.completedMs))||!Number.isSafeInteger(r.omitted)||Number(r.omitted)<0||!Array.isArray(r.messageIds)||r.messageIds.length>128||!r.messageIds.every(identifier)||!Array.isArray(r.files)||r.files.length>128)throw Error('Invalid native review');
+ let bytes=0;
+ for(const item of r.files){const file=asRecord(item);if(!file||typeof file.relativePath!=='string'||!file.relativePath||file.relativePath.length>4096||/[\0\r\n:\\]/.test(file.relativePath)||file.relativePath.startsWith('/')||file.relativePath.split('/').some(p=>!p||p==='.'||p==='..')||!['add','delete','update','renamed','multiple patches'].includes(String(file.kind))||!(file.content===null||typeof file.content==='string'))throw Error('Invalid native changed file');if(typeof file.content==='string')bytes+=new TextEncoder().encode(file.content).length;}
+ if(bytes>1024*1024)throw Error('Native diff budget exceeded');
+ return page as unknown as NativePage;
 }
 export interface ChangeReviewPorts {
  readonly element:HTMLElement;
@@ -19,93 +23,135 @@ export interface ChangeReviewPorts {
  readonly enabled:boolean;
  readonly openDiff:(id:string,path:string,content:string)=>void;
 }
+interface NativeCard {element:HTMLElement;previousDisplay:string;previousPriority:string;reviewId:string;}
+/** The native history remains the source of truth; only the visible presentation is adapted. */
 export class ChangeReviewController {
  private timer:ReturnType<typeof setTimeout>|undefined;
  private key='';private revision=0;private disposed=false;private running:boolean|undefined;
- private capture:Promise<boolean>|undefined;private finishAt=0;private summary:ReviewSummary|null=null;
- private host:HTMLElement|undefined;private shadow:ShadowRoot|undefined;private loaded=false;private expanded=false;
- private readonly diffs=new Map<string,ReviewDiff>();private readers:LargeTextReader[]=[];private lastCleanup=0;
+ private refreshing=false;private finishAt=0;private lastRead=0;private error='';private bounded=false;private ready=false;
+ private reviews:NativeReview[]=[];private selectedId='';private expanded=false;
+ private host:HTMLElement|undefined;private shadow:ShadowRoot|undefined;private readers:LargeTextReader[]=[];
+ private cards=new Map<HTMLElement,NativeCard>();private revealed=new Set<string>();
  constructor(private readonly ports:ChangeReviewPorts){}
- start():void {this.disposed=false;if(!this.timer)this.tick();}
- dispose():void {this.disposed=true;clearTimeout(this.timer);this.timer=undefined;this.revision++;this.key='';this.capture=undefined;this.remove();}
- private currentKey():string {const context=this.ports.context;return this.ports.enabled&&context?context.threadId+'\0'+context.rootPath:'';}
+ start():void {this.disposed=false;if(!this.timer){this.ports.element.ownerDocument.addEventListener('click',this.onNativeClick,true);this.tick();}}
+ dispose():void {this.disposed=true;clearTimeout(this.timer);this.timer=undefined;this.revision++;this.key='';this.ports.element.ownerDocument.removeEventListener('click',this.onNativeClick,true);this.restoreCards();this.remove();this.reviews=[];}
+ private currentKey():string {const c=this.ports.context;return this.ports.enabled&&c?c.threadId+'\0'+c.rootPath:'';}
  private remove():void {for(const reader of this.readers)reader.dispose();this.readers=[];this.host?.remove();this.host=undefined;this.shadow=undefined;}
+ private restore(card:NativeCard):void {if(card.previousDisplay)card.element.style.setProperty('display',card.previousDisplay,card.previousPriority);else card.element.style.removeProperty('display');card.element.removeAttribute('data-code-codex-native-review-hidden');}
+ private restoreCards():void {for(const card of this.cards.values())this.restore(card);this.cards.clear();}
+ private selected():NativeReview|undefined {return this.reviews.find(r=>r.id===this.selectedId);}
+ private cardReview(element:Element):NativeReview|undefined {
+  const context=this.ports.context,annotation=element.closest('[data-response-annotation-target]');
+  if(!context||annotation?.getAttribute('data-response-annotation-conversation')!==context.threadId)return;
+  const id=annotation.getAttribute('data-response-annotation-target');return this.reviews.find(r=>r.messageIds.includes(id??''));
+ }
+ private updateCards():void {
+  if(!this.ready||this.key!==this.currentKey()){this.restoreCards();return;}
+  const found=new Set<HTMLElement>();
+  for(const overlay of this.ports.element.ownerDocument.querySelectorAll<HTMLButtonElement>('button[aria-label="View changed files"]')){
+   const header=overlay.parentElement,card=header?.parentElement;
+   if(!header?.classList.contains('group/turn-diff-header')||!card?.querySelector('.turn-diff-default-subtitle'))continue;
+   const review=this.cardReview(card);if(!review||review.omitted||!review.files.length||review.files.some(f=>f.content===null)||this.revealed.has(review.id))continue;
+   found.add(card);
+   if(!this.cards.has(card))this.cards.set(card,{element:card,reviewId:review.id,previousDisplay:card.style.getPropertyValue('display'),previousPriority:card.style.getPropertyPriority('display')});
+   card.dataset.codeCodexNativeReviewHidden='true';card.style.setProperty('display','none','important');
+  }
+  for(const [element,card] of this.cards){if(!found.has(element)){this.restore(card);this.cards.delete(element);}}
+  const undo=this.shadow?.querySelector<HTMLButtonElement>('.undo');const native=this.nativeUndo(this.selectedId);
+  if(undo){undo.textContent=native?.textContent?.trim()||'Undo unavailable';undo.disabled=!native||native.disabled;}
+ }
+ private nativeUndo(id:string):HTMLButtonElement|undefined {
+  const card=[...this.cards.values()].find(c=>c.reviewId===id)?.element;
+  return card?[...card.querySelectorAll<HTMLButtonElement>('button')].find(b=>['Undo','Reapply'].includes(b.textContent?.trim()??'')):undefined;
+ }
+ private onNativeClick=(event:MouseEvent):void=>{
+  if(!this.ready||this.key!==this.currentKey())return;
+  const button=event.composedPath().find((n):n is HTMLButtonElement=>n instanceof HTMLButtonElement);
+  if(!button||!(button.getAttribute('aria-label')==='View changed files'||button.textContent?.trim()==='View changes'))return;
+  const review=this.cardReview(button);if(!review||!review.files.length||review.omitted||review.files.some(f=>f.content===null))return;
+  event.preventDefault();event.stopImmediatePropagation();
+  this.open(review);
+ };
+ private open(review:NativeReview,file?:NativeReviewFile):void {
+  if(this.key!==this.currentKey())return;
+  const content=file?.content??review.files.map(f=>f.content??'').join('\n');
+  if(!content)return;this.ports.openDiff(review.id,file?.relativePath??(review.files.length===1?review.files[0]!.relativePath:'All changed files'),content);
+ }
  private tick=():void=>{
   this.timer=undefined;if(this.disposed)return;
-  const context=this.ports.context,bridge=this.ports.bridge;
-  const enabled=this.ports.enabled&&context&&bridge?.available;
-  if(enabled){
-   const key=context.threadId+'\0'+context.rootPath;
-   if(key!==this.key){this.key=key;this.revision++;this.summary=null;this.diffs.clear();this.loaded=false;this.running=undefined;this.capture=undefined;this.finishAt=0;this.expanded=false;this.remove();}
-   const anchor=[...this.ports.element.ownerDocument.querySelectorAll<HTMLElement>('[data-above-composer-conversation-id]')].find(e=>e.getAttribute('data-above-composer-conversation-id')===context.threadId&&!e.closest('[data-app-shell-active-page="false"]'));
+  const key=this.currentKey(),bridge=this.ports.bridge;
+  if(key&&bridge?.available){
+   if(key!==this.key){this.revision++;this.key=key;this.running=undefined;this.reviews=[];this.selectedId='';this.lastRead=0;this.refreshing=false;this.ready=false;this.error='';this.finishAt=0;this.expanded=false;this.revealed.clear();this.restoreCards();this.remove();}
+   const context=this.ports.context!;
+   const anchor=[...this.ports.element.ownerDocument.querySelectorAll<HTMLElement>('[data-above-composer-conversation-id]')].find(e=>e.getAttribute('data-above-composer-conversation-id')===context.threadId&&!e.closest('[data-app-shell-active-page="false"]')&&e.closest('[data-codex-composer-root]')?.querySelector('[contenteditable="true"],textarea'));
    if(anchor){
-    const composer=anchor.closest('[data-codex-composer-root]');
-    const running=!!composer?.querySelector('button[aria-label="Stop"]');
-    const revision=this.revision;
-    if(!this.loaded){this.loaded=true;this.lastCleanup=Date.now();void this.readLatest(bridge,revision);}
-    if(running&&this.running!==true){
-     const late=this.running===undefined;this.finishAt=0;this.capture=bridge.request('explorer.changes.capture',{action:'begin',startedLate:late},30_000).then(()=>true,()=>false);
-    }else if(!running&&this.running===true){this.finishAt=Date.now()+1200;}
+    const running=!!anchor.closest('[data-codex-composer-root]')?.querySelector('button[aria-label="Stop"]');
+    if(!running&&this.running===true)this.finishAt=Date.now()+1200;
     this.running=running;
-    if(!running&&this.finishAt&&Date.now()>=this.finishAt){this.finishAt=0;void this.finish(bridge,revision);}
-    if(!running&&Date.now()-this.lastCleanup>60_000){this.lastCleanup=Date.now();if(this.loaded)void this.readLatest(bridge,revision);}
-    if(this.summary&&(this.summary.files.length||!this.summary.complete))this.mount(anchor);
+    if(!this.lastRead||!running&&Date.now()-this.lastRead>60_000||!running&&this.finishAt&&Date.now()>=this.finishAt){if(!this.refreshing){this.finishAt=0;void this.refresh(bridge);}}
+    this.updateCards();
+    if(this.selected()||this.error)this.mount(anchor);
    }
-  }else if(this.host){this.remove();}
-  this.timer=setTimeout(this.tick,400);
+  }else {this.restoreCards();this.remove();}
+  this.timer=setTimeout(this.tick,500);
  };
- private async readLatest(bridge:WorkspaceBridge,revision:number):Promise<void>{
-  try{const summary=normalizeReview(await bridge.request('explorer.changes.capture',{action:'latest'},30_000));if(revision!==this.revision||this.disposed)return;if(summary?.id!==this.summary?.id){this.summary=summary;this.diffs.clear();this.remove();}}catch{/* Older native readers cannot provide change reviews. */}
- }
- private async finish(bridge:WorkspaceBridge,revision:number):Promise<void>{
-  const capture=this.capture;if(!capture)return;this.capture=undefined;
-  try{if(!await capture)return;if(revision!==this.revision||this.disposed||this.key!==this.currentKey())return;const summary=normalizeReview(await bridge.request('explorer.changes.capture',{action:'finish'},30_000));if(revision!==this.revision||this.disposed)return;if(summary){this.summary=summary;this.diffs.clear();this.expanded=false;this.remove();}}catch{/* Keep the previous completed review on an interrupted capture. */}
+ private async refresh(bridge:WorkspaceBridge):Promise<void>{
+  this.refreshing=true;this.lastRead=Date.now();const revision=this.revision,key=this.key;
+  const current=()=>!this.disposed&&revision===this.revision&&key===this.currentKey();
+  try{
+   const found:NativeReview[]=[];let cursor:string|null=null;const seen=new Set<string>();let exhausted=false;
+   for(let pageIndex=0;pageIndex<40;pageIndex++){
+    const page=normalizeNativePage(await bridge.request('explorer.changes.native',{cursor},30_000));if(!current())return;
+    if(page.review&&!found.some(r=>r.id===page.review!.id))found.push(page.review);
+    // Once we reach our previous newest review, older immutable records are already in memory.
+    if(page.turnId===this.reviews[0]?.id){for(const review of this.reviews){if(found.length>=10)break;if(!found.some(r=>r.id===review.id))found.push(review);}exhausted=!this.bounded;break;}
+    if(found.length>=10||page.nextCursor===null){exhausted=page.nextCursor===null;break;}
+    if(seen.has(page.nextCursor))throw Error('Native history pagination repeated');seen.add(page.nextCursor);cursor=page.nextCursor;
+   }
+   if(!current())return;
+   const previous=this.reviews[0]?.id;this.reviews=found;this.bounded=!exhausted;this.ready=true;this.error='';
+   if(found[0]&&previous!==found[0].id){this.selectedId=found[0].id;this.expanded=false;}
+   else if(!found.some(r=>r.id===this.selectedId))this.selectedId=found[0]?.id??'';
+   this.updateCards();this.remove();
+  }catch{if(current()){this.ready=false;this.error='Native changes unavailable. The original chat cards remain available.';this.restoreCards();this.remove();}}
+  finally{if(revision===this.revision)this.refreshing=false;}
  }
  private mount(anchor:HTMLElement):void {
-  if(!this.host){this.host=anchor.ownerDocument.createElement('section');this.host.dataset.codeCodexChangeReview='true';this.host.setAttribute('aria-label','Response file changes');this.shadow=this.host.attachShadow({mode:'open'});this.render();}
+  if(!this.host){this.host=anchor.ownerDocument.createElement('section');this.host.dataset.codeCodexChangeReview='true';this.host.setAttribute('aria-label','Native response changes');this.shadow=this.host.attachShadow({mode:'open'});this.render();}
   if(this.host.parentElement!==anchor)anchor.append(this.host);
  }
  private render():void {
-  const shadow=this.shadow,summary=this.summary;if(!shadow||!summary)return;
+  const shadow=this.shadow,review=this.selected();if(!shadow)return;
   for(const reader of this.readers)reader.dispose();this.readers=[];
   shadow.innerHTML=`<style>${largeTextStyles}
-   :host{display:block;margin:8px 0;color:inherit;font:12px/1.4 system-ui,sans-serif}section{border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:9px;overflow:hidden;background:transparent}header{display:flex;align-items:center;gap:8px;padding:8px 10px}button{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer;text-align:left}button:focus-visible{outline:2px solid currentColor;outline-offset:2px}.toggle{flex:1}.files{max-height:min(45vh,420px);overflow:auto;padding:0 10px 10px}.file{border-top:1px solid color-mix(in srgb,currentColor 15%,transparent);padding-top:6px;margin-top:6px}.file-name{overflow-wrap:anywhere;font-weight:600;width:100%;padding:4px 0}.kind,.note{opacity:.65;font-size:11px}.diff{height:170px;min-height:0;margin-top:5px;overflow:hidden}.diff .large-text-reader{height:170px}.diff .large-text-tools{display:none}.diff .large-text-viewport{font-size:11px}.diff .large-text-row{color:inherit}.diff .large-text-row[data-change=add]{color:#268b45}.diff .large-text-row[data-change=remove]{color:#cf4a4a}.clear{font-size:11px;opacity:.7}
-  </style><section><header><button class="toggle" type="button" aria-expanded="${this.expanded}"></button><button class="clear" type="button" title="Delete stored review copies for this project; source files are untouched">Clear history</button></header><div class="files" ${this.expanded?'':'hidden'}></div></section>`;
+   :host{display:block;margin:8px 0;color:inherit;font:12px/1.4 system-ui,sans-serif}section{border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:9px;overflow:hidden}header{display:flex;align-items:center;gap:8px;padding:8px 10px}button,select{font:inherit;color:inherit;background:transparent;border:0;cursor:pointer}button:disabled{opacity:.5;cursor:default}button:focus-visible,select:focus-visible{outline:2px solid currentColor;outline-offset:2px}.toggle{flex:1;text-align:left}.files{max-height:min(45vh,420px);overflow:auto;padding:0 10px 10px}.file{border-top:1px solid color-mix(in srgb,currentColor 15%,transparent);padding-top:6px;margin-top:6px}.file-name{overflow-wrap:anywhere;font-weight:600;width:100%;padding:4px 0;text-align:left}.kind,.note{opacity:.7;font-size:11px}.note{margin:4px 0}.diff{height:170px;min-height:0;margin-top:5px;overflow:hidden}.diff .large-text-reader{height:170px}.diff .large-text-tools{display:none}.diff .large-text-viewport{font-size:11px}.small{font-size:11px}.history{max-width:130px}option{background:Canvas;color:CanvasText}
+  </style><section><header><button class="toggle" type="button" aria-expanded="${this.expanded}"></button><select class="history" aria-label="Recent native reviews" title="Recent native reviews"></select><button class="undo small" type="button" disabled>Undo unavailable</button><button class="retry small" type="button">Refresh</button></header><div class="files" ${this.expanded?'':'hidden'}></div></section>`;
   const toggle=shadow.querySelector<HTMLButtonElement>('.toggle')!;
-  toggle.title=new Date(summary.createdMs).toLocaleString();
-  toggle.textContent=`${this.expanded?'▾':'▸'} Latest recorded changes · ${summary.files.length} file${summary.files.length===1?'':'s'}`;
+  toggle.textContent=this.error?'Changes unavailable':`${this.expanded?'▾':'▸'} Native changes · ${review?.files.length??0} file${review?.files.length===1?'':'s'}`;
+  if(review?.completedMs)toggle.title=new Date(review.completedMs).toLocaleString();
   toggle.addEventListener('click',()=>{this.expanded=!this.expanded;this.render();});
-  shadow.querySelector('.clear')!.addEventListener('click',()=>{const bridge=this.ports.bridge;if(!bridge||this.key!==this.currentKey())return;const revision=this.revision;void bridge.request('explorer.changes.capture',{action:'clear'}).then(()=>{if(revision===this.revision){this.summary=null;this.diffs.clear();this.remove();}}).catch(()=>{const button=this.shadow?.querySelector('.clear');if(button)button.textContent='Could not clear history';});});
-  if(!this.expanded)return;
+  const history=shadow.querySelector<HTMLSelectElement>('.history')!;history.hidden=this.reviews.length<2;
+  for(const [index,item] of this.reviews.entries()){const option=shadow.ownerDocument.createElement('option');option.value=item.id;option.textContent=`${index===0?'Latest':item.completedMs?new Date(item.completedMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}):'Earlier'} · ${item.files.length} files`;history.append(option);}history.value=this.selectedId;
+  history.addEventListener('change',()=>{this.selectedId=history.value;this.expanded=true;this.render();this.updateCards();});
+  shadow.querySelector('.retry')!.addEventListener('click',()=>{if(this.key===this.currentKey()&&!this.refreshing&&this.ports.bridge)void this.refresh(this.ports.bridge);});
+  shadow.querySelector('.undo')!.addEventListener('click',()=>{if(this.key!==this.currentKey())return;const native=this.nativeUndo(this.selectedId);if(native&&!native.disabled)native.click();this.updateCards();});
+  this.updateCards();if(!this.expanded)return;
   const files=shadow.querySelector('.files')!;
-  const note=anchorText(shadow.ownerDocument,'note','Workspace changes observed during this response. Private/generated/ignored files excluded. History: 7 days, 10 responses/project, 200 MB total.');files.append(note);
-  if(!summary.complete)files.append(anchorText(shadow.ownerDocument,'note','Incomplete coverage: tracking started late, a scan limit was reached, or some paths could not be read.'));
-  let queue=Promise.resolve();
-  for(const file of summary.files){
+  const note=(text:string)=>{const n=shadow.ownerDocument.createElement('div');n.className='note';n.textContent=text;files.append(n);};
+  if(this.error)note(this.error);
+  note('Native patch records. Shell/script edits may not appear. No workspace scan or extra diff copies on disk.');
+  if(this.bounded)note('Showing recent native reviews; older history remains in chat.');
+  if(review?.status!=='completed')note('This response was interrupted or failed; only its completed patches are shown.');
+  if(review?.omitted)note('Some patches are outside this project, sensitive, oversized, or unavailable. Their original chat cards remain visible.');
+  for(const file of review?.files??[]){
    const entry=shadow.ownerDocument.createElement('div');entry.className='file';
-   const name=shadow.ownerDocument.createElement('button');name.type='button';name.className='file-name';name.textContent=file.relativePath;
-   const status=anchorText(shadow.ownerDocument,'kind',file.kind);entry.append(name,status);files.append(entry);
-   if(!file.textAvailable){name.disabled=true;status.textContent+=' · Text diff unavailable (binary, oversized, or snapshot budget)';continue;}
-   const area=shadow.ownerDocument.createElement('div');area.className='diff';area.textContent='Loading before/after diff…';entry.append(area);
-   const revision=this.revision;const id=summary.id;const key=this.key;
-   const current=()=>this.revision===revision&&this.summary?.id===id&&this.currentKey()===key;
-   const load=async():Promise<ReviewDiff>=>{
-    if(!current())throw Error('Review context changed');
-    const cached=this.diffs.get(file.relativePath);if(cached)return cached;
-    const bridge=this.ports.bridge;if(!bridge)throw Error('Disconnected');
-    const read=async(side:'before'|'after',size:number):Promise<string>=>{
-     if(size>10*1024*1024)throw Error('Snapshot too large');const bytes=new Uint8Array(size);let offset=0;
-     while(offset<size){if(!current())throw Error('Review changed');const length=Math.min(2*1024*1024,size-offset);
-      const raw=await bridge.request('explorer.changes.chunk',{recordId:id,relativePath:file.relativePath,side,offset,length},30_000);
-      const chunk=normalizeMediaChunk(raw,offset,length,size);bytes.set(chunk.bytes,offset);offset+=length;}
-     return new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(bytes);
-    };
-    const before=await read('before',file.beforeBytes),after=await read('after',file.afterBytes);
-    const diff=createReviewDiff(file.relativePath,before,after);if(current())this.diffs.set(file.relativePath,diff);return diff;
-   };
-   name.addEventListener('click',()=>{name.disabled=true;void load().then(diff=>{if(current())this.ports.openDiff(id,file.relativePath,diff.content);}).catch(()=>{status.textContent='Review expired or unavailable';}).finally(()=>name.disabled=false);});
-   queue=queue.then(async()=>{if(!entry.isConnected)return;try{const diff=await load();if(!entry.isConnected||this.revision!==revision)return;status.textContent=`${file.kind} · +${diff.added} −${diff.removed}`;const reader=new LargeTextReader(shadow.ownerDocument,diff.content,true);this.readers.push(reader);area.replaceChildren(reader.element);}catch{area.textContent='Review expired or unavailable. Reopen the file for its current contents.';}});
+   const name=shadow.ownerDocument.createElement('button');name.type='button';name.className='file-name';name.textContent=file.relativePath;name.disabled=file.content===null;
+   const kind=shadow.ownerDocument.createElement('div');kind.className='kind';kind.textContent=file.kind;
+   entry.append(name,kind);files.append(entry);
+   if(file.content===null){kind.textContent+=' · Diff unavailable';continue;}
+   const content=file.content;let added=0,removed=0;for(const line of content.split('\n')){if(line.startsWith('+')&&!line.startsWith('+++ '))added++;else if(line.startsWith('-')&&!line.startsWith('--- '))removed++;}kind.textContent+=` · +${added} −${removed}`;
+   name.addEventListener('click',()=>{if(review)this.open(review,file);});
+   const area=shadow.ownerDocument.createElement('div');area.className='diff';const reader=new LargeTextReader(shadow.ownerDocument,content,true);this.readers.push(reader);area.append(reader.element);entry.append(area);
   }
  }
 }
-function anchorText(document:Document,className:string,text:string):HTMLElement {const element=document.createElement('div');element.className=className;element.textContent=text;return element;}

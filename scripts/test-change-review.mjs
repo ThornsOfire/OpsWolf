@@ -5,51 +5,64 @@ import {mkdirSync,writeFileSync} from 'node:fs';
 import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
 import {launchFixture,delay} from './browser-fixture.mjs';
 const ui=resolve(import.meta.dirname,'../packages/explorer-ui');
-const bundle=await build({bundle:true,write:false,format:'iife',define:{__CODE_CODEX_VERSION__:'"0.5.40"',__CODE_CODEX_PLUGIN_CATALOG__:'[]'},stdin:{contents:`import {ChangeReviewController,normalizeReview} from './features/workspace/change-review';import {createReviewDiff} from './features/preview/review-diff';import {registerMainPreviewElement,MAIN_PREVIEW_TAG} from './main-preview';import {PreviewWorkspaceController} from './features/workspace/preview-workspace';registerMainPreviewElement();Object.assign(window,{ChangeReviewController,normalizeReview,createReviewDiff,fixtureTag:MAIN_PREVIEW_TAG,PreviewWorkspaceController});`,resolveDir:resolve(ui,'src'),loader:'ts'}});
-const html=`<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;font:14px system-ui}main{position:relative;height:900px;width:1200px}header{height:50px}#chat{height:850px}#composer{position:absolute;bottom:10px;left:10px;width:600px}textarea{width:100%;height:80px}</style><main class="main-surface"><header>Native header</header><div id="chat"><div id="composer" data-codex-composer-root><div data-above-composer-conversation-id="thread-fixture"></div><textarea>Existing unsent prompt</textarea></div></div></main><script>window.__CODE_CODEX_BOOTSTRAP__={codexVersion:'26.1023.6123.0'};</script><script src="/core.js"></script><script>
+const bundle=await build({bundle:true,write:false,format:'iife',define:{__CODE_CODEX_VERSION__:'"0.5.40"',__CODE_CODEX_PLUGIN_CATALOG__:'[]'},stdin:{contents:`import {ChangeReviewController,normalizeNativePage} from './features/workspace/change-review';import {registerMainPreviewElement,MAIN_PREVIEW_TAG} from './main-preview';import {PreviewWorkspaceController} from './features/workspace/preview-workspace';registerMainPreviewElement();Object.assign(window,{ChangeReviewController,normalizeNativePage,fixtureTag:MAIN_PREVIEW_TAG,PreviewWorkspaceController});`,resolveDir:resolve(ui,'src'),loader:'ts'}});
+const html=`<!doctype html><meta charset="utf-8"><style>html,body{margin:0;height:100%;background:#191919;color:#eee;font:14px system-ui}main{position:relative;height:900px;width:1200px}header{height:50px}#chat{height:850px;padding:12px}#composer{position:absolute;bottom:10px;left:10px;width:600px}textarea{width:100%;height:80px;background:#303030;color:inherit}.native-card{padding:12px;border:1px solid gray;margin-bottom:12px}</style><main class="main-surface"><header>Native header</header><div id="chat"><div id="feed"></div><div id="composer" data-codex-composer-root><div data-above-composer-conversation-id="thread-fixture"></div><textarea>Existing unsent prompt</textarea></div></div></main><script>window.__CODE_CODEX_BOOTSTRAP__={codexVersion:'26.1023.6123.0'};</script><script src="/core.js"></script><script>
 window.errors=[];addEventListener('error',e=>errors.push(e.message));addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
-window.before='first\\nold line\\nlast\\n';window.after='first\\nnew line\\nlast\\n';
-window.record=null;window.actions=[];window.context={threadId:'thread-fixture',rootPath:'C:/Fixture',projectName:'Fixture',rootName:'Fixture',compatible:true};
-window.makeRecord=()=>({id:Date.now()+'-0000000000000001',createdMs:Date.now(),complete:true,unavailable:1,files:[{relativePath:'IDEAS.md',kind:'modified',beforeBytes:new TextEncoder().encode(before).length,afterBytes:new TextEncoder().encode(after).length,textAvailable:true},{relativePath:'image.png',kind:'modified',beforeBytes:10,afterBytes:12,textAvailable:false}]});
-window.bridge={available:true,request:async(method,p)=>{
- if(method==='explorer.changes.capture'){actions.push(p.action);if(p.action==='begin')return {capturing:true};if(p.action==='finish'){record=makeRecord();return record;}if(p.action==='clear'){record=null;return null;}return record;}
- const text=p.side==='before'?before:after,bytes=new TextEncoder().encode(text),part=bytes.slice(p.offset,p.offset+p.length);let bin='';for(const byte of part)bin+=String.fromCharCode(byte);return {offset:p.offset,dataBase64:btoa(bin),eof:p.offset+part.length===bytes.length};
-}};
+window.actions=[];window.openCalls=0;window.nativeTabs=0;window.undoCalls=0;window.failure=false;window.nextReview=false;
+window.context={threadId:'thread-fixture',rootPath:'C:/Fixture',projectName:'Fixture',rootName:'Fixture',compatible:true};
+window.nativeCard=(message,id)=>{const annotation=document.createElement('div');annotation.setAttribute('data-response-annotation-target',message);annotation.setAttribute('data-response-annotation-conversation','thread-fixture');annotation.innerHTML='<div class="native-card" id="'+id+'"><div class="group/turn-diff-header"><button aria-label="View changed files">Open card</button><span class="turn-diff-default-subtitle">+1 -1</span><button class="original-undo">Undo</button><button class="original-view">View changes</button></div></div>';annotation.querySelector('.original-view').onclick=()=>nativeTabs++;annotation.querySelector('[aria-label]').onclick=()=>nativeTabs++;annotation.querySelector('.original-undo').onclick=e=>{undoCalls++;e.currentTarget.textContent=e.currentTarget.textContent==='Undo'?'Reapply':'Undo';};document.querySelector('#feed').append(annotation);};
+nativeCard('msg-review','native-latest');nativeCard('msg-old','native-old');nativeCard('unknown-message','native-unknown');
+window.latest={id:'turn-review',completedMs:100000,status:'completed',messageIds:['msg-review'],omitted:0,files:[{relativePath:'IDEAS.md',kind:'update',content:'--- a/IDEAS.md\\n+++ b/IDEAS.md\\n@@ -1 +1 @@\\n-old line\\n+new line\\n'},{relativePath:'notes/test.txt',kind:'add',content:'--- /dev/null\\n+++ b/notes/test.txt\\n@@ -0,0 +1 @@\\n+hello\\n'}]};
+window.older={id:'turn-old',completedMs:90000,status:'interrupted',messageIds:['msg-old'],omitted:1,files:[{relativePath:'image.png',kind:'update',content:null}]};
+window.newer={id:'turn-new',completedMs:200000,status:'completed',messageIds:['msg-new'],omitted:0,files:[{relativePath:'new.md',kind:'add',content:'--- /dev/null\\n+++ b/new.md\\n@@ -0,0 +1 @@\\n+new response\\n'}]};
+window.bridge={available:true,request:async(method,p)=>{actions.push({method,...p});if(failure)throw Error('Disconnected');if(method!=='explorer.changes.native')throw Error('Unexpected filesystem request');const pages=nextReview?[null,newer,latest,older]:[null,latest,older];const index=p.cursor?Number(p.cursor):0;const r=pages[index];return {review:r,nextCursor:index<pages.length-1?String(index+1):null,turnId:r?.id??'shell-only-turn'};}};
 window.viewer=document.createElement(fixtureTag);document.querySelector('main').append(viewer);
 window.host={element:document.body,state:'ready',context,bridge,mainPreviewSurface:document.querySelector('main'),mainPreview:viewer,editingPath:null,editDraft:'',editSaving:false,enabledPreviewers:new Set(),settings:{collapsed:false},generation:1,collapse(){},reportEditingConflict(){},renderVisible(){},announce(){},syncEditModeButton(){},ensureMainPreview:()=>viewer,detachMainPreview(){},clearEditing(){return false;},leaveEditing(){return true;}};
 window.workspace=new PreviewWorkspaceController(host);
-window.openCalls=0;window.ports={element:document.querySelector('main'),get bridge(){return bridge;},get context(){return context;},enabled:true,openDiff:(id,path,content)=>{openCalls++;workspace.openReviewDiff(id,path,content);}};
+window.ports={element:document.querySelector('main'),get bridge(){return bridge;},get context(){return context;},enabled:true,openDiff:(id,path,content)=>{openCalls++;workspace.openReviewDiff(id,path,content);}};
 window.controller=new ChangeReviewController(ports);controller.start();window.q=s=>document.querySelector('[data-code-codex-change-review]')?.shadowRoot.querySelector(s);
-window.run=()=>{const button=document.createElement('button');button.id='stop';button.setAttribute('aria-label','Stop');document.querySelector('[data-codex-composer-root]').append(button);};
 </script>`;
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/core.js'?'text/javascript':'text/html');res.end(req.url==='/core.js'?bundle.outputFiles[0].text:html);});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),ev=e=>browser.evaluate(e),checks=[];
 async function check(name,expr){assert.equal(await ev(expr),true,name);checks.push(name);}
-async function until(expr){for(let i=0;i<60;i++){if(await ev(expr))return;await delay(100);}throw Error('Condition not ready: '+expr);}
+async function until(expr){for(let i=0;i<100;i++){if(await ev(expr))return;await delay(100);}throw Error('Condition not ready: '+expr);}
 async function click(selector){const point=await ev(`(()=>{const r=q(${JSON.stringify(selector)}).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);for(const type of ['mousePressed','mouseReleased'])await browser.command('Input.dispatchMouseEvent',{type,button:'left',clickCount:1,...point});await delay(60);}
 try{
- await check('Review diff detects a line replacement with unchanged context',`(()=>{const d=createReviewDiff('file.txt','a\\nb\\nc\\n','a\\nx\\nc\\n');return d.added===1&&d.removed===1&&d.content.includes('-b\\n+x\\n')&&d.content.includes(' a\\n')})()`);
- await check('Review handles ordinary new/deleted files',`createReviewDiff('new.md','','hello\\n').added===1&&createReviewDiff('old.md','hello\\n','').removed===1`);
- await check('Large edits produce a bounded-work complete diff',`(()=>{const d=createReviewDiff('big.txt','a\\n'.repeat(20000),'b\\n'.repeat(20000));return d.added===20000&&d.removed===20000&&d.content.endsWith('+b\\n')})()`);
- await check('Unsafe review paths rejected',`(()=>{try{normalizeReview({id:Date.now()+'-0000000000000001',createdMs:Date.now(),complete:true,files:[{relativePath:'../secret',kind:'modified',textAvailable:true,beforeBytes:1,afterBytes:1}]});}catch{return true}return false})()`);
- await delay(500);await ev('run()');await until(`actions.includes('begin')`);
- await check('Begin capture happens at response start',`actions.filter(a=>a==='begin').length===1&&!q('.toggle')`);
- await ev(`document.querySelector('#stop').remove()`);await until(`!!q('.toggle')`);
- await check('Completed response displays compact collapsed file summary above composer',`q('.toggle').textContent.includes('2 files')&&q('.toggle').getAttribute('aria-expanded')==='false'&&document.querySelector('[data-code-codex-change-review]').parentElement.hasAttribute('data-above-composer-conversation-id')`);
- await click('.toggle');await until(`q('.kind').textContent.includes('+1')`);
- await check('Expansion shows file changes, statistics and inline diff',`q('.files').textContent.includes('IDEAS.md')&&q('.kind').textContent.includes('+1')&&q('.diff').textContent.includes('new line')`);
- await check('Binary file is listed with an explicit unavailable diff',`Array.from(q('.files').querySelectorAll('.file-name')).some(e=>e.textContent==='image.png'&&e.disabled)&&q('.files').textContent.includes('Text diff unavailable')`);
- await check('Panel stays above composer without altering unsent prompt',`document.querySelector('[data-code-codex-change-review]').getBoundingClientRect().bottom<=document.querySelector('#composer textarea').getBoundingClientRect().top+1&&document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
+ await until(`q('.toggle')?.textContent.includes('2 files')`);
+ await check('Reads native history without any workspace capture or chunk requests',`actions.length===3&&actions.every(a=>a.method==='explorer.changes.native')`);
+ await check('Latest native review stays collapsed directly above composer',`q('.toggle').getAttribute('aria-expanded')==='false'&&document.querySelector('[data-code-codex-change-review]').parentElement.hasAttribute('data-above-composer-conversation-id')`);
+ await check('Only completely mapped native card is hidden; incomplete and unknown cards stay in feed',`document.querySelector('#native-latest').style.display==='none'&&document.querySelector('#native-old').style.display!== 'none'&&document.querySelector('#native-unknown').style.display!=='none'`);
+ await click('.toggle');
+ await check('Panel shows each native diff, line counts, coverage boundary and no extra disk copies',`q('.files').textContent.includes('IDEAS.md')&&q('.kind').textContent.includes('+1')&&q('.diff').textContent.includes('new line')&&q('.files').textContent.includes('Shell/script edits may not appear')`);
  await click('.file-name');
- await check('Click opens the recorded diff in the right editor pane',`workspace.previewTabs.length===1&&workspace.previewTabs[0].view.kind==='git-diff'&&workspace.previewTabs[0].view.content.includes('-old line\\n+new line')&&viewer.hasAttribute('data-editor-pane-open')`);
- await ev(`window.oldContext=context;window.previousOpenCalls=openCalls;window.previousClearCalls=actions.filter(a=>a==='clear').length;context={...context,threadId:'different-thread'};q('.file-name').click();q('.clear').click();context=oldContext;`);await delay(100);
- await check('Stale panel actions cannot open diffs or clear another chat history',`openCalls===previousOpenCalls&&actions.filter(a=>a==='clear').length===previousClearCalls`);
- const out=resolve(ui,'../../artifacts/change-review');mkdirSync(out,{recursive:true});const screenshot=await browser.command('Page.captureScreenshot',{format:'png'});writeFileSync(resolve(out,'completion-panel.png'),Buffer.from(screenshot.data,'base64'));
- await ev('controller.dispose();controller=new ChangeReviewController(ports);controller.start()');await until(`!!q('.toggle')`);
- await check('Returning to chat restores the retained review collapsed',`q('.toggle').getAttribute('aria-expanded')==='false'`);
- await click('.clear');await until(`!q('.toggle')`);
- await check('Clear history removes the review without changing source or prompt',`actions.includes('clear')&&record===null&&before==='first\\nold line\\nlast\\n'&&document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
+ await check('File opens recorded native diff in right editor without opening a native middle tab',`workspace.previewTabs.length===1&&workspace.previewTabs[0].view.content.includes('-old line\\n+new line')&&viewer.hasAttribute('data-editor-pane-open')&&nativeTabs===0`);
+ await ev(`document.querySelector('#native-latest .original-view').click()`);
+ await check('Recognized native View changes is routed to custom editor',`nativeTabs===0&&workspace.previewTabs.some(t=>t.name==='All changed files')`);
+ await ev(`document.querySelector('#native-unknown .original-view').click()`);
+ await check('Unknown card retains its original native behavior',`nativeTabs===1`);
+ await click('.undo');
+ await check('Undo forwards once to native control and reflects native Reapply state',`undoCalls===1&&q('.undo').textContent==='Reapply'`);
+ await click('.undo');
+ await check('Reapply also uses native control',`undoCalls===2&&q('.undo').textContent==='Undo'`);
+ await ev(`window.oldContext=context;window.previousOpenCalls=openCalls;window.previousUndoCalls=undoCalls;context={...context,threadId:'other-thread'};q('.file-name').click();q('.undo').click();context=oldContext;`);
+ await check('Stale panel cannot open or undo another chat',`openCalls===previousOpenCalls&&undoCalls===previousUndoCalls`);
+ await ev(`q('.history').value='turn-old';q('.history').dispatchEvent(new Event('change'));`);
+ await check('Older native review remains accessible; omitted diff and interrupted response are explicit',`q('.files').textContent.includes('image.png')&&q('.file-name').disabled&&q('.files').textContent.includes('Diff unavailable')&&q('.files').textContent.includes('interrupted')`);
+ await ev(`q('.history').value='turn-review';q('.history').dispatchEvent(new Event('change'));`);
+ await check('Changing reviews leaves existing unsent prompt untouched',`document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
+ await ev(`window.beforeReadCount=actions.length;q('.retry').click()`);await until(`actions.length>beforeReadCount`);await delay(150);
+ await check('Refresh reuses older cached native records instead of rereading all history',`actions.length-beforeReadCount===2`);
+ await ev(`const b=document.createElement('button');b.id='stop';b.setAttribute('aria-label','Stop');document.querySelector('#composer').append(b)`);await delay(700);
+ await ev(`nextReview=true;nativeCard('msg-new','native-new');document.querySelector('#stop').remove()`);await until(`q('.toggle')?.textContent.includes('1 file')`);
+ await check('Completed response automatically replaces summary with newest meaningful native review',`document.querySelector('#native-new').style.display==='none'&&q('.toggle').getAttribute('aria-expanded')==='false'`);
+ await click('.toggle');
+ const out=resolve(ui,'../../artifacts/native-review');mkdirSync(out,{recursive:true});const screenshot=await browser.command('Page.captureScreenshot',{format:'png'});writeFileSync(resolve(out,'native-panel.png'),Buffer.from(screenshot.data,'base64'));
+ await ev(`failure=true;q('.retry').click()`);await until(`q('.toggle')?.textContent==='Changes unavailable'`);
+ await check('Read failure restores native feed cards and presents a visible retry state',`document.querySelector('#native-latest').style.display!=='none'&&document.querySelector('#native-new').style.display!=='none'&&q('.retry').textContent==='Refresh'`);
+ await ev(`failure=false;q('.retry').click()`);await until(`q('.toggle')?.textContent.includes('1 file')`);
+ await check('Retry recovers native review without losing files or prompt',`document.querySelector('#native-new').style.display==='none'&&document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
+ await check('Unsafe paths and invalid turn IDs are rejected',`(()=>{for(const value of [{review:{...latest,files:[{relativePath:'../secret',kind:'add',content:'bad'}]},turnId:latest.id,nextCursor:null},{review:{...latest,id:'bad/id'},turnId:'bad/id',nextCursor:null}]){try{normalizeNativePage(value);return false}catch{}}return true})()`);
  await ev('controller.dispose()');
- await check('Controller disposal removes its composer UI',`!document.querySelector('[data-code-codex-change-review]')`);
+ await check('Disposal restores native cards and removes replacement UI',`!document.querySelector('[data-code-codex-change-review]')&&document.querySelector('#native-new').style.display!=='none'`);
  await check('No unhandled browser errors',`errors.length===0`);
  console.log(JSON.stringify({passed:true,checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop();}
