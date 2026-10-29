@@ -58,6 +58,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- Plain local-file references in the active chat now open in the editor instead of a native middle tab. Recognizes Codex's file-reference buttons and ordinary absolute-file anchors inside the current project, including paths with spaces; preserves save/cancel/conflict handling and keyboard activation. Modified clicks, external destinations and unknown controls retain native behavior.
+
 - The editor's conversation tab tracks the active native chat title while docked as well as expanded, including renames, replacement titles and cached-chat switches. Ambiguous native titles keep the generic label, and docking leaves the native title visible. Unrelated header controls do not trigger a title/layout feedback loop.
 
 - Moving an existing chat into a different local project updates the explorer root after metadata revalidation, including empty destination folders. Resolutions no longer retain a process-lifetime cwd cache. Refresh and visible-chat background checks detect same-chat moves; dirty or saving editor drafts defer the switch, and stale responses cannot retarget another chat. Explicit launcher workspace overrides remain fixed.

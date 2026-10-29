@@ -38,6 +38,7 @@ import { PreviewEditingController } from "../features/workspace/preview-editing"
 import { PreviewRequestsController } from "../features/workspace/preview-requests";
 import { PreviewWorkspaceController } from "../features/workspace/preview-workspace";
 import {CitationController} from '../features/workspace/citations';
+import {ChatFileLinks} from '../features/workspace/chat-file-links';
 import {citationRelativePath} from '../features/preview/citation-model';
 import {resolvePreviewLink} from '../features/preview/link-policy';
 import { TreeInteractionController } from "../features/workspace/tree-interaction";
@@ -849,6 +850,7 @@ export class CodeCodexElement extends HTMLElement {
     }
     #changeReview:ChangeReviewController|undefined;
     #citations:CitationController|undefined;
+    #chatFileLinks:ChatFileLinks|undefined;
     #nativeDiffHost:NativeDiffHost|undefined;
     #nativeMiddlePages:NativeMiddlePages|undefined;
     connectedCallback(): void {
@@ -911,6 +913,11 @@ export class CodeCodexElement extends HTMLElement {
             },
         });
         this.#citations.start();
+        this.#chatFileLinks??=new ChatFileLinks({element:this,
+            get context(){return owner.#workspaceSession.context;},get enabled(){return reviewPorts.enabled;},
+            openFile:path=>owner.#openNativeFileInEditor(path),announce:message=>owner.#announce(message),
+        });
+        this.#chatFileLinks.start();
         const appearanceInitializationGeneration = ++this.#appearanceInitializationGeneration;
         this.#requestedPlacement = this.dataset.placement || "inline";
         this.#rememberInlineMount();
@@ -1207,6 +1214,7 @@ export class CodeCodexElement extends HTMLElement {
     #disposeDisconnected(): void {
         this.#rootRevalidation?.dispose();
           this.#citations?.dispose();
+          this.#chatFileLinks?.dispose();
         this.#changeReview?.dispose();
         this.#nativeDiffHost?.dispose();
         this.#nativeMiddlePages?.dispose();

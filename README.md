@@ -21,6 +21,7 @@ The local development candidate also includes an optional Code Rain background w
 ### An editor that lives beside the chat
 
 - Files open in a resizable right editor pane, so you can keep talking to the agent while looking at your work.
+- Plain local-file links in chat open there too, including Codex's file-reference buttons. Files must be inside the current project; normal save/cancel protection still applies.
 - **E** in the chat header opens or hides the editor. Hiding exits fullscreen, so reopening puts it beside chat at your saved width. Your files and session draft stay available. There's a separate fullscreen button when you want the extra room.
 - The chat, native tab, editor tab, and file-control headers are more compact. They were taking up way too much vertical real estate haha.
 - The native Codex sidebar waits until you choose your first chat before collapsing once per launch. Browse projects first, then get the space back. Manually reopening it stays respected. The file explorer has its own controls.

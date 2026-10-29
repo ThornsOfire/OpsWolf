@@ -53,6 +53,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
 | Running native activity disclosures, shared reading/following, manual collapse, completion and cached chats | `node scripts/test-chat-activity.mjs`; `node scripts/test-chat-reading.mjs` |
 | Citation/local-link/native-file transfer integration with the actual explorer, reader and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
+| Ordinary chat-file references: native button/anchor routing, keyboard, project scope and cleanup | `node scripts/test-chat-file-links.mjs` |
 | Preview link classification, tooltips, external/app confirmation, saved permissions and stale-dialog cancellation | `node scripts/test-preview-links.mjs` |
 | Native record history, per-file disclosures, coverage, card restoration | `node scripts/test-change-review.mjs` |
 | Hosting actual native comparison DOM in editor layout | `node scripts/test-native-diff-host.mjs` |

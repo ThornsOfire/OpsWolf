@@ -1,4 +1,16 @@
-# Links in Markdown Preview
+# File links in chat and Markdown Preview
+
+## Opening a chat file reference
+
+Plain absolute local-file references in the active chat open/reuse an editor tab through the authenticated workspace reader. This covers ordinary anchors and the observed native `data-file-reference` button with `data-prompt-link-href`, including encoded spaces, Unicode names and local file URLs. Click the reference, or focus a native reference button and press Enter or Space. Nothing is executed.
+
+The adapter requires matching active chat/project identity and a recognized main chat surface. References outside the project, relative/unknown destinations, external URLs, native tab content, composer content, modified/middle clicks and downloads retain their original handlers. Existing citation/line-anchor routing is separate; this addition does not reinterpret fragments or query parameters. Unknown native markup stays native.
+
+Dirty source files use the existing Save and switch / Discard / Cancel flow. Cancel or a failed save preserves the draft. Read failures remain explicit editor errors; the adapter does not also open a native tab as a fallback. Repeated clicks while a switch is pending announce that it must finish first. The normal file-policy and preview-format limits still apply.
+
+`test-chat-file-links.mjs` checks native-reference markup, actual browser pointer/keyboard input, parsing, scoping, modified clicks, pending requests and disposal. `test-citations-host.mjs` tests the built explorer's reader and save/cancel/conflict flow. The reported native reference's attributes were inspected read-only; live navigation with the new candidate still requires installation and an owner check.
+
+## Markdown Preview
 
 Preview links now have somewhere useful to go ;3 Hover first: the tooltip describes the resolved destination, what clicking does, and whether confirmation is required or previously allowed.
 
