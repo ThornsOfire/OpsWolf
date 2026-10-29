@@ -154,7 +154,7 @@ try {
   }
   await browser.command('Emulation.clearDeviceMetricsOverride');
   await ev(`document.querySelector('main').style.width='1200px';document.querySelector('main').style.zoom='1';viewer._panePreference.width=340;state.editor={path:file.path,draft:numberedSource,saving:false};show()`);await delay(100);
-  await check('Wrap preference persists locally', `localStorage.getItem('code-codex:word-wrap:v1')==='true'`);
+  await check('Wrap preference persists locally', `JSON.parse(localStorage.getItem('cursadex:preferences:v1')).wordWrap===true`);
   await ev(`delete state.editor;show()`);await delay(60);
   await check('Read-only source also wraps within the pane', `getComputedStyle(q('.literal-text')).whiteSpace==='pre-wrap'&&q('.preview-content').scrollWidth<=q('.preview-content').clientWidth+1`);
   await clickSelector('.word-wrap-toggle');await delay(60);

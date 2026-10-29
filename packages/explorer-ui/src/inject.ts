@@ -2,6 +2,8 @@ import {nativeSettingsBackgroundCss} from './native-background-surfaces';
 import {collapseNativeSidebarOnStartup} from './native-sidebar';
 import {installChatReading} from './host/native-surfaces/chat-reading';
 import {installComposerTyping} from './host/native-surfaces/composer-typing';
+import {openPreferencesPanel} from './features/settings/preferences-panel';
+import {LinkPermissions, LINK_PERMISSIONS_CHANGED} from './features/preview/link-policy';
 import { optionalPluginExport } from './utility-plugin-facade';
 import { monitorStartupReadiness } from './startup-readiness';
 import { getBootstrapConfig } from "./bridge";
@@ -517,6 +519,15 @@ function revealExplorer(): CodeCodexElement | null {
 }
 
 const applicationMenuActions = {
+  openPreferences: () => {
+    let storage: Storage | undefined;
+    try { storage = window.localStorage; } catch { /* Unavailable storage is handled by the panel. */ }
+    const links = new LinkPermissions(storage);
+    openPreferencesPanel({linkPermissions: () => links.list(), resetLinkPermissions: () => {
+      if (!storage) throw new Error('Permission storage is unavailable.');
+      links.clear(); window.dispatchEvent(new Event(LINK_PERMISSIONS_CHANGED));
+    }});
+  },
   getLoginStartup: () => {
     return requestApplicationMenu<import('./contracts/login-startup').LoginStartupStatus>('explorer.login.startup.get');
   },

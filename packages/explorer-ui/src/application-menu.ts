@@ -9,6 +9,7 @@ interface ApplicationMenuActions extends LoginStartupActions {
   openPreviewMarket(): void;
   checkForUpdates(): void;
   openRuntimeInformation(): void;
+  openPreferences?(): void;
   openInstallationFolder(): void;
   openUninstaller(): Promise<{ opened: boolean }>;
 }
@@ -171,7 +172,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   trigger.type = "button";
   trigger.id = "code-codex-application-menu-trigger";
   trigger.className = nativeTriggers().find(button => button.dataset.state !== 'open')?.className ?? mount.lastNativeTrigger.className;
-  trigger.textContent = "Code-Codex";
+  trigger.textContent = "Cursadex";
   trigger.setAttribute("aria-haspopup", "menu");
   trigger.setAttribute("aria-expanded", "false");
   trigger.dataset.state = 'closed';
@@ -195,6 +196,11 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   marketItem.tabIndex = -1;
   marketItem.textContent = "Preview Market";
   const runtimeItem = document.createElement("button");
+  const preferencesItem = document.createElement('button');
+  preferencesItem.type = 'button'; preferencesItem.tabIndex = -1;
+  preferencesItem.setAttribute('role', 'menuitem');
+  preferencesItem.dataset.cursadexPreferences = 'true';
+  preferencesItem.hidden = !actions.openPreferences;
   runtimeItem.type = "button";
   runtimeItem.setAttribute("role", "menuitem");
   runtimeItem.tabIndex = -1;
@@ -255,7 +261,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   uninstallItem.type = 'button'; uninstallItem.tabIndex = -1;
   uninstallItem.setAttribute('role', 'menuitem');
   uninstallItem.dataset.codeCodexUninstall = 'true';
-  popup.append(treeItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, separator, updateItem, repositoryItem, uninstallSeparator, uninstallItem);
+  popup.append(treeItem, preferencesItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, separator, updateItem, repositoryItem, uninstallSeparator, uninstallItem);
 
   // Keep this sibling separate from Codex's React-owned Radix menubar. It
   // shares the visual row without joining Radix's private keyboard collection.
@@ -263,9 +269,10 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   document.body.append(popup);
   document.body.append(languagePopup);
 
-  const items: HTMLElement[] = [treeItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, updateItem, repositoryItem, uninstallItem];
+  const items: HTMLElement[] = [treeItem, preferencesItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, updateItem, repositoryItem, uninstallItem];
   const updateText=()=>{
     loginStartup.render();
+    preferencesItem.textContent = getLocale() === 'zh-CN' ? 'Cursadex 设置…' : 'Cursadex settings…';
     treeItem.textContent=t(actions.isExplorerVisible()?'menu.hideTree':'menu.showTree');
     for(const [item,key] of [[marketItem,'menu.market'],[runtimeItem,'menu.runtime'],[installationItem,'menu.installation'],[updateItem,'menu.updates'],[repositoryItem,'menu.repository'],[uninstallItem,'menu.uninstall']] as const)item.textContent=t(key);
     languageLabel.textContent=t('menu.language');
@@ -375,7 +382,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
       if (button) openNative(button);
     } else if (["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) {
       event.preventDefault();
-      const navigable = items.filter(item => !(item instanceof HTMLButtonElement) || !item.disabled);
+      const navigable = items.filter(item => !item.hidden && (!(item instanceof HTMLButtonElement) || !item.disabled));
       const index = navigable.indexOf(document.activeElement as HTMLElement);
       const next = event.key === "Home" ? 0 : event.key === "End" ? navigable.length - 1 :
         (index + (event.key === "ArrowDown" ? 1 : -1) + navigable.length) % navigable.length;
@@ -396,6 +403,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   treeItem.addEventListener("click", () => { close(); actions.toggleExplorer(); }, { signal });
   marketItem.addEventListener("click", () => { close(); actions.openPreviewMarket(); }, { signal });
   runtimeItem.addEventListener("click", () => { close(); actions.openRuntimeInformation(); }, { signal });
+  preferencesItem.addEventListener('click', () => { close(true); actions.openPreferences?.(); }, {signal});
   installationItem.addEventListener("click", () => { close(); actions.openInstallationFolder(); }, { signal });
   loginStartupItem.addEventListener('click', () => { close(); void loginStartup.toggle(); }, { signal });
   updateItem.addEventListener("click", () => { close(); actions.checkForUpdates(); }, { signal });

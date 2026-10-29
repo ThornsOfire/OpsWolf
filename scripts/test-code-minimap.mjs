@@ -91,13 +91,13 @@ try {
   await mouse('mouseReleased',track.x,track.y+130,{button:'left',clickCount:1}); await wait();
   await check('Dragging the far-right native scrollbar moves source and minimap',`q('.preview-content').scrollTop>500&&q('.code-vertical-scrollbar').scrollTop===q('.preview-content').scrollTop&&parseFloat(q('.code-minimap-slider').style.top)>6`);
   await ev(String.raw`q('.minimap-toggle').click()`); await wait();
-  await check('Toggle hides only minimap, retains outer scrollbar and stores preference',`q('.code-surface').hasAttribute('data-minimap-hidden')&&q('.preview-content').getBoundingClientRect().width+12===q('.code-surface').clientWidth&&q('.code-vertical-scrollbar').getBoundingClientRect().right===q('.code-surface').getBoundingClientRect().right&&localStorage.getItem('code-codex:code-minimap:v1')==='false'`);
+  await check('Toggle hides only minimap, retains outer scrollbar and stores preference',`q('.code-surface').hasAttribute('data-minimap-hidden')&&q('.preview-content').getBoundingClientRect().width+12===q('.code-surface').clientWidth&&q('.code-vertical-scrollbar').getBoundingClientRect().right===q('.code-surface').getBoundingClientRect().right&&JSON.parse(localStorage.getItem('cursadex:preferences:v1')).minimap===false`);
   await check('Disabling minimap clears visibility and idle timer',`viewer._codeMinimap.activityTimer===0&&!q('.code-minimap').hasAttribute('data-viewport-visible')`);
   await ev(String.raw`window.oldController=viewer._codeMinimap;show(true)`); await wait();
   await check('Rerender disposes old controller/listeners/bitmap',`oldController.disposed&&oldController.frame===0&&oldController.canvas.width===0`);
   await check('Preference survives entering edit mode',`q('.code-surface').hasAttribute('data-minimap-hidden')&&q('textarea').value===text`);
   await check('A fresh preview instance restores the saved off preference',`!document.createElement(fixtureTag)._minimapEnabled`);
-  await check('Blocked preference storage falls back without breaking construction',`(()=>{const old=Storage.prototype.getItem;try{Storage.prototype.getItem=()=>{throw new Error('fixture storage blocked')};return document.createElement(fixtureTag)._minimapEnabled===true}finally{Storage.prototype.getItem=old}})()`);
+  await check('Storage becoming blocked keeps the shared session preference during construction',`(()=>{const old=Storage.prototype.getItem;try{Storage.prototype.getItem=()=>{throw new Error('fixture storage blocked')};return document.createElement(fixtureTag)._minimapEnabled===false}finally{Storage.prototype.getItem=old}})()`);
   await ev(String.raw`q('.minimap-toggle').click();q('textarea').scrollTop=2200`); await wait();
   await check('Editor scrolling synchronizes highlight, gutter and minimap',`q('textarea').scrollTop===q('.code-editor-highlight').scrollTop&&q('textarea').scrollTop===q('.code-editor-line-numbers').scrollTop&&parseFloat(q('.code-minimap-slider').style.top)>100`);
   await check('Editor scrolling reveals viewport too',`getComputedStyle(q('.code-minimap-slider')).opacity==='1'`);

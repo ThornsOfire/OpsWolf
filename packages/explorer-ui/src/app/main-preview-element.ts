@@ -9,7 +9,8 @@ import type { Box3,Object3D } from "three";
 import { activePageElements,MAIN_SURFACE_SELECTOR } from "../adapters/codex-26.715";
 import { usesClippedMainLayout } from "../adapters/codex-layout-version";
 import { getBootstrapConfig } from "../bridge";
-import { CODE_MINIMAP_PREFERENCE,CodeMinimap,codeMinimapStyles } from "../code-minimap";
+import { CodeMinimap,codeMinimapStyles } from "../code-minimap";
+import { userPreferences } from '../core/configuration/user-preferences';
 import { mainPreviewStyles } from "../components/styles/main-preview";
 import { attachTooltips } from "../components/tooltips";
 import { EditorHeaderControl } from "../features/preview/editor-header-control";
@@ -133,9 +134,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   constructor() {
     super();
     try { this._panePreference = readEditorPanePreference(this.ownerDocument.defaultView!.localStorage); } catch { /* Storage may be unavailable. */ }
-    try { this._minimapEnabled = this.ownerDocument.defaultView?.localStorage.getItem(CODE_MINIMAP_PREFERENCE) !== "false"; }
-    catch { runtimeEvent("code-minimap", "preference read", "unavailable"); }
-    try { this._wordWrap=this.ownerDocument.defaultView?.localStorage.getItem('code-codex:word-wrap:v1')==='true'; } catch { /* Storage may be unavailable. */ }
+    const preferences = userPreferences(this.ownerDocument.defaultView!).current;
+    this._minimapEnabled = preferences.minimap;
+    this._wordWrap = preferences.wordWrap;
     const bootstrap = getBootstrapConfig();
     this._clippedLayout = usesClippedMainLayout(bootstrap.codexVersion ?? bootstrap.version);
     this._shadow = this.attachShadow({ mode: "open" });
@@ -209,8 +210,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         if(this._nativeWordWrap!==undefined)this.dispatchEvent(new CustomEvent('cle-main-preview-native-wrap',{bubbles:true,composed:true,detail:{enabled:!this._nativeWordWrap}}));
         return;
       }
-      this._wordWrap=!this._wordWrap;this._syncWordWrap();
-      try { this.ownerDocument.defaultView?.localStorage.setItem('code-codex:word-wrap:v1',String(this._wordWrap)); } catch { /* Preference remains active for this session. */ }
+      userPreferences(this.ownerDocument.defaultView!).set('wordWrap', !this._wordWrap);
     });
     const resizeHandle = this._required<HTMLElement>('.editor-pane-resizer');
     resizeHandle.addEventListener('pointerdown', (event) => this._resizePane(event));
@@ -228,10 +228,24 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _languageCleanup: (() => void) | undefined;
   _tooltipCleanup: (() => void) | undefined;
+  _preferenceCleanup: (() => void) | undefined;
+
+  _syncPreferences = (): void => {
+    const preferences = userPreferences(this.ownerDocument.defaultView!).current;
+    const wrapChanged = this._wordWrap !== preferences.wordWrap;
+    if (this._minimapEnabled !== preferences.minimap) runtimeEvent('code-minimap', 'preference', preferences.minimap ? 'enabled' : 'disabled');
+    this._wordWrap = preferences.wordWrap;
+    this._minimapEnabled = preferences.minimap;
+    if (wrapChanged) this._syncWordWrap();
+    this._codeMinimap?.setEnabled(this._minimapEnabled && !this._wordWrap);
+    this._shadow.querySelector('.minimap-toggle')?.setAttribute('aria-pressed', String(this._minimapEnabled));
+  };
 
   connectedCallback(): void {
     if (this._connected) {this._syncSuppression();return;}
     this._connected = true;
+    this._preferenceCleanup = userPreferences(this.ownerDocument.defaultView!).subscribe(this._syncPreferences);
+    this._syncPreferences();
     this._citationUi.start();
     this._linkUi.start();
     this._languageCleanup = localizeOwnedUi(this._shadow);
@@ -271,6 +285,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._editorPane.restore();
     this._languageCleanup?.();this._languageCleanup = undefined;
     this._tooltipCleanup?.();this._tooltipCleanup = undefined;
+    this._preferenceCleanup?.();this._preferenceCleanup = undefined;
     this._connected = false;
     this._wrappedLineNumbers?.dispose();this._wrappedLineNumbers=null;
     this._largeTextReader?.dispose();
@@ -751,12 +766,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       toggle.setAttribute("aria-pressed", String(this._minimapEnabled));
       toggle.innerHTML = '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.2" aria-hidden="true"><path d="M2 3h7M2 6h5M2 9h7M2 12h5M12 2v12M14 3v3m0 2v4"/></svg>';
       toggle.addEventListener("click", () => {
-        this._minimapEnabled = !this._minimapEnabled;
-        runtimeEvent("code-minimap", "preference", this._minimapEnabled ? "enabled" : "disabled");
-        toggle.setAttribute("aria-pressed", String(this._minimapEnabled));
-        minimap.setEnabled(this._minimapEnabled);
-        try { this.ownerDocument.defaultView?.localStorage.setItem(CODE_MINIMAP_PREFERENCE, String(this._minimapEnabled)); }
-        catch { runtimeEvent("code-minimap", "preference save", "unavailable"); }
+        userPreferences(this.ownerDocument.defaultView!).set('minimap', !this._minimapEnabled);
       });
       metaBar.append(toggle);
       panel.append(metaBar, surface);

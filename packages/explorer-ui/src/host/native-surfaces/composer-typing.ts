@@ -35,6 +35,7 @@ export function installComposerTyping(doc: Document = document, preferences: Use
   };
   const configure = () => {
     if (!current) return;
+    if (!!current.meter === preferences.current.typingMeter) { render(); return; }
     const active = current;
     clearInterval(active.timer); active.timer = undefined;
     active.meter?.dispose(); active.meter = undefined;

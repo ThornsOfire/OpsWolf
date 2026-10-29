@@ -12,6 +12,7 @@ export function collapseNativeSidebarOnStartup(doc:Document=document):void {
   const stop=()=>{selected=undefined;observer?.disconnect();clearTimeout(timeout);doc.removeEventListener('click',onClick);doc.removeEventListener('keydown',onKeyDown,true);};
   const onKeyDown=(event:KeyboardEvent)=>{if(!event.repeat&&(event.key==='Enter'||event.key===' '))onClick(event);};
   const onClick=(event:MouseEvent|KeyboardEvent)=>{
+    if (!userPreferences(doc.defaultView!).current.collapseSidebar) return;
     if(!event.isTrusted||event instanceof MouseEvent&&event.button!==0||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return;
     if(event.composedPath().some(node=>node instanceof Element&&node.matches('[data-app-shell-sidebar-trigger][aria-controls="app-shell-sidebar"]'))){stop();return;}
     const row=event.composedPath().find((node):node is Element=>node instanceof Element&&node.hasAttribute('data-app-action-sidebar-thread-id'));
@@ -26,6 +27,7 @@ export function collapseNativeSidebarOnStartup(doc:Document=document):void {
   };
   const reconcile=()=>{
     if(!selected)return;
+    if (!userPreferences(doc.defaultView!).current.collapseSidebar) { stop(); return; }
     const active=[...doc.querySelectorAll('[data-app-action-sidebar-thread-active="true"][data-app-action-sidebar-thread-id]')].filter(row=>!row.closest('[data-app-shell-active-page="false"],[inert],[hidden],[aria-hidden="true"]'));
     const ids=new Set(active.map(row=>row.getAttribute('data-app-action-sidebar-thread-id')));
     if(ids.size!==1||!ids.has(selected))return;
@@ -43,3 +45,4 @@ export function collapseNativeSidebarOnStartup(doc:Document=document):void {
   doc.addEventListener('click',onClick);
   doc.addEventListener('keydown',onKeyDown,true);
 }
+import { userPreferences } from './core/configuration/user-preferences';

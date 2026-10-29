@@ -1,0 +1,20 @@
+# Cursadex settings
+
+Open **Cursadex → Cursadex settings…** in the application menu. This is an owned settings dialog, not an injected section of Codex's native Settings page. The inherited market, language, startup, updater, installation, repository and uninstall actions remain available. Code-Codex credit and its repository link are retained.
+
+Changes apply in the current window immediately:
+
+- **Typing speed** enables the optional gross WPM meter. No typing history or accuracy score is stored. Changing other preferences does not reset a running measurement.
+- **Wrap source text** uses the same preference as the editor's wrap button, without replacing the text area or its draft. Native Changes has its own wrap state and original control.
+- **Code minimap** uses the same preference as its editor button. Wrapping temporarily hides the minimap without forgetting that preference.
+- **Collapse sidebar after selecting a chat** controls the existing once-per-session behavior. It does not move the current layout immediately or re-arm a collapse already consumed this session.
+
+**Reset these preferences** restores WPM off, source wrapping off, minimap on, and sidebar collapse on. It does not reset files, drafts, pins, pane widths, themes, plugin settings, or permissions. **Reset link warnings** separately removes saved website-origin/application-protocol allowances so subsequent preview clicks ask again; it never launches a link. A failed reset leaves an error in the dialog.
+
+Preferences live in the renderer's local storage under `cursadex:preferences:v1`. Existing wrap/minimap keys are read as migration defaults when their new fields are absent; the old keys are left intact for older builds. Once saved, the central record takes precedence. This is one live store per renderer window, not account sync or a settings file watched across windows. If storage fails, current choices still work in this session and the dialog reports the persistence limitation. It never exports drafts or client content.
+
+The dialog uses native modal focus handling, supports Escape/Done, restores launcher focus, scrolls at small viewport sizes, and updates English/Chinese labels without reconstructing controls. The menu stays outside native Radix ownership. Unsupported native menu layouts do not get speculative injected menu controls.
+
+## Verification
+
+`scripts/test-preferences.mjs` covers migration, defaults, storage errors, pointer toggles, singleton/disposal, live updates, reset boundaries, failure, localization and a 360×480 viewport. Editor-pane, minimap, typing, sidebar and application-menu fixtures cover the integration. These synthetic Chromium checks do not prove every native version or physical display; the combined native candidate pass is still required.

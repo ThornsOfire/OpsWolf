@@ -3,7 +3,7 @@ import {createServer} from 'node:http';
 import {resolve} from 'node:path';
 import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
 import {launchFixture,delay} from './browser-fixture.mjs';
-const bundle=await build({bundle:true,write:false,format:'iife',stdin:{contents:`import {collapseNativeSidebarOnStartup} from './native-sidebar';window.collapseNativeSidebarOnStartup=collapseNativeSidebarOnStartup;`,resolveDir:resolve(import.meta.dirname,'../packages/explorer-ui/src'),loader:'ts'}});
+const bundle=await build({bundle:true,write:false,format:'iife',stdin:{contents:`import {collapseNativeSidebarOnStartup} from './native-sidebar';import {userPreferences} from './core/configuration/user-preferences';window.userPreferences=userPreferences;window.collapseNativeSidebarOnStartup=collapseNativeSidebarOnStartup;`,resolveDir:resolve(import.meta.dirname,'../packages/explorer-ui/src'),loader:'ts'}});
 const html=`<!doctype html><meta charset="utf-8"><div data-app-shell-frame data-app-shell-sidebar-open="true"><button id="toggle" data-app-shell-sidebar-trigger aria-controls="app-shell-sidebar" aria-expanded="true">Sidebar</button><div id="app-shell-sidebar"><div id="chat" role="button" tabindex="0" data-app-action-sidebar-thread-id="local:fixture-thread">Pick chat</div><button id="other" data-app-action-sidebar-thread-id="local:other-thread">Other chat</button><button id="project">Project folder</button></div><div id="file-tree">File explorer</div></div><script src="/core.js"></script><script>
 window.clicks=0;window.button=document.querySelector('#toggle');window.frame=button.parentElement;window.chat=document.querySelector('#chat');window.other=document.querySelector('#other');window.pending=false;
 button.onclick=()=>{clicks++;const open=button.getAttribute('aria-expanded')!=='true';setOpen(open);};
@@ -41,5 +41,9 @@ try{
  await navigate('manual');await click('toggle');await click('toggle');await click('chat');await check('Manual sidebar toggling before selection opts out of auto-collapse',`clicks===2&&button.getAttribute('aria-expanded')==='true'`);
  await navigate('keyboard');await ev(`chat.focus()`);for(const type of ['keyDown','keyUp'])await browser.command('Input.dispatchKeyEvent',{type,key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:type==='keyDown'?'\r':undefined});await delay(60);await check('Keyboard chat selection also collapses once',`clicks===1`);
  await navigate('unknown');await click('chat');await check('Unknown native layout does not receive speculative clicks',`clicks===0&&button.getAttribute('aria-expanded')==='true'`);
+ await navigate('preference');await ev(`userPreferences().set('collapseSidebar',false)`);await click('chat');
+ await check('Disabled preference leaves user-selected chat sidebar open',`clicks===0&&button.getAttribute('aria-expanded')==='true'`);
+ await ev(`userPreferences().set('collapseSidebar',true)`);await check('Enabling preference does not immediately collapse current layout',`clicks===0`);
+ await click('other');await check('Enabled preference applies on the next user chat selection',`clicks===1`);
  console.log(JSON.stringify({passed:true,checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop()}

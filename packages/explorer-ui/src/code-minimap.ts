@@ -1,7 +1,7 @@
 import { SYNTAX_TOKEN_KINDS, type SyntaxHighlight, type SyntaxTokenKind } from "./syntax-highlight";
 import { runtimeEvent } from "./runtime-events";
 
-export const CODE_MINIMAP_PREFERENCE = "code-codex:code-minimap:v1";
+export { LEGACY_MINIMAP_KEY as CODE_MINIMAP_PREFERENCE } from './core/configuration/user-preferences';
 
 export const codeMinimapStyles = `
   .code-surface { display: grid; grid-template-columns: minmax(0, 1fr) 96px var(--code-scrollbar-width, 0px); min-width: 0; min-height: 0; overflow: hidden; }

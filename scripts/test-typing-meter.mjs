@@ -38,6 +38,8 @@ try {
  await check('Integrated control starts off by default',`document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('[data-toggle]').getAttribute('aria-pressed')==='false'&&localStorage.length===0`);
  await ev(`store.setTypingMeter(true)`);await type('hello');await delay(1700);
  await check('Enabled meter displays a value beside the composer',`/[0-9]+ WPM/.test(document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent)`);
+ await ev(`store.set('minimap',false)`);
+ await check('Unrelated preference changes preserve the active measurement',`/[0-9]+ WPM/.test(document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent)`);
  await check('Only the preference is persisted',`localStorage.length===1&&JSON.parse(localStorage.getItem('cursadex:preferences:v1')).typingMeter===true&&!localStorage.getItem('cursadex:preferences:v1').includes('hello')`);
  await ev(`editor.replaceChildren()`);await delay(60);
  await check('Native clearing without an input event resets the measurement',`document.querySelector('[data-cursadex-typing]').shadowRoot.querySelector('output').textContent.includes('—')`);

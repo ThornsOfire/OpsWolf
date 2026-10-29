@@ -1,5 +1,5 @@
 import type {MainPreviewState} from '../../file-preview/contracts';
-import {LinkPermissions,LINK_PERMISSIONS_KEY,previewLinkTooltip,resolvePreviewLink} from './link-policy';
+import {LinkPermissions,LINK_PERMISSIONS_KEY,LINK_PERMISSIONS_CHANGED,previewLinkTooltip,resolvePreviewLink} from './link-policy';
 import {confirmPreviewLink} from './link-dialog';
 interface EditorLinkPorts {
  readonly element:HTMLElement;
@@ -22,11 +22,13 @@ export class EditorLinks {
   this.ports.shadow.addEventListener('keydown',this.onKey as EventListener,true);
   this.observer=new MutationObserver(this.refresh);this.observer.observe(this.ports.panel,{childList:true,subtree:true});
   this.ports.element.ownerDocument.defaultView?.addEventListener('storage',this.onStorage);this.refresh();
+  this.ports.element.ownerDocument.defaultView?.addEventListener(LINK_PERMISSIONS_CHANGED,this.refresh);
  }
  dispose():void {
   this.started=false;this.observer?.disconnect();this.observer=undefined;
   this.ports.shadow.removeEventListener('click',this.onClick as EventListener,true);this.ports.shadow.removeEventListener('keydown',this.onKey as EventListener,true);
   this.ports.element.ownerDocument.defaultView?.removeEventListener('storage',this.onStorage);
+  this.ports.element.ownerDocument.defaultView?.removeEventListener(LINK_PERMISSIONS_CHANGED,this.refresh);
   this.ports.element.ownerDocument.defaultView?.cancelAnimationFrame(this.frame);this.frame=0;this.dialog?.();this.dialog=undefined;this.dialogCurrent=undefined;this.pending=undefined;
  }
  queueHeading(path:string,fragment:string):void {this.pending={path,fragment,context:this.context(),deadline:Date.now()+30_000};this.refresh();}

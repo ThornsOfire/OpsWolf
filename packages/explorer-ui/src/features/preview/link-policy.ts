@@ -38,6 +38,7 @@ export function resolvePreviewLink(href:string,root:string,source:string):Previe
  }catch{return blocked('Invalid local file destination');}
 }
 export const LINK_PERMISSIONS_KEY='code-codex:link-permissions:v1';
+export const LINK_PERMISSIONS_CHANGED='cursadex:link-permissions-changed';
 /** Explicit choices only; websites are scoped to exact origin, apps to URI scheme. */
 export class LinkPermissions {
  constructor(private readonly storage:Storage|undefined){}
