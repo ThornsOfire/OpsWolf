@@ -2170,9 +2170,45 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.style.right = `${Math.max(0, contentRight - viewportRect.right)}px`;
   }
 
+  _syncNativeTitle(parent: Element | null): HTMLElement | null {
+    if (!parent || !this._clippedLayout) {
+      this._nativeTitleObserver?.disconnect();
+      this._nativeTitleObserver = null;
+      this._nativeTitleObserverRoot = null;
+      return null;
+    }
+    const titleRoot = parent.closest('[data-app-shell-active-page="true"]') ?? document;
+    const focusedTitles = activePageElements<HTMLElement>(titleRoot,
+      'header [data-app-shell-focus-area="main"] [data-app-shell-titlebar-content]',
+    );
+    const titles = focusedTitles.length ? focusedTitles :
+      activePageElements<HTMLElement>(titleRoot, 'header [data-app-shell-titlebar-content]');
+    const title = titles.length === 1 ? titles[0] ?? null : null;
+    const observerRoot = title?.closest('header')?.parentElement ??
+      (this._nativeTitleObserverRoot?.isConnected ? this._nativeTitleObserverRoot : document.body);
+    if (observerRoot !== this._nativeTitleObserverRoot) {
+      this._nativeTitleObserver?.disconnect();
+      this._nativeTitleObserverRoot = observerRoot;
+      this._nativeTitleObserver = new MutationObserver(() => this._syncSuppression());
+      this._nativeTitleObserver.observe(observerRoot, {
+        childList: true, subtree: true, characterData: observerRoot !== document.body,
+      });
+    }
+    const titleText = title?.textContent?.trim() || 'Conversation';
+    if (titleText !== this._conversationTitle) {
+      this._conversationTitle = titleText;
+      const tab = this._tabList.querySelector<HTMLButtonElement>('[data-tab-kind="conversation"]');
+      const label = tab?.querySelector<HTMLElement>('.tab-label');
+      if (label) label.textContent = titleText;
+      if (tab) tab.dataset.tooltip = titleText;
+    }
+    return title;
+  }
+
   _syncSuppression(): void {
     const hasNativeSurface = this.parentElement?.matches(MAIN_SURFACE_SELECTOR) === true;
     const paneActive = hasNativeSurface && this._connected && !this._suspended && this._panePreference.docked && this._editorVisible;
+    const title = this._syncNativeTitle(hasNativeSurface && this._connected && !this._suspended && this._editorVisible ? this.parentElement : null);
     this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
     const visible=this._editorVisible && !this._suspended;
@@ -2192,7 +2228,6 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if (this._panePreference.docked && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) {
       this._restoreSuppressedChildren();
       this._syncNativeViewportBounds(this.parentElement, null);
-      this._nativeTitleObserver?.disconnect(); this._nativeTitleObserverRoot = null;
       if (paneActive) this._editorPane.apply(this.parentElement, this._panePreference.width);
       else {
         this._editorPane.restore();
@@ -2235,34 +2270,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if (nativeHeaderSubject && nativeHeaderSubject !== nativeHeader) desired.add(nativeHeaderSubject);
 
     if (this._clippedLayout) {
-      const titleRoot = parent.closest('[data-app-shell-active-page="true"]') ?? document;
-      const focusedTitles = activePageElements<HTMLElement>(titleRoot,
-        'header [data-app-shell-focus-area="main"] [data-app-shell-titlebar-content]',
-      );
-      const titles = focusedTitles.length ? focusedTitles :
-        activePageElements<HTMLElement>(titleRoot, "header [data-app-shell-titlebar-content]");
-      const title = titles.length === 1 ? titles[0] : null;
       const header = title?.closest("header") ?? null;
-      const observerRoot = header?.parentElement ??
-        (this._nativeTitleObserverRoot?.isConnected ? this._nativeTitleObserverRoot : document.body);
-      if (observerRoot !== this._nativeTitleObserverRoot) {
-        this._nativeTitleObserver?.disconnect();
-        this._nativeTitleObserverRoot = observerRoot;
-        this._nativeTitleObserver = observerRoot ? new MutationObserver(() => this._syncSuppression()) : null;
-        this._nativeTitleObserver?.observe(observerRoot!, {
-          childList: true,
-          subtree: true,
-          characterData: observerRoot !== document.body,
-        });
-      }
-      const titleText = title?.textContent?.trim() || "Conversation";
-      if (titleText !== this._conversationTitle) {
-        this._conversationTitle = titleText;
-        const tab = this._tabList.querySelector<HTMLButtonElement>('[data-tab-kind="conversation"]');
-        const label = tab?.querySelector<HTMLElement>(".tab-label");
-        if (label) label.textContent = titleText;
-        if (tab) tab.dataset.tooltip = titleText;
-      }
       const titleRect = title?.getBoundingClientRect();
       const headerRect = header?.getBoundingClientRect();
       if (titleRect && headerRect) {
