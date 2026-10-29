@@ -1,6 +1,8 @@
 import type {ExplorerContext} from '../../contracts/bridge';
 import {annotationConsensusThreadId} from '../../adapters/codex-26.715';
 import {NativeDiffFiles} from './native-diff-files';
+import {NativeDiffSections} from './native-diff-sections';
+import type {ReviewRevisions} from '../workspace/native-review-revisions';
 export interface NativeDiffHostPorts {
  readonly element:HTMLElement;
  readonly context:ExplorerContext|undefined;
@@ -13,6 +15,7 @@ export interface NativeDiffHostPorts {
  readonly setWordWrap:(enabled:boolean|undefined)=>void;
  readonly openFile:(path:string)=>Promise<boolean>;
  readonly announce:(message:string)=>void;
+ readonly readRevisions:()=>Promise<ReviewRevisions>;
 }
 class StyleLease {
  private values=new Map<HTMLElement,Map<string,{value:string;priority:string;applied:string}>>();
@@ -37,11 +40,12 @@ export class NativeDiffHost {
  private ownedAttribute:string|null=null;private threadId='';
  private layout=new StyleLease();private activeLayout=new StyleLease();
  private readonly files:NativeDiffFiles;
- constructor(private readonly ports:NativeDiffHostPorts){this.files=new NativeDiffFiles(ports);}
+ private readonly sections:NativeDiffSections;
+ constructor(private readonly ports:NativeDiffHostPorts){this.files=new NativeDiffFiles(ports);this.sections=new NativeDiffSections(ports);}
  start():void {
   if(!this.disposed)return;this.disposed=false;
   const document=this.ports.element.ownerDocument;
-  this.observer=new MutationObserver(this.schedule);this.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['data-review-path','hidden','aria-hidden','aria-label','aria-pressed','disabled','aria-disabled','data-state','data-preview-tabs','data-app-shell-active-page','data-editor-visible','data-editor-pane-open','data-native-diff-active','data-app-shell-workspace-layout','data-app-shell-right-panel-full-width']});
+  this.observer=new MutationObserver(this.schedule);this.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-expanded','data-app-action-review-file-expanded','data-review-path','hidden','aria-hidden','aria-label','aria-pressed','disabled','aria-disabled','data-state','data-preview-tabs','data-app-shell-active-page','data-editor-visible','data-editor-pane-open','data-native-diff-active','data-app-shell-workspace-layout','data-app-shell-right-panel-full-width']});
   document.addEventListener('click',this.onClick,true);document.addEventListener('cle-main-preview-native-wrap',this.onWrap);document.defaultView?.addEventListener('resize',this.schedule);
   this.resize=new ResizeObserver(this.schedule);this.schedule();
   this.styleObserver=new MutationObserver(records=>{if(records.some(r=>r.target instanceof HTMLElement&&(this.layout.changed(r.target)||this.activeLayout.changed(r.target))))this.schedule();});
@@ -76,7 +80,7 @@ export class NativeDiffHost {
  };
  private schedule=():void=>{if(this.disposed||this.frame)return;this.frame=this.ports.element.ownerDocument.defaultView!.requestAnimationFrame(()=>{this.frame=0;this.refresh();});};
  private release():void {
-  this.files.dispose();this.ports.setWordWrap(undefined);
+  this.files.dispose();this.sections.dispose();this.ports.setWordWrap(undefined);
   this.resize?.disconnect();this.styleObserver?.disconnect();this.observedTarget=undefined;this.observedWorkspace=undefined;this.activeLayout.restore();this.layout.restore();this.probe?.remove();this.probe=undefined;
   if(this.aside){if(this.ownedAttribute===null)this.aside.removeAttribute('data-code-codex-owned');else this.aside.setAttribute('data-code-codex-owned',this.ownedAttribute);}
   this.panel=undefined;this.aside=undefined;this.threadId='';
@@ -128,6 +132,7 @@ export class NativeDiffHost {
   const expand=this.activeElement('header button[aria-label="Enter full view"]');if(expand)this.layout.set(expand,'display','none');
   const target=this.ports.target(),bounds=target?.getBoundingClientRect();
   this.files.sync(panel);
+  this.sections.sync(panel,!!target&&!!bounds&&bounds.width>0&&bounds.height>0);
   if(!target||!bounds||bounds.width<1||bounds.height<1){this.ports.setWordWrap(undefined);this.activeLayout.restore();this.layout.set(aside,'display','none');return;}
   const wrap=this.wrapButton();this.ports.setWordWrap(wrap?wrap.getAttribute('aria-pressed')==='true':undefined);
   this.layout.set(aside,'display','block');

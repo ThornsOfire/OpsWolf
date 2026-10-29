@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Recognized native Changes sections start collapsed and show session-only unread markers. Expanding a section or Clear all unread clears markers; subsequently observed native patch records mark files again. Reads pause while hidden, and unavailable updates are explicit. This tracks recorded patches rather than every filesystem edit.
+
 - Recognized native Changes file headers offer an explicit Open file in editor action, using the full native path and normal preview/save guards while preserving the native Open in and File actions controls. External program selection remains native functionality, not a new launcher in this fork.
 
 - Optional composer typing-speed readout with reset, two-second idle handling and gross five-character WPM. Tracking starts off; paste, undo and citation insertion are excluded. Only the on/off preference persists, and no typing history is recorded.

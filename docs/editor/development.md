@@ -50,6 +50,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Native record history, per-file disclosures, coverage, card restoration | `node scripts/test-change-review.mjs` |
 | Hosting actual native comparison DOM in editor layout | `node scripts/test-native-diff-host.mjs` |
 | Current-source actions in native Changes headers and stale file/chat identity | `node scripts/test-native-diff-files.mjs`; see [destination boundaries](native-diff-actions.md) |
+| Native Changes initial disclosures, unread markers, bounded patch polling and cleanup | `node scripts/test-native-diff-sections.mjs`; see [coverage and lifetime](native-diff-sections.md) |
 | Diff → current source → edit/save/reopen and missing source | `node scripts/test-diff-source.mjs` |
 | Module layering, capability ports and import cycles | `node scripts/check-architecture.mjs` |
 | Changelog structure and committed change-range coverage | `node scripts/check-changelog.mjs`; after committing, `node scripts/check-changelog.mjs --base HEAD~1 --head HEAD` |

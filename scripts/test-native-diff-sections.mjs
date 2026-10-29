@@ -1,0 +1,51 @@
+import assert from 'node:assert/strict';
+import {createServer} from 'node:http';
+import {resolve} from 'node:path';
+import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
+import {launchFixture,delay} from './browser-fixture.mjs';
+const bundle=await build({bundle:true,write:false,format:'iife',define:{__CODE_CODEX_VERSION__:'"0.5.40"',__CODE_CODEX_PLUGIN_CATALOG__:'[]'},stdin:{contents:`import {NativeDiffSections} from './features/preview/native-diff-sections';import {nativeReviewRevisions} from './features/workspace/native-review-revisions';window.NativeDiffSections=NativeDiffSections;window.revisions=nativeReviewRevisions;`,resolveDir:resolve('packages/explorer-ui/src'),loader:'ts'}});
+const html=`<!doctype html><div data-app-shell-active-page="true"><div data-response-annotation-conversation="fixture-thread">Chat</div><div data-above-composer-conversation-id="fixture-thread"><textarea>Unsent text</textarea></div><div role="tabpanel" data-tab-id="diff" id="panel"><div style="display:flex;flex-direction:column;height:600px"><button aria-label="Word wrap">Wrap</button><div data-app-shell-pane-content-viewport id="viewport" style="flex:1;min-height:0;overflow:auto"></div></div></div></div><script>window.errors=[];addEventListener("error",e=>errors.push(e.message));</script><script src="/fixture.js"></script><script>
+window.context={threadId:'fixture-thread',rootPath:'C:/workspace'};window.enabled=true;window.visible=true;window.calls=0;window.mode='normal';window.clock=0;const now=Date.now.bind(Date);Date.now=()=>now()+clock;window.panel=document.querySelector('#panel');window.batch=[{path:'a.md',revision:'r1'},{path:'b.md',revision:'r1'}];
+window.add=(path)=>{const f=document.createElement('div');f.setAttribute('data-review-path','C:/workspace/'+path);f.innerHTML='<div class="group/diff-header"><button data-app-action-review-file-toggle aria-expanded="true">'+path+'</button></div><pre>Native content</pre>';f.querySelector('button').onclick=e=>{const next=e.currentTarget.getAttribute('aria-expanded')!=='true';setTimeout(()=>{f.querySelector('button').setAttribute('aria-expanded',String(next));f.querySelector('pre').hidden=!next},20)};document.querySelector("#viewport").append(f);return f};window.a=add('a.md');window.b=add('b.md');
+window.controller=new NativeDiffSections({get context(){return context},get enabled(){return enabled},readRevisions:async()=>{calls++;if(mode==='wait')return await new Promise(r=>window.finish=r);if(mode==='error')throw Error('offline');return {files:batch,omitted:window.omitted??0}}});window.syncs=0;window.sync=()=>{syncs++;controller.sync(panel,visible)};window.pendingFrame=0;window.observer=new MutationObserver(()=>{if(!pendingFrame)pendingFrame=requestAnimationFrame(()=>{pendingFrame=0;sync()})});observer.observe(panel,{childList:true,subtree:true,attributes:true,attributeFilter:["aria-expanded","disabled"]});window.mark=f=>f.querySelector('[data-code-codex-owned="diff-unread"]')?.textContent;window.clear=()=>panel.querySelector('[data-code-codex-owned="diff-read-controls"] button');window.advance=()=>{clock+=5001;sync()};sync();
+</script>`;
+const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/fixture.js'?'text/javascript':'text/html');res.end(req.url==='/fixture.js'?bundle.outputFiles[0].text:html)});await new Promise(r=>server.listen(0,'127.0.0.1',r));const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),ev=e=>browser.evaluate(e);let checks=0;
+const check=async(name,expr)=>{const result=await ev(expr);if(!result)console.log(await ev(`({errors,controller:!!window.controller,visible,enabled,calls,a:a.outerHTML,b:b.outerHTML,status:panel.textContent})`));assert.equal(result,true,name);checks++};
+async function click(expr){const p=await ev(`(()=>{const r=(${expr}).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);for(const type of ['mousePressed','mouseReleased'])await browser.command('Input.dispatchMouseEvent',{type,button:'left',clickCount:1,...p});await delay(70)}
+try{
+ await delay(100);
+ await check('First observation collapses native sections through their own handlers',`a.querySelector('button').getAttribute('aria-expanded')==='false'&&b.querySelector('pre').hidden&&mark(a).includes('Unread')&&calls===1`);
+ await click(`a.querySelector('button')`);
+ await check('Opening one section clears only its marker',`mark(a)===''&&mark(b).includes('Unread')&&!a.querySelector('pre').hidden`);
+ await ev(`sync();sync()`);await delay(50);
+ await check('Repeated refresh preserves user expansion without extra IO',`a.querySelector('button').getAttribute('aria-expanded')==='true'&&calls===1`);
+ await check('Owned labels and disabled states settle without observer feedback',`(async()=>{await new Promise(r=>setTimeout(r,100));const before=syncs;await new Promise(r=>setTimeout(r,150));return before===syncs})()`);
+ await check('Controls occupy native flex flow without extending panel height',`(()=>{const column=document.querySelector('#viewport').parentElement,controls=clear().parentElement,v=document.querySelector('#viewport');return controls.parentElement===column&&v.getBoundingClientRect().bottom<=column.getBoundingClientRect().bottom+1&&v.clientHeight<600})()`);
+ await ev(`batch=[{path:'a.md',revision:'r2'}];advance()`);await delay(60);
+ await check('New patch revision marks an already open file unread',`mark(a).includes('Unread')&&!a.querySelector('pre').hidden&&calls===2`);
+ await click('clear()');
+ await check('Clear all only clears markers, leaving native disclosures/content intact',`mark(a)===''&&mark(b)===''&&!a.querySelector('pre').hidden&&b.querySelector('pre').hidden&&clear().disabled`);
+ await ev(`advance()`);await delay(60);
+ await check('Repeated same revision does not re-mark cleared file',`mark(a)===''&&calls===3`);
+ await ev(`batch=[{path:'b.md',revision:'r2'}];advance()`);await delay(60);
+ await check('Collapsed files detect revision changes without rendering their code',`mark(b).includes('Unread')&&b.querySelector('pre').hidden`);
+ await click(`b.querySelector('button')`);await check('Reopening clears the new revision marker',`mark(b)===''`);
+ await ev(`visible=false;advance()`);await delay(60);await check('Hidden comparison does not poll',`calls===4`);
+ await ev(`visible=true;mode='wait';sync()`);await delay(60);await ev(`advance();advance()`);
+ await check('One outstanding request prevents overlapping reads',`calls===5`);
+ await ev(`context={threadId:'other-thread',rootPath:'C:/workspace'};sync();finish({files:[{path:'a.md',revision:'r3'}],omitted:0})`);await delay(60);
+ await check('Stale completion cannot recreate controls or markers',`!clear()&&panel.querySelectorAll('[data-code-codex-owned]').length===0`);
+ await ev(`context={threadId:'fixture-thread',rootPath:'C:/workspace'};mode='error';sync()`);await delay(80);
+ await check('Read failure reports stale-marker limitation without damaging native content',`panel.textContent.includes('updates unavailable')&&a.querySelector('pre').textContent==='Native content'`);
+ await ev(`mode='normal';batch=[{path:'a.md',revision:'r3'}];advance()`);await delay(60);
+ await check('Read capability recovers on the next bounded check',`!panel.textContent.includes('updates unavailable')`);
+ await ev(`window.c=add('c.md');sync();advance()`);await delay(70);await click('clear()');
+ await ev(`batch=[{path:'c.md',revision:'first-patch'}];advance()`);await delay(60);
+ await check('A first patch after an observed absence marks a previously read file',`mark(c).includes('Unread')`);
+ await ev(`window.omitted=2;advance()`);await delay(60);
+ await check('Partial native coverage is visible instead of reporting complete tracking',`panel.textContent.includes('2 omitted')`);
+ await ev(`enabled=false;sync()`);await check('Disabling releases owned controls and retains chat draft',`!clear()&&document.querySelector('textarea').value==='Unsent text'`);
+ await check('Equal-size patch changes and new turns have distinct fingerprints',`(()=>{const page=(id,body)=>({review:{id,completedMs:null,status:'inProgress',messageIds:[],omitted:0,files:[{relativePath:'a.md',kind:'update',content:body}]},nextCursor:null,turnId:id});const a=revisions(page('t1','-old\\n+new')),b=revisions(page('t1','-old\\n+two')),c=revisions(page('t2','-old\\n+two'));return a.files[0].revision!==b.files[0].revision&&b.files[0].revision!==c.files[0].revision})()`);
+ await check('Missing patch data is not treated as a reliable revision',`revisions({review:{id:'t1',completedMs:null,status:'completed',messageIds:[],omitted:1,files:[{relativePath:'a.md',kind:'update',content:null}]},nextCursor:null,turnId:'t1'}).omitted===1`);
+ console.log(JSON.stringify({passed:checks}));
+}finally{await ev('observer.disconnect();cancelAnimationFrame(pendingFrame);controller.dispose()').catch(()=>{});await browser.close();server.close();stop()}

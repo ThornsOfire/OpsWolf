@@ -1,4 +1,5 @@
 import { ChangeReviewController } from "../features/workspace/change-review";
+import { nativeReviewRevisions } from "../features/workspace/native-review-revisions";
 import { attachTooltips } from "../components/tooltips";
 import { NativeDiffHost } from "../features/preview/native-diff-host";
 import { NativeMiddlePages } from "../features/preview/native-middle-pages";
@@ -870,6 +871,11 @@ export class CodeCodexElement extends HTMLElement {
             setWordWrap:enabled=>owner.#mainPreview?.setNativeWordWrapState(enabled),
             openFile:path=>owner.#openNativeFileInEditor(path),
             announce:message=>owner.#announce(message),
+            readRevisions:async()=>{
+                const bridge=owner.#workspaceSession.bridge;
+                if(!bridge?.available)throw Error('Workspace bridge unavailable');
+                return nativeReviewRevisions(await bridge.request('explorer.changes.native',{cursor:null},30_000));
+            },
         });
         this.#nativeDiffHost.start();
         this.#nativeMiddlePages??=new NativeMiddlePages({element:this,
