@@ -14,6 +14,8 @@ Chat remains mounted when a native page is shown. Switching pages preserves its 
 
 Page selection is running-session UI state. It does not add a new disk archive or promise restoration of unsaved native state after restarting the app.
 
+The editor's separate conversation tab tracks the active native chat title in both docked and expanded layouts, including renames. It uses a generic label if the title cannot be identified uniquely; inactive cached pages do not supply the title.
+
 ## Move a local file to the editor
 
 Select an eligible local file/preview/PDF tab, then use the **↗** button beside the middle-page dropdown. Its tooltip describes the action. The adapter recognizes the verified local text-editor and artifact tab identities, validates the full path against the current project, and opens the file through the usual authenticated workspace reader.
@@ -25,6 +27,8 @@ If the native file panel exposes an editor or input surface, the button becomes 
 Outside-project, remote, cloud, and unrecognized file identities do not get a transfer action. Browser, terminal, and additional-chat transfers remain roadmap work. Native browser/terminal pages can still be selected in the middle area.
 
 ## Compatibility
+
+Reverse editor-to-middle transfers and bidirectional dragging remain unimplemented. The [native capability investigation](native-capability-research.md) records why agent-side file-opening tools do not yet establish a safe extension-side transfer route.
 
 The adapter requires a matching active chat, the known native main/header/action markers, and right-controller tab identities. Unrecognized layouts, conflicting chat identities, and primary/main-controller page placements retain the native presentation. Native nodes are not moved or cloned and private framework stores are not used.
 
