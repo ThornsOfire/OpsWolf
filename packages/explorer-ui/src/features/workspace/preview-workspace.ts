@@ -348,6 +348,18 @@ disposePreviewTab(tab: PreviewTab): void {
         tab.modifiedDuringSave = false;
         tab.view = { kind: "loading", path: tab.path, name: tab.name };
     }
+closeAllPreviewTabs(): boolean {
+        if(this.host.editSaving) {
+            this.host.announce('Wait for the current save to finish');return false;
+        }
+        if(this.host.editingPath!==null && !this.host.leaveEditing('Close all tabs and discard your unsaved changes?')) return false;
+        this.previewSessionRevision+=1;
+        for(const tab of this.previewTabs) this.disposePreviewTab(tab);
+        this.tabStore.clear();this.activePreviewPath=null;
+        this.syncMainPreview();this.host.mainPreview?.showEditor?.();
+        this.host.renderVisible();this.host.announce('All editor tabs closed');
+        return true;
+    }
 purgePreviewTabs(renderRows = true): void {
         this.restoredProject = undefined;
         this.previewSessionRevision += 1;

@@ -2773,6 +2773,7 @@ export class CodeCodexElement extends HTMLElement {
         preview.dataset.codeCodexOwned = "true";
         this.#mirrorThemeToMainPreview(preview);
         preview.addEventListener("cle-main-preview-activate", this.#onMainPreviewActivate as EventListener);
+        preview.addEventListener("cle-main-preview-close-all", this.#onMainPreviewCloseAll as EventListener);
         preview.addEventListener("cle-main-preview-close", this.#onMainPreviewClose as EventListener);
         preview.addEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.addEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
@@ -2792,6 +2793,7 @@ export class CodeCodexElement extends HTMLElement {
         if (!preview)
             return;
         preview.removeEventListener("cle-main-preview-activate", this.#onMainPreviewActivate as EventListener);
+        preview.removeEventListener("cle-main-preview-close-all", this.#onMainPreviewCloseAll as EventListener);
         preview.removeEventListener("cle-main-preview-close", this.#onMainPreviewClose as EventListener);
         preview.removeEventListener("cle-main-preview-draft", this.#onMainPreviewDraft as EventListener);
         preview.removeEventListener("cle-main-preview-edit", this.#onMainPreviewEdit as EventListener);
@@ -2836,6 +2838,9 @@ export class CodeCodexElement extends HTMLElement {
         else
             this.#previewWorkspace.syncMainPreview();
         this.#treeinteractionSettings.renderVisible();
+    };
+    #onMainPreviewCloseAll = (event: Event): void => {
+        if(event.target===this.#mainPreview) this.#previewWorkspace.closeAllPreviewTabs();
     };
     #onMainPreviewClose = (event: CustomEvent<unknown>): void => {
         const detail = asRecord(event.detail);

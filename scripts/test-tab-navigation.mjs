@@ -27,6 +27,7 @@ controller.activePreviewPath='src/file-0.ts';controller.syncMainPreview();
 viewer.addEventListener('cle-main-preview-activate',e=>{if(e.detail.kind==='file')controller.activePreviewPath=e.detail.path;else controller.activePreviewPath=null;controller.syncMainPreview();});
 viewer.addEventListener('cle-main-preview-reorder',e=>controller.reorderTabs(e.detail.path,e.detail.targetPath,e.detail.after));
 viewer.addEventListener('cle-main-preview-pin',e=>controller.togglePin(e.detail.path));
+viewer.addEventListener('cle-main-preview-close-all',()=>controller.closeAllPreviewTabs());
 viewer.addEventListener('cle-main-preview-close',e=>controller.closePreviewTab(e.detail.path));
 `;
 const html=`<!doctype html><html><meta charset="utf-8"><style>body{margin:0}main{position:relative;width:1200px;height:850px}header{height:48px}#chat{height:800px}</style><body><main class="main-surface"><header>Native header</header><div id="chat">Conversation</div></main><script>window.__CODE_CODEX_BOOTSTRAP__={codexVersion:'26.1023.6123.0'};</script><script src="/fixture.js"></script><script>${setup}</script></body></html>`;
@@ -81,6 +82,15 @@ try{
  await check('Invalid or absolute pin paths are rejected',`(()=>{const p=new PinnedFiles(localStorage);return !p.toggle('C:/Projects/Other','../secret')&&!p.toggle('C:/Projects/Other','C:/absolute/file')})()`);
  await ev(`controller=makeController('C:/Projects/Point');controller.restorePinnedFiles();for(let i=0;i<66;i++)controller.openPreviewPath('large/file-'+i+'.txt','file-'+i+'.txt');`);await delay(150);
  await check('Large tab set respects cap and protects pinned file',`controller.previewTabs.length===64&&controller.previewTabs.some(t=>t.path==='src/file-11.ts')`);
+ await ev(`host.editingPath=controller.activePreviewPath;host.editDraft='UNSAVED';controller.syncMainPreview();window.beforeCloseCount=controller.previewTabs.length;`);
+ await click('.editor-pane-close');
+ await check('Rejected discard leaves every tab and unsaved draft intact', `controller.previewTabs.length===beforeCloseCount&&host.editDraft==='UNSAVED'&&viewer.hasAttribute('data-editor-visible')`);
+ await ev(`host.editSaving=true;controller.syncMainPreview()`);
+ await check('Close-all is disabled during save and rejects direct calls', `q('.editor-pane-close').disabled&&controller.closeAllPreviewTabs()===false&&controller.previewTabs.length===beforeCloseCount`);
+ await ev(`host.editSaving=false;host.leaveEditing=()=>{host.clearEditing();return true;};controller.syncMainPreview()`);
+ await click('.editor-pane-close');
+ await check('X closes every tab and leaves an empty editor open', `controller.previewTabs.length===0&&controller.activePreviewPath===null&&viewer.hasAttribute('data-editor-visible')&&!!q('.editor-empty')`);
+ await check('Close-all preserves project pins and disables empty X', `controller.pinnedPaths.includes('src/file-11.ts')&&q('.editor-pane-close').disabled`);
  await check('No unhandled browser errors',`errors.length===0`);
  console.log(JSON.stringify({passed:true,checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop();}

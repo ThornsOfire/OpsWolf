@@ -389,3 +389,13 @@ the editor toggles between the right pane and expanded layout.
 
 Dragging a file from the tree into chat or another text field inserts its full
 local path. Dragging inside the tree still moves entries using workspace-relative paths.
+
+The editor header **X** closes all file tabs while leaving the empty editor open.
+Unsaved changes require confirmation, active saves block close-all, and project
+pins remain saved. **E** continues to hide or show the editor without closing tabs.
+
+The **word wrap** icon toggles wrapping for source editing and source previews,
+including the virtual large-file reader. It retains the current draft and caret
+selection and remembers the preference locally. While wrapping, the fixed-line
+number gutter and minimap are hidden to avoid misleading line alignment; source
+syntax highlighting remains available.

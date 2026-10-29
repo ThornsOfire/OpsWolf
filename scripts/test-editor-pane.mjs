@@ -57,7 +57,7 @@ try {
   await check('Source editing emits draft through existing editor', `q('textarea').value==='const changed = 2;'`);
   await ev(`state.editor.draft='const changed = 2;';state.editor.dirty=true;show();q('textarea').dispatchEvent(new KeyboardEvent('keydown',{key:'s',ctrlKey:true,bubbles:true,cancelable:true}));`);
   await check('Ctrl+S uses existing save action', `saves.length===1&&saves[0].path==='example.ts'`);
-  await ev(`window.rejectClose=true;q('.editor-pane-close').click()`);
+  await ev(`window.rejectClose=true;q('.editor-pane-toggle').click()`);
   await check('Close hides editor without discarding dirty draft', `!viewer.hasAttribute('data-editor-visible')&&state.editor.draft==='const changed = 2;'`);
   await ev(`q('.editor-pane-toggle').click()`);
   await check('E reopens the same dirty draft', `viewer.hasAttribute('data-editor-visible')&&q('textarea').value==='const changed = 2;'`);
@@ -105,8 +105,18 @@ try {
   await check('Opening a file enables the existing header E', `!!headerE()&&!headerE().disabled&&viewer.hasAttribute('data-editor-pane-open')`);
   await ev(`viewer.setSuspended(true)`);
   await check('Inactive chats restore native layout and remove header E', `!headerE()&&document.querySelector('#chat').style.maxWidth==='98%'&&!document.querySelector('#chat').hasAttribute('inert')`);
-  await ev(`viewer.setSuspended(false);rejectClose=false;q('.editor-pane-close').click()`);
+  await ev(`viewer.setSuspended(false);rejectClose=false;q('.editor-pane-toggle').click()`);
   await check('Closing pane restores full conversation width and native title', `!viewer.hasAttribute('data-editor-pane-open')&&document.querySelector('#chat').style.maxWidth==='98%'&&!document.querySelector('header').hasAttribute('inert')`);
+  await ev(`window.wrapText='word '.repeat(700)+'END';state.activePath=file.path;state.tabs=[{...file,text:wrapText,sizeBytes:wrapText.length}];state.editor={path:file.path,draft:wrapText,saving:false};show();viewer.showEditor();window.wrapEditor=q('textarea');wrapEditor.value+=' UNSAVED';wrapEditor.dispatchEvent(new Event('input',{bubbles:true}));wrapEditor.setSelectionRange(17,27);window.beforeWrap=wrapEditor.value;`);
+  await check('Source starts unwrapped with horizontal scrolling', `wrapEditor.wrap==='off'&&wrapEditor.scrollWidth>wrapEditor.clientWidth`);
+  await clickSelector('.word-wrap-toggle');await delay(80);
+  await check('Word wrap fits editable text without losing draft, caret or DOM', `q('textarea')===wrapEditor&&wrapEditor.value===beforeWrap&&wrapEditor.selectionStart===17&&wrapEditor.selectionEnd===27&&wrapEditor.wrap==='soft'&&wrapEditor.scrollWidth<=wrapEditor.clientWidth+1&&q('.word-wrap-toggle').getAttribute('aria-pressed')==='true'`);
+  await check('Wrapped syntax mirror matches the textarea layout', `Math.abs(q('.code-editor-highlight').clientWidth-wrapEditor.clientWidth)<=1&&Math.abs(q('.code-editor-highlight').scrollHeight-wrapEditor.scrollHeight)<=2&&getComputedStyle(q('.code-line-numbers')).display==='none'`);
+  await check('Wrap preference persists locally', `localStorage.getItem('code-codex:word-wrap:v1')==='true'`);
+  await ev(`delete state.editor;show()`);await delay(60);
+  await check('Read-only source also wraps within the pane', `getComputedStyle(q('.literal-text')).whiteSpace==='pre-wrap'&&q('.preview-content').scrollWidth<=q('.preview-content').clientWidth+1`);
+  await clickSelector('.word-wrap-toggle');await delay(60);
+  await check('Wrap toggle restores horizontal source layout', `!viewer.hasAttribute('data-word-wrap')&&q('.preview-content').scrollWidth>q('.preview-content').clientWidth`);
   await ev(`state.activePath=file.path;show();viewer.remove()`); await delay(60);
   await check('Disposal restores original native styles', `document.querySelector('#chat').style.maxWidth==='98%'&&document.querySelector('#chat').style.width===''`);
   await check('No unhandled errors', `errors.length===0`);

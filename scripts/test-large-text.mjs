@@ -51,6 +51,9 @@ try{
  await check('10 MiB single-line Markdown uses bounded read-only DOM',`!!q('.large-text-reader')&&!q('.markdown-body')&&!q('.code-minimap')&&q('.large-text-viewport').clientHeight>100&&viewer.shadowRoot.querySelectorAll('.large-text-row').length<150`);
  await ev(`Array.from(viewer.shadowRoot.querySelectorAll('button')).find(b=>b.textContent==='End').click()`);await delay(100);
  await check('Single-line tail reachable at actual viewport bottom',`(()=>{const v=q('.large-text-viewport'),rows=viewer.shadowRoot.querySelectorAll('.large-text-row'),last=rows[rows.length-1];return last.textContent.endsWith('TAIL_END!')&&last.getBoundingClientRect().bottom<=v.getBoundingClientRect().bottom+1})()`);
+ await ev(`q('.word-wrap-toggle').click()`);await delay(150);
+ await check('Wrapped 10 MiB source reaches the tail with no horizontal overflow', `q('.large-text-visible').textContent.includes('TAIL_END!')&&q('.large-text-viewport').scrollWidth<=q('.large-text-viewport').clientWidth+1&&viewer.shadowRoot.querySelectorAll('.large-text-row').length<150`);
+ await ev(`q('.word-wrap-toggle').click()`);await delay(100);
  await ev(`window.large='\\n'.repeat(10*1024*1024-9)+'TAIL_END!';show(large)`);await delay(150);
  await ev(`Array.from(viewer.shadowRoot.querySelectorAll('button')).find(b=>b.textContent==='End').click()`);await delay(100);
  await check('Ten million short rows reach tail without browser scroll-height clipping',`q('.large-text-viewport').scrollHeight<=8000000&&q('.large-text-visible').textContent.includes('TAIL_END!')&&viewer.shadowRoot.querySelectorAll('.large-text-row').length<150`);

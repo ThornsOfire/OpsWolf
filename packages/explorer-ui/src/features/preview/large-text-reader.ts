@@ -3,19 +3,23 @@ const ROW_UNITS=2048;
 const ROW_HEIGHT=20;
 const MAX_SCROLL_HEIGHT=8_000_000;
 
-export function indexTextRows(text: string): Uint32Array {
+export function indexTextRows(text: string,rowUnits=ROW_UNITS): Uint32Array {
   // Two scans avoid a boxed array with millions of entries for newline-heavy files.
   const scan=(emit:(offset:number)=>void):void=>{
     emit(0);
-    let start=0;
+    let start=0,columns=0;
     for(let i=0;i<text.length;i+=1) {
       const ch=text.charCodeAt(i);
       if(ch===13||ch===10) {
         if(ch===13&&text.charCodeAt(i+1)===10) i+=1;
-        start=i+1; emit(start);
-      } else if(i-start+1>=ROW_UNITS&&i+1<text.length&&text.charCodeAt(i+1)!==10&&text.charCodeAt(i+1)!==13) {
-        if(ch>=0xd800&&ch<=0xdbff&&text.charCodeAt(i+1)>=0xdc00&&text.charCodeAt(i+1)<=0xdfff) i+=1;
-        start=i+1; emit(start);
+        start=i+1;columns=0;emit(start);
+      } else {
+        const pair=ch>=0xd800&&ch<=0xdbff&&text.charCodeAt(i+1)>=0xdc00&&text.charCodeAt(i+1)<=0xdfff;
+        const wide=pair||(ch>=0x2e80&&ch<=0xa4cf)||(ch>=0xac00&&ch<=0xd7af)||(ch>=0xff01&&ch<=0xff60);
+        let width=ch===9?4-columns%4:wide?2:1;
+        if(columns+width>rowUnits&&i>start){start=i;columns=0;emit(start);width=ch===9?4:wide?2:1;}
+        if(pair)i+=1;
+        columns+=width;
       }
     }
   };
@@ -28,7 +32,9 @@ export function indexTextRows(text: string): Uint32Array {
 export class LargeTextReader {
   readonly element: HTMLElement;
   readonly viewport: HTMLElement;
-  private readonly rows: Uint32Array;
+  private rows: Uint32Array;
+  private wrapped=false;
+  private columns=ROW_UNITS;
   private readonly spacer: HTMLElement;
   private readonly visible: HTMLElement;
   private readonly status: HTMLElement;
@@ -68,7 +74,23 @@ export class LargeTextReader {
       if(event.key==='End'&&(event.ctrlKey||event.metaKey)){event.preventDefault();this.jump(true);}
       if(event.key==='Home'&&(event.ctrlKey||event.metaKey)){event.preventDefault();this.jump(false);}
     });
-    this.resize=new ResizeObserver(()=>this.schedule());this.resize.observe(viewport);
+    this.resize=new ResizeObserver(()=>{this.reflow();this.schedule();});this.resize.observe(viewport);
+    this.schedule();
+  }
+  setWordWrap(enabled:boolean):void {
+    this.wrapped=enabled;this.reflow();
+  }
+  private reflow():void {
+    const canvas=this.document.createElement('canvas');
+    const context=canvas.getContext('2d');
+    if(context)context.font=this.document.defaultView!.getComputedStyle(this.viewport).font;
+    const width=context?.measureText('M').width||8;
+    const columns=this.wrapped?Math.max(8,Math.floor((this.viewport.clientWidth-16)/width)-2):ROW_UNITS;
+    if(columns===this.columns)return;
+    const fraction=this.viewport.scrollTop/Math.max(1,this.viewport.scrollHeight-this.viewport.clientHeight);
+    this.columns=columns;this.rows=indexTextRows(this.text,columns);
+    this.spacer.style.height=`${Math.max(this.viewport.clientHeight,Math.min(MAX_SCROLL_HEIGHT,this.rows.length*ROW_HEIGHT))}px`;
+    this.viewport.scrollTop=fraction*Math.max(0,this.viewport.scrollHeight-this.viewport.clientHeight);
     this.schedule();
   }
   dispose():void {

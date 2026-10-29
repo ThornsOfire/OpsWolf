@@ -60,6 +60,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
   readonly _editorHeader: EditorHeaderControl;
+  _wordWrap = false;
   _editorVisible = false;
   _panePreference = { docked: true, width: 560 };
   _paneResizeCleanup: (() => void) | undefined;
@@ -126,6 +127,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     try { this._panePreference = readEditorPanePreference(this.ownerDocument.defaultView!.localStorage); } catch { /* Storage may be unavailable. */ }
     try { this._minimapEnabled = this.ownerDocument.defaultView?.localStorage.getItem(CODE_MINIMAP_PREFERENCE) !== "false"; }
     catch { runtimeEvent("code-minimap", "preference read", "unavailable"); }
+    try { this._wordWrap=this.ownerDocument.defaultView?.localStorage.getItem('code-codex:word-wrap:v1')==='true'; } catch { /* Storage may be unavailable. */ }
     const bootstrap = getBootstrapConfig();
     this._clippedLayout = usesClippedMainLayout(bootstrap.codexVersion ?? bootstrap.version);
     this._shadow = this.attachShadow({ mode: "open" });
@@ -136,8 +138,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
           <button type="button" class="tab-pin-toggle" title="Pin this file for this project" aria-pressed="false">Pin</button>
           <button type="button" class="open-files-toggle" popovertarget="open-files-menu" popovertargetaction="toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
           <button type="button" class="editor-pane-toggle" title="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
+          <button type="button" class="word-wrap-toggle" title="Enable word wrap" aria-label="Enable word wrap" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 3h12M2 7h9a3 3 0 0 1 0 6H8m2-2-2 2 2 2M2 11h3"/></svg></button>
           <button type="button" class="editor-fullscreen-toggle" title="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
-          <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
+          <button type="button" class="editor-pane-close" title="Close all tabs" aria-label="Close all tabs">×</button>
         </div>
         <div class="editor-pane-resizer" role="separator" aria-label="Editor pane width" aria-orientation="vertical" tabindex="0"></div>
         <div class="tab-strip" role="tablist" aria-label="Conversation and file previews"></div>
@@ -185,7 +188,13 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       this._panePreference.docked = !this._panePreference.docked;
       this._savePanePreference();this._syncSuppression();
     });
-    this._required('.editor-pane-close').addEventListener('click', () => this._setEditorVisible(false));
+    this._required('.editor-pane-close').addEventListener('click', () => {
+      this.dispatchEvent(new CustomEvent('cle-main-preview-close-all',{bubbles:true,composed:true}));
+    });
+    this._required('.word-wrap-toggle').addEventListener('click', () => {
+      this._wordWrap=!this._wordWrap;this._syncWordWrap();
+      try { this.ownerDocument.defaultView?.localStorage.setItem('code-codex:word-wrap:v1',String(this._wordWrap)); } catch { /* Preference remains active for this session. */ }
+    });
     const resizeHandle = this._required<HTMLElement>('.editor-pane-resizer');
     resizeHandle.addEventListener('pointerdown', (event) => this._resizePane(event));
     resizeHandle.addEventListener('keydown', (event) => {
@@ -198,6 +207,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._tabList.addEventListener("keydown", (event) => this._onTabListKeyDown(event));
     this._shadow.addEventListener("keydown", (event) => this._onShadowKeyDown(event as KeyboardEvent));
     this._render();
+    this._syncWordWrap();
   }
 
   _languageCleanup: (() => void) | undefined;
@@ -373,6 +383,19 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     }
   }
 
+  _syncWordWrap(): void {
+    this.toggleAttribute('data-word-wrap',this._wordWrap);
+    const toggle=this._required<HTMLButtonElement>('.word-wrap-toggle');
+    toggle.setAttribute('aria-pressed',String(this._wordWrap));
+    toggle.title=this._wordWrap?'Disable word wrap':'Enable word wrap';toggle.setAttribute('aria-label',toggle.title);
+    const textarea=this._panelMount.querySelector<HTMLTextAreaElement>('.code-editor');
+    if(textarea){textarea.wrap=this._wordWrap?'soft':'off';if(this._wordWrap)textarea.scrollLeft=0;this._syncEditorScroll(textarea);}
+    this._codeMinimap?.setEnabled(this._minimapEnabled&&!this._wordWrap);
+    const minimap=this._panelMount.querySelector<HTMLButtonElement>('.minimap-toggle');
+    if(minimap)minimap.disabled=this._wordWrap;
+    this._largeTextReader?.setWordWrap(this._wordWrap);
+  }
+
   showEditor(): void { this._setEditorVisible(true); }
 
   _setEditorVisible(open:boolean):void {
@@ -454,6 +477,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     pin.textContent = pinned ? 'Unpin' : 'Pin';
     pin.title = pinned ? 'Unpin this file (keep it open)' : 'Reopen this file when returning to this project';
     pin.setAttribute('aria-pressed', String(pinned));
+    this._required<HTMLButtonElement>('.editor-pane-close').disabled=this._state.tabs.length===0||this._state.editor?.saving===true;
     this._required('.open-files-toggle').setAttribute('aria-label', `All open files (${this._state.tabs.length})`);
     if (this._openFilesMenu.matches(':popover-open')) this._renderOpenFilesMenu();
   }
@@ -648,6 +672,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       panel.append(metaBar, surface);
     } else panel.append(metaBar, content);
     this._panelMount.replaceChildren(panel);
+    this._syncWordWrap();
   }
 
   _renderViewContent(content: HTMLElement, view: MainPreviewFileView, editor?: MainPreviewEditorState): void {
