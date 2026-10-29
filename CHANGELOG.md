@@ -26,6 +26,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Changed
 
+- Hiding the editor with E, or returning through its chat tab/Escape, exits fullscreen. E then reopens the editor docked beside chat at its saved width, keeping open files and session drafts. Cancelled switches leave the current layout intact.
 - **E** controls editor visibility; the separate fullscreen button controls layout. Hiding the editor keeps its open tabs and running-session draft. ([controls](https://github.com/ThornsOfire/code-codex/commit/64bc327))
 - The editor row's X closes unpinned tabs. Individual pinned-tab closes ask first and retain the pin for next session; Unpin removes the pin without closing the file. ([close behavior](https://github.com/ThornsOfire/code-codex/commit/730027e))
 - Chat/native-tab headers are compact, with slimmer editor tab and file-control rows. ([compact headers](https://github.com/ThornsOfire/code-codex/commit/1af10db))

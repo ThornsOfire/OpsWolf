@@ -72,7 +72,9 @@ try{
  await check('Unknown native controls restore original view without closing its renderer',`nativePanel.isConnected&&document.querySelector('[data-app-shell-tab-controller]').style.display!=='none'&&closeCalls===1`);
  await ev(`originalNativeClose.setAttribute('aria-label','Close Changes tab');document.querySelector('#pill').click()`);await until(`ports.hasTab()&&originalAside.style.position==='fixed'`);
  await ev(`viewer._panePreference.docked=false;workspace.activePreviewPath=null;workspace.syncMainPreview();viewer._setEditorVisible(false);document.querySelector('#pill').click()`);await until(`!!viewer.nativeDiffSurface()&&originalAside.style.display==='block'`);
- await check('Bubble reopening from expanded conversation preserves expanded mode and selects the comparison',`!viewer.hasAttribute('data-editor-pane')&&viewer.nativeDiffSurface().getBoundingClientRect().width>1000&&workspace.activePreviewPath==='native-diff://thread-fixture'`);
+ await check('Bubble reopening after hiding expanded editor returns docked and selects comparison',`viewer.hasAttribute('data-editor-pane-open')&&viewer.nativeDiffSurface().getBoundingClientRect().width<1000&&workspace.activePreviewPath==='native-diff://thread-fixture'`);
+ await click('.editor-fullscreen-toggle');await delay(100);
+ await check('Reopened comparison can still explicitly expand',`!viewer.hasAttribute('data-editor-pane')&&viewer.nativeDiffSurface().getBoundingClientRect().width>1000`);
  await click('.editor-fullscreen-toggle');await delay(100);
  await check('Restoring the reopened comparison returns it to the right pane',`viewer.hasAttribute('data-editor-pane-open')&&viewer.nativeDiffSurface().getBoundingClientRect().width<1000&&Math.abs(originalAside.getBoundingClientRect().left-viewer.nativeDiffSurface().getBoundingClientRect().left)<1`);
  await ev(`controller.dispose()`);

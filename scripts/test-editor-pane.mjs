@@ -66,8 +66,16 @@ try {
   await ev(`q('.editor-pane-toggle').click()`);await delay(60);
   await check('E closes expanded editor and restores interactive chat', `!viewer.hasAttribute('data-editor-visible')&&!document.querySelector('#chat').hasAttribute('inert')&&state.editor.draft==='const changed = 2;'`);
   await ev(`q('.editor-pane-toggle').click()`);await delay(60);
-  await check('E reopens expanded editor with draft and layout intact', `viewer.hasAttribute('data-editor-visible')&&!viewer.hasAttribute('data-editor-pane')&&q('textarea').value==='const changed = 2;'`);
-  await ev(`q('.editor-fullscreen-toggle').click();q('.editor-pane-resizer').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}))`); await delay(60);
+  await check('E reopens formerly expanded editor docked with draft intact', `viewer.hasAttribute('data-editor-pane-open')&&q('textarea').value==='const changed = 2;'&&JSON.parse(localStorage.getItem('code-codex:editor-pane:v1')).docked===true`);
+  await ev(`rejectClose=false;q('.editor-fullscreen-toggle').click();q('[data-tab-kind="conversation"]').click()`);await delay(60);
+  await check('Chat tab exits fullscreen and reveals full interactive chat',`!viewer.hasAttribute('data-editor-visible')&&viewer._panePreference.docked&&state.activePath===null&&!document.querySelector('#chat').hasAttribute('inert')&&document.querySelector('#chat').style.maxWidth==='98%'`);
+  await ev(`q('.editor-pane-toggle').click()`);await delay(60);
+  await check('E after Chat tab restores docked source and its unsaved draft',`viewer.hasAttribute('data-editor-pane-open')&&state.activePath==='example.ts'&&q('textarea').value==='const changed = 2;'`);
+  await ev(`q('.editor-fullscreen-toggle').click();rejectClose=true;q('[data-tab-kind="conversation"]').click()`);await delay(60);
+  await check('Rejected conversation switch leaves fullscreen and draft unchanged',`!viewer._panePreference.docked&&viewer.hasAttribute('data-editor-visible')&&q('textarea').value==='const changed = 2;'`);
+  await ev(`rejectClose=false;q('textarea').dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}))`);await delay(60);
+  await check('Escape to chat also resets fullscreen',`state.activePath===null&&viewer._panePreference.docked&&!viewer.hasAttribute('data-editor-visible')`);
+  await ev(`q('.editor-pane-toggle').click();q('.editor-pane-resizer').dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}))`); await delay(60);
   await check('Keyboard resizing persists width', `JSON.parse(localStorage.getItem('code-codex:editor-pane:v1')).width===580`);
   await ev(`document.querySelector('main').style.width='600px'`); await delay(80);
   await check('Narrow window keeps at least 280px of chat', `document.querySelector('#chat').getBoundingClientRect().width>=279&&viewer.getBoundingClientRect().width<=321`);

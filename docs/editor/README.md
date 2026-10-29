@@ -4,7 +4,7 @@ This is the longer version of the [main README](../../README.md): what the butto
 
 ## Getting around
 
-The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Closing it this way keeps its open files, selected tab, layout choice, and current draft in the running session. It doesn't save the draft to disk.
+The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Hiding it exits fullscreen, so the next E opens it beside chat at its saved width. Open files and the current draft stay in the running session; hiding doesn't save to disk. Selecting the editor's chat tab or using Escape to return to chat also resets fullscreen after the switch is accepted. Cancelling a dirty-file switch leaves the layout intact.
 
 Use the editor's fullscreen button to expand the editor, and the same button to restore the right pane. Drag the pane's left edge to resize it. The focused resize separator also supports Left/Right arrow keys. The pane preserves a minimum amount of chat space when the window becomes narrow.
 

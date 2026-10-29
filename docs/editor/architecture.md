@@ -54,7 +54,7 @@ The resolver requests `thread/turns/list` with `limit: 1`, descending order and 
 
 The persistent renderer skips in-progress turns. It refreshes after a visible response finishes, on explicit Refresh, and at most once per minute while idle. It looks back through at most 40 pages and caches up to 10 useful reviews; newer refreshes reuse immutable older records. Per-file expansion state is in memory and pruned with retained reviews.
 
-Recorded and native comparison opening publishes the requested active tab to the editor before reopening its surface. Otherwise a hidden editor still showing conversation state can auto-select its first old file and overwrite the intended diff selection. The regression fixtures cover both docked and expanded reopening.
+Recorded and native comparison opening publishes the requested active tab to the editor before reopening its surface. Otherwise a hidden editor still showing conversation state can auto-select its first old file and overwrite the intended diff selection. Hiding explicitly resets fullscreen and persists docked mode without changing saved width, files or draft contents. Accepted chat-tab/Escape transitions follow the same rule; cancelled transitions and temporary suspension/reparenting don't reset layout. The regression fixtures cover reopening comparisons after a fullscreen editor is hidden.
 
 | Bound | Current value |
 | --- | --- |

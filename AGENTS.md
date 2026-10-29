@@ -21,7 +21,7 @@ These rules apply inside this repository. They supplement workspace/user instruc
 
 ## Editor and native layout
 
-- Keep chat, the explorer, editor visibility, editor fullscreen and native tabs as separate capabilities. E hides/shows; fullscreen changes layout; close-all keeps pins. Avoid broad overlay/CSS changes that steal native hit targets.
+- Keep chat, the explorer, editor visibility, editor fullscreen and native tabs as separate capabilities. E hides/shows; hiding or an accepted return to the editor's chat tab/Escape exits fullscreen so reopening is docked. Temporary suspension/reparenting and cancelled switches preserve layout; close-all keeps pins. Avoid broad overlay/CSS changes that steal native hit targets.
 - Measure app chrome using qualified app-shell markers. Nested file/diff/content headers must not contribute to the editor's top inset. Check repeated layout updates, zoom, docked/fullscreen transitions, narrow windows, 1080p and 4K when relevant.
 - Native DOM adapters must verify active-page and matching chat identity, preserve native handlers and ownership, restore leased styles/listeners on disposal, and leave unknown layouts in their native presentation. Don't access private React stores or reparent/clone native comparison nodes.
 - Publish the requested active tab before reopening a hidden editor. Check E, conversation state, native bubble/hover selection, recorded-review opening and fullscreen restore when changing activation.

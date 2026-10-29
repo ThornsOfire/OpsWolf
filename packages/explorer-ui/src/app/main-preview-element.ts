@@ -326,7 +326,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     const nextState = normalizeState(state);
     if(nextState.activePath!==this._state.activePath) {
       if(nextState.activePath!==null) this._editorVisible=true;
-      else if(nextState.tabs.length>0) this._editorVisible=false;
+      else if(nextState.tabs.length>0) {this._editorVisible=false;this._resetFullscreen();}
     }
     const previousEditorPath = this._state.editor?.path ?? null;
     const nextEditorPath = nextState.editor?.path ?? null;
@@ -433,6 +433,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _setEditorVisible(open:boolean):void {
     this._editorVisible=open;
+    if(!open)this._resetFullscreen();
     if(!open && this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
     if(open && this._state.activePath===null && this._state.tabs[0]) {
       this._dispatchActivate({kind:'file',path:this._state.tabs[0].path});
@@ -440,6 +441,12 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     // Visibility changes leave the active file, draft, and tab collection intact.
     if(this._state.activePath===null) this._renderPanel();
     this._syncSuppression();
+  }
+
+  _resetFullscreen():void {
+    if(this._panePreference.docked)return;
+    this._panePreference.docked=true;
+    this._savePanePreference();
   }
 
   _render(): void {
