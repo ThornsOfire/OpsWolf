@@ -93,5 +93,3 @@ try{
  await check('No unhandled browser errors',`errors.length===0`);
  console.log(JSON.stringify({passed:true,checks},null,2));
 }finally{await browser.close();await new Promise(r=>server.close(r));await stop();}
-
-
