@@ -85,6 +85,10 @@ try {
   await browser.command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...ePoint});
   await browser.command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...ePoint});await delay(80);
   await check('Real pointer docks again through E in the native end slot', `viewer.hasAttribute('data-editor-pane-open')`);
+  await ev(`window.savedState={...state};state={activePath:null,tabs:[],enabledPreviewers:[]};show()`);await delay(80);
+  await check('Empty editor retains visible disabled E without covering chat', `!!headerE()&&headerE().disabled&&getComputedStyle(q('.surface')).display==='none'&&!document.querySelector('#chat').hasAttribute('inert')`);
+  await ev(`state=savedState;show()`);await delay(80);
+  await check('Opening a file enables the existing header E', `!!headerE()&&!headerE().disabled&&viewer.hasAttribute('data-editor-pane-open')`);
   await ev(`viewer.setSuspended(true)`);
   await check('Inactive chats restore native layout and remove header E', `!headerE()&&document.querySelector('#chat').style.maxWidth==='98%'&&!document.querySelector('#chat').hasAttribute('inert')`);
   await ev(`viewer.setSuspended(false);rejectClose=false;q('.editor-pane-close').click()`);

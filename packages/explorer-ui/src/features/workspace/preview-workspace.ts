@@ -332,8 +332,7 @@ closePreviewTab(path: string, announce = true): void {
         else {
             this.syncMainPreview();
         }
-        if (!this.previewTabs.length)
-            this.host.detachMainPreview(false);
+        // Keep the empty shell mounted so the native header E remains discoverable.
         this.host.renderVisible();
         if (announce)
             this.host.announce(`${closed.name} closed`);

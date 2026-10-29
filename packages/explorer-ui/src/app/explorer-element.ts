@@ -1449,7 +1449,7 @@ export class CodeCodexElement extends HTMLElement {
         if (nextSurface && this.#workspaceSession.context && !this.#previewWorkspace.tabStore.items.length && this.#previeweditingSettings.restoreDetachedDraft(this.#workspaceSession.context))
             return;
         if (nextSurface) this.#previewWorkspace.restorePinnedFiles();
-        if (nextSurface && this.#previewWorkspace.tabStore.items.length) {
+        if (nextSurface) {
             this.#ensureMainPreview();
             this.#previewWorkspace.syncMainPreview();
         }
@@ -2390,6 +2390,8 @@ export class CodeCodexElement extends HTMLElement {
                 this.#treeinteractionSettings.model.commitLoad("", list);
                 diagnostic.event('root listing', 'applied', { entryCount: list.entries.length, hasNextPage: !!list.nextCursor, generation });
                 this.#setState("ready");
+                this.#ensureMainPreview();
+                this.#previewWorkspace.syncMainPreview();
                 this.#treeinteractionSettings.renderTree();
                 if (!this.#previeweditingSettings.restoreDetachedDraft(context))
                     this.#announce(`${context.projectName} loaded`);
@@ -2727,7 +2729,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#queuedMainPreviewReconcile = undefined;
         this.#detachMainPreview();
         this.#mainPreviewSurface = queued.surface;
-        if (queued.surface && this.#previewWorkspace.tabStore.items.length) {
+        if (queued.surface) {
             this.#ensureMainPreview();
             this.#previewWorkspace.syncMainPreview();
         }

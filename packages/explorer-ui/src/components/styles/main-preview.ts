@@ -1809,4 +1809,5 @@ export const mainPreviewStyles = String.raw`
   .preview-mode-button:disabled { opacity: .5; cursor: default !important; }
   .editor-pane-toggle { width:28px; padding-inline:0 !important; font-weight:600; }
   .editor-pane-toggle[hidden] { display:none !important; }
+  :host(:not([data-has-files])) .surface { display:none !important; }
 `;

@@ -370,6 +370,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _render(): void {
     const focus = this._captureFocus();
+    this.toggleAttribute("data-has-files", this._state.tabs.length > 0);
     this.toggleAttribute("data-file-active", this._state.activePath !== null);
     this.toggleAttribute("data-editing", Boolean(this._state.editor));
     this._renderTabs();

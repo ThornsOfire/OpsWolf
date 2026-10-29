@@ -381,3 +381,6 @@ not save automatically. Saving still uses the existing conflict checks and
 The compact **E** control lives in the native chat-header action row, beside
 New tab, and switches between the right editor pane and expanded editor.
 It falls back to the editor tab row when that header slot is unavailable.
+
+The header E is visible before any file opens and after the last file closes;
+it stays disabled until a file is available. The empty editor does not cover chat.
