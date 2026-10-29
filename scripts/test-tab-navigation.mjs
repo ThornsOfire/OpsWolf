@@ -9,6 +9,7 @@ const bundle = await build({ bundle:true, write:false,format:'iife',target:['chr
   stdin:{contents:`import {registerMainPreviewElement,MAIN_PREVIEW_TAG} from './main-preview';import {PreviewWorkspaceController} from './features/workspace/preview-workspace';import {PinnedFiles} from './features/preview/pinned-files';registerMainPreviewElement();Object.assign(window,{fixtureTag:MAIN_PREVIEW_TAG,PreviewWorkspaceController,PinnedFiles});`,resolveDir:resolve(ui,'src'),loader:'ts'} });
 const setup = `
 window.errors=[];addEventListener('error',e=>errors.push(e.message));addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
+localStorage.setItem('code-codex:word-wrap:v1','true');
 window.viewer=document.createElement(fixtureTag);document.querySelector('main').append(viewer);window.q=s=>viewer.shadowRoot.querySelector(s);
 window.makeView=path=>({kind:'text',path,name:path.split('/').at(-1),text:'const value = 1;',sizeBytes:16,truncated:false,editable:true,version:'a'.repeat(64),lineEnding:'lf'});
 window.makeController=root=>{
@@ -37,6 +38,7 @@ const browser=await launchFixture(`http://127.0.0.1:${server.address().port}`),e
 async function check(name,expression){assert.equal(await ev(expression),true,name);checks.push(name);}
 async function click(selector){const point=await ev(`(()=>{const el=q(${JSON.stringify(selector)});el.scrollIntoView({block:'nearest',inline:'nearest'});const r=el.getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);await browser.command('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});await browser.command('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});await delay(50);}
 try{
+ await check('Editor starts with persisted word wrap without custom-element construction errors',`viewer.hasAttribute('data-word-wrap')&&typeof viewer.setState==='function'&&q('.word-wrap-toggle').getAttribute('aria-pressed')==='true'&&errors.length===0`);
  await check('Twelve documents remain open',`controller.previewTabs.length===12&&q('.tab-strip').scrollWidth>q('.tab-strip').clientWidth`);
  const point=await ev(`(()=>{const r=q('.tab-strip').getBoundingClientRect();return{x:r.x+40,y:r.y+r.height/2}})()`);
  await browser.command('Input.dispatchMouseEvent',{type:'mouseMoved',...point});

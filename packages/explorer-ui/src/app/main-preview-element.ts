@@ -208,8 +208,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._tabList.addEventListener("click", (event) => this._onTabListClick(event));
     this._tabList.addEventListener("keydown", (event) => this._onTabListKeyDown(event));
     this._shadow.addEventListener("keydown", (event) => this._onShadowKeyDown(event as KeyboardEvent));
-    this._render();
-    this._syncWordWrap();
+    // Host attributes must wait until connection: createElement validates the constructor.
   }
 
   _languageCleanup: (() => void) | undefined;
@@ -221,6 +220,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.ownerDocument.defaultView?.addEventListener("code-codex:plugin-loaded", this._onPluginLoaded);
     if (this._clippedLayout) this.dataset.clippedLayout = "true";
     this._render();
+    this._syncWordWrap();
     this._syncSuppression();
     queueMicrotask(() => {
       if (this._connected) this._scrollSelectedTabIntoView();
