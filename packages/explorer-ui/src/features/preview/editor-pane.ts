@@ -53,7 +53,7 @@ export class EditorPaneLayout {
 
   private refresh(): void {
     if (!this.parent) return;
-    const width = editorPaneWidth(this.width, this.parent.getBoundingClientRect().width);
+    const width = editorPaneWidth(this.width, this.parent.clientWidth);
     this.host.style.setProperty('--cle-editor-pane-width', `${width}px`);
     this.host.style.setProperty('--cle-editor-pane-top', `${nativeHeaderInset(this.parent)}px`);
     const desired = new Set([...this.parent.children].filter((child): child is HTMLElement =>

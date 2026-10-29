@@ -635,7 +635,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     if(view.kind==='native-diff'){
       this.setAttribute('data-native-diff-active','');
       const mount=this.ownerDocument.createElement('div');mount.className='native-diff-mount';
-      mount.style.cssText='height:100%;width:100%;min-height:0;background:var(--cle-main-bg);pointer-events:none';
+      mount.style.cssText='height:100%;min-height:0;background:var(--cle-main-bg);pointer-events:none';
       mount.dataset.threadId=view.threadId;mount.id=this._panelId(view.path);mount.tabIndex=-1;
       mount.setAttribute('role','tabpanel');mount.setAttribute('aria-labelledby',this._tabId(view.path));mount.setAttribute('aria-label','Native Changes comparison');
       this._panelMount.replaceChildren(mount);return;
@@ -2308,11 +2308,13 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._paneResizeCleanup?.();
     const handle = event.currentTarget as HTMLElement;
     const startX = event.clientX;
-    const startWidth = this.getBoundingClientRect().width;
+    const bounds=this.getBoundingClientRect();
+    const startWidth = Number.parseFloat(this.ownerDocument.defaultView!.getComputedStyle(this).width);
+    const scale=bounds.width/startWidth||1;
     handle.setPointerCapture(event.pointerId);
     const move = (next: PointerEvent) => {
       if (next.pointerId !== event.pointerId) return;
-      this._panePreference.width = Math.max(260, Math.min(1200, startWidth + startX - next.clientX));
+      this._panePreference.width = Math.max(260, Math.min(1200, startWidth + (startX - next.clientX)/scale));
       if (this.parentElement) this._editorPane.apply(this.parentElement, this._panePreference.width);
     };
     const finish = () => { cleanup(); this._savePanePreference(); };

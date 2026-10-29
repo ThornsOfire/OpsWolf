@@ -109,6 +109,14 @@ export class NativeDiffHost {
   this.layout.set(aside,'position','fixed');this.layout.set(aside,'margin','0px');this.layout.set(aside,'min-width','0px');this.layout.set(aside,'pointer-events','auto');
   this.styleObserver?.observe(aside,{attributes:true,attributeFilter:['style']});
   this.layout.set(aside,'background','var(--color-surface, #1d1d1c)');
+  // The native outer divider can be a top-layer popover, above every z-index.
+  // Only our pane resizer owns the hosted outer edge; internal diff dividers stay native.
+  for(const separator of aside.querySelectorAll<HTMLElement>('[role="separator"][aria-label="Resize workspace panes"][aria-orientation="vertical"]')){
+   if(panel.contains(separator))continue;
+   const overlay=separator.closest<HTMLElement>('[popover="manual"]')??separator;
+   if(!aside.contains(overlay)||overlay.contains(panel))continue;
+   this.layout.set(overlay,'display','none');this.styleObserver?.observe(overlay,{attributes:true,attributeFilter:['style']});
+  }
   const viewport=workspace.querySelector<HTMLElement>('[data-app-shell-main-content-layout]');
   if(viewport){this.layout.set(viewport,'width','100%');this.layout.set(viewport,'max-width','100%');if(viewport.firstElementChild instanceof HTMLElement)this.layout.set(viewport.firstElementChild,'width','100%');}
   for(let node=panel.parentElement;node&&node!==aside;node=node.parentElement)if(node.style.width||node.style.minWidth){this.layout.set(node,'width','100%');this.layout.set(node,'min-width','0px');}

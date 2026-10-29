@@ -198,6 +198,7 @@ export const mainPreviewStyles = String.raw`
   :host([data-editor-pane]:not([data-editor-pane-open])) .tab-strip { visibility: hidden; }
   :host([data-editor-pane-open]) .editor-pane-resizer { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 4; cursor: col-resize; pointer-events: auto; touch-action: none; }
   .editor-pane-resizer:focus-visible { outline: 2px solid var(--cle-main-focus); outline-offset: -2px; }
+  :host([data-editor-pane-open]) .native-diff-mount { margin-left:6px; }
   .editor-pane-toggle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Native title-bar controls retain their own hit targets above our pane.
