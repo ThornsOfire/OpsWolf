@@ -24,7 +24,9 @@ async function check(name,expr){assert.equal(await ev(expr),true,name);checks.pu
 async function until(expr){for(let i=0;i<100;i++){if(await ev(expr))return;await delay(50);}throw Error('Condition not ready: '+expr);}
 async function click(selector){const point=await ev(`(()=>{const r=q(${JSON.stringify(selector)}).getBoundingClientRect();return{x:r.x+r.width/2,y:r.y+r.height/2}})()`);for(const type of ['mousePressed','mouseReleased'])await browser.command('Input.dispatchMouseEvent',{type,button:'left',clickCount:1,...point});await delay(100);}
 try{
- await ev(`document.querySelector('#pill').click()`);await until(`!!q('.native-diff-mount')&&originalAside.style.position==='fixed'`);
+ await ev(`workspace.activePreviewPath=null;workspace.syncMainPreview();viewer._setEditorVisible(false);document.querySelector('#pill').click()`);await delay(150);
+ await check('Bubble from a hidden conversation activates Changes instead of the first source file',`workspace.activePreviewPath==='native-diff://thread-fixture'&&!!viewer.nativeDiffSurface()`);
+ await until(`!!q('.native-diff-mount')&&originalAside.style.position==='fixed'`);
  await check('Native comparison becomes a Changes tab beside ordinary editable source tabs',`workspace.previewTabs.length===2&&workspace.previewTabs[1].view.kind==='native-diff'&&q('.tab-strip').textContent.includes('Changes')&&q('.tab-strip').textContent.includes('notes.md')`);
  await check('Native renderer retains original parent and event ownership',`nativePanel.parentElement===originalParent&&nativePanel.isConnected&&nativePanel.querySelector('#native-mode')===document.querySelector('#native-mode')`);
  await check('Docked native surface matches editor target bounds',`(()=>{const a=originalAside.getBoundingClientRect(),b=q('.native-diff-mount').getBoundingClientRect();return Math.abs(a.left-b.left)<1&&Math.abs(a.top-b.top)<1&&Math.abs(a.width-b.width)<1&&Math.abs(a.height-b.height)<1})()`);
@@ -69,6 +71,10 @@ try{
  await ev(`window.originalNativeClose=document.querySelector('[aria-label="Close Changes tab"]');originalNativeClose.setAttribute('aria-label','Different host layout')`);await until(`!ports.hasTab()&&originalAside.style.position!=='fixed'`);
  await check('Unknown native controls restore original view without closing its renderer',`nativePanel.isConnected&&document.querySelector('[data-app-shell-tab-controller]').style.display!=='none'&&closeCalls===1`);
  await ev(`originalNativeClose.setAttribute('aria-label','Close Changes tab');document.querySelector('#pill').click()`);await until(`ports.hasTab()&&originalAside.style.position==='fixed'`);
+ await ev(`viewer._panePreference.docked=false;workspace.activePreviewPath=null;workspace.syncMainPreview();viewer._setEditorVisible(false);document.querySelector('#pill').click()`);await until(`!!viewer.nativeDiffSurface()&&originalAside.style.display==='block'`);
+ await check('Bubble reopening from expanded conversation preserves expanded mode and selects the comparison',`!viewer.hasAttribute('data-editor-pane')&&viewer.nativeDiffSurface().getBoundingClientRect().width>1000&&workspace.activePreviewPath==='native-diff://thread-fixture'`);
+ await click('.editor-fullscreen-toggle');await delay(100);
+ await check('Restoring the reopened comparison returns it to the right pane',`viewer.hasAttribute('data-editor-pane-open')&&viewer.nativeDiffSurface().getBoundingClientRect().width<1000&&Math.abs(originalAside.getBoundingClientRect().left-viewer.nativeDiffSurface().getBoundingClientRect().left)<1`);
  await ev(`controller.dispose()`);
  await check('Disposal restores native placement and native tab visibility',`originalAside.style.position!=='fixed'&&document.querySelector('[data-app-shell-tab-controller]').style.display!=='none'&&!document.querySelector('[data-code-codex-owned="native-comparison-probe"]')`);
  await check('No unhandled browser errors',`errors.length===0`);

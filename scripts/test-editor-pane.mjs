@@ -131,6 +131,9 @@ try {
   await check('Suspending restores native header size and removes compact style', `document.querySelector('header').getBoundingClientRect().height===62&&!document.querySelector('[data-code-codex-compact-header]')&&!document.querySelector('style[data-code-codex-owned="compact-header"]')`);
   await ev(`viewer.setSuspended(false);show()`);await delay(80);
   await check('Resuming reapplies compact header exactly once', `document.querySelector('header').getBoundingClientRect().height===32&&document.querySelectorAll('style[data-code-codex-owned="compact-header"]').length===1`);
+  await ev(`document.querySelector('#chat').insertAdjacentHTML('afterbegin','<header id="content-header" style="position:absolute;top:34px;left:0;right:0;height:24px">Content toolbar</header>');window.headerInsets=[];for(let i=0;i<4;i++){document.querySelector('#content-header').style.top=(34+i*6)+'px';viewer._syncSuppression();headerInsets.push(parseFloat(viewer.style.getPropertyValue('--cle-editor-pane-top')));}`);await delay(80);
+  await check('Content toolbars cannot repeatedly push the editor below the native header', `headerInsets.every(value=>value===32)&&q('.tab-strip').getBoundingClientRect().top===document.querySelector('header').getBoundingClientRect().bottom`);
+  await ev(`document.querySelector('#content-header').remove();viewer._syncSuppression()`);
   await ev(`viewer.remove()`); await delay(60);
   await check('Disposal restores original native styles', `document.querySelector('#chat').style.maxWidth==='98%'&&document.querySelector('#chat').style.width===''`);
   await check('No unhandled errors', `errors.length===0`);

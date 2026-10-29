@@ -13,8 +13,12 @@ export function editorPaneWidth(requested: number, available: number): number {
 
 function nativeHeaders(parent: HTMLElement): HTMLElement[] {
   const scope = parent.closest('[data-app-shell-active-page="true"]') ?? parent.parentElement ?? parent;
-  return [...scope.querySelectorAll<HTMLElement>('header')].filter(header =>
+  const headers=[...scope.querySelectorAll<HTMLElement>('header')].filter(header =>
     !header.closest('[data-app-shell-active-page="false"]') && !header.closest('[data-code-codex-owned]'));
+  const shellHeaders=headers.filter(header=>header.matches('header[data-app-shell-titlebar],header[data-app-shell-application-menu-bar],header[data-app-shell-header-edge-scroll]'));
+  // Native file/diff readers also render headers. Measuring those as app chrome
+  // feeds their content position back into the editor's top inset on each layout.
+  return shellHeaders.length?shellHeaders:headers.filter(header=>header.parentElement===parent||header.parentElement===parent.parentElement);
 }
 
 export function nativeHeaderInset(parent: HTMLElement): number {

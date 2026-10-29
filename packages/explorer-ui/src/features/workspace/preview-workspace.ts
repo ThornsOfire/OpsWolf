@@ -45,7 +45,9 @@ export class PreviewWorkspaceController {
    if(this.previewTabs.length>=MAX_PREVIEW_TABS)this.evictUnpinnedTab();
    this.tabStore.append({path,name:'Changes',view:{kind:'native-diff',path,name:'Changes',threadId},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false});
   }
-  this.activePreviewPath=path;preview.showEditor?.();this.syncMainPreview();this.host.renderVisible();
+  // Publish the requested tab before reopening: a hidden conversation may
+  // otherwise auto-select its first stale file and overwrite this activation.
+  this.activePreviewPath=path;this.syncMainPreview();preview.showEditor?.();this.host.renderVisible();
  }
  restoreDetachedTab(saved:Pick<PreviewTab,"path"|"name"|"view">):PreviewTab {
  const tab:PreviewTab={instanceId:this.tabStore.nextInstanceId(),path:saved.path,name:saved.name,revision:1,timer:undefined,modifiedDuringSave:false,dirty:false,view:saved.view};this.tabStore.append(tab);return tab;
@@ -67,7 +69,7 @@ export class PreviewWorkspaceController {
       this.tabStore.append(tab);
     }
     else if(tab.view.kind==='git-diff')tab.view={...tab.view,content,openSourcePath};
-    this.activePreviewPath=tabPath;preview.showEditor?.();this.syncMainPreview();this.host.renderVisible();
+    this.activePreviewPath=tabPath;this.syncMainPreview();preview.showEditor?.();this.host.renderVisible();
   }
   async openGitDiff(hash: string,path: string): Promise<void> {
     const normalizedPath=path.replaceAll("\\","/");
