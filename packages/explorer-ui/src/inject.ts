@@ -1,5 +1,6 @@
 import {nativeSettingsBackgroundCss} from './native-background-surfaces';
 import {collapseNativeSidebarOnStartup} from './native-sidebar';
+import {installChatReading} from './host/native-surfaces/chat-reading';
 import { optionalPluginExport } from './utility-plugin-facade';
 import { monitorStartupReadiness } from './startup-readiness';
 import { getBootstrapConfig } from "./bridge";
@@ -723,6 +724,7 @@ export function installInjector(): void {
   installGlowHorizonBackgroundStyle();
   installReselectionListener();
   const start = () => {
+    installChatReading();
     const startupTransitionPromise = getEarlyStartupTransition();
     removeSupersededExplorers();
     const existing = document.querySelector<CodeCodexElement>(EXPLORER_TAG);

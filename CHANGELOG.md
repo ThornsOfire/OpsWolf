@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Paused chat reading keeps a visible text block anchored during streaming and earlier-content reflow in qualified native layouts. A Jump to latest action returns to native following; cached chats release their anchors. This candidate still needs live-host verification.
+
 - Shared bubble tooltips for the file explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, with keyboard focus, Escape dismissal, theme colors, and viewport-aware positioning.
 - A single middle-page strip on qualified native shells, with pinned Chat, native page selection/close proxies, wheel scrolling and an overflow dropdown. Chat and the selected native page use the middle area one at a time instead of competing across an internal divider; native action handlers and sessions stay intact.
 - A local file/preview/PDF action to open or move eligible native tabs into the editor through normal workspace reads. The source stays open on cancellation, save/read failure, unsupported previews, or exposed native editing state; no native draft is silently discarded.
