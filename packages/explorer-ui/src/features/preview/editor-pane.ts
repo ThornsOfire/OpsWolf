@@ -44,12 +44,12 @@ export class EditorPaneLayout {
     if (this.parent !== parent) {
       this.restore();
       this.parent = parent;
-      this.observer = new ResizeObserver(() => this.refresh());
+      this.observer = new ResizeObserver(this.schedule);
       this.observer.observe(parent);
       for (const header of nativeHeaders(parent)) this.observer.observe(header);
       this.childrenObserver = new MutationObserver(records => {
         if (!records.some(record => record.type === 'childList' || this.originals.has(record.target as HTMLElement))) return;
-        if (!this.frame) this.frame = requestAnimationFrame(() => { this.frame = 0; this.refresh(); });
+        this.schedule();
       });
       const scope = parent.closest('[data-app-shell-active-page="true"]') ?? parent;
       this.childrenObserver.observe(scope, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
@@ -57,6 +57,10 @@ export class EditorPaneLayout {
     this.width = width;
     this.refresh();
   }
+
+  private schedule = (): void => {
+    if (this.parent && !this.frame) this.frame = requestAnimationFrame(() => { this.frame = 0; this.refresh(); });
+  };
 
   private refresh(): void {
     if (!this.parent) return;
@@ -90,7 +94,7 @@ export class EditorPaneLayout {
         this.lease(header, 'max-width', 'none');
         this.lease(header, 'box-sizing', 'border-box');
         top = (rect.top - bounds.top) / scale;
-        const rightSlots = [...header.querySelectorAll<HTMLElement>('[data-app-shell-titlebar-slot="content"][data-app-shell-focus-area="right-panel"]')];
+        const rightSlots = header.hasAttribute('data-code-codex-middle-owner') ? [] : [...header.querySelectorAll<HTMLElement>('[data-app-shell-titlebar-slot="content"][data-app-shell-focus-area="right-panel"]')];
         const hasRightTabs = [...header.querySelectorAll<HTMLElement>('[data-app-shell-tab-controller="right"]')].some(tab => getComputedStyle(tab).display !== 'none' && !tab.closest('[hidden],[aria-hidden="true"]'));
         let rightWidth = 0;
         if (rightSlots.length === 1) {

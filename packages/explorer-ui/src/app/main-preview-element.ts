@@ -441,6 +441,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   showEditor(): void { this._setEditorVisible(true); }
+  revealMiddle(): void { if (this._editorVisible && !this._panePreference.docked) this._setEditorVisible(false); }
 
   revealMarkdownHeading(path:string,fragment:string):void {this._linkUi.queueHeading(path,fragment);}
 

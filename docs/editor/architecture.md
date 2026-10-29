@@ -14,6 +14,7 @@ Paths below are relative to the repository root.
 | Editor DOM, tabs, metadata controls, source/preview switching | `packages/explorer-ui/src/app/main-preview-element.ts` |
 | Pane geometry and native-header reservation | `packages/explorer-ui/src/features/preview/editor-pane.ts` |
 | Embedded browser geometry notifications through the native resize listener | `packages/explorer-ui/src/features/preview/native-browser-geometry.ts` |
+| Primary Chat/native middle-page presentation and local-file transfer actions | `packages/explorer-ui/src/features/preview/native-middle-pages.ts` |
 | E control and scoped compact native header | `packages/explorer-ui/src/features/preview/editor-header-control.ts` |
 | Tab collection and per-project pins | `packages/explorer-ui/src/features/preview/tab-store.ts`, `pinned-files.ts` |
 | Preview requests, full text transfer, stale-result checks | `packages/explorer-ui/src/features/workspace/preview-requests.ts` |
@@ -36,6 +37,10 @@ For the qualified active page with a sibling shell titlebar, docked layout lease
 Qualified browser panels also release fixed/minimum widths on their inner native frame while docked. `NativeBrowserGeometry` tracks the visible browser content viewport's position and size, coalesces notifications to animation frames, and emits the native window resize event only when geometry changes. This invokes Codex's own embedded-surface bounds handler; it does not call a private browser-host bridge, reload pages, or move native nodes. Position-only divider changes are covered even when ResizeObserver reports no size change. Release disconnects observation and makes one final bounds comparison after style restoration. Hidden/inactive pages and the separately owned Changes host are excluded; stable geometry produces no recurring resize notifications.
 
 ## Reading and editing source
+
+`NativeMiddlePages` qualifies the current chat against the native annotations before installing a pinned Chat/page proxy strip. Native tabs, panels, and menu anchors stay under their original parents. Scoped attribute/style rules hide the nested divider and alternate between the original conversation viewport and an unowned native right panel at full middle width. The separately owned Changes host is excluded from page hiding. Original attributes, header variables, styles and controls are released on disposal, header replacement, unknown main-controller placements, or context mismatch.
+
+The controller recognizes only verified `text-editor:local:` and `artifact:local:` file identities, normalizes the absolute path within the current project, and delegates opening to application wiring. That port uses existing draft/save guards and the authenticated reader, then reports success only for the same generation, project, tab instance and selected file after loading. Native close runs only after success and a second context check; native input/editor surfaces keep their original tab. No native draft is copied or saved by this action. See [middle pages](middle-pages.md) for controls and compatibility limits.
 
 1. `PreviewWorkspaceController` opens or reuses a tab for a relative project path and assigns a tab instance/revision.
 2. `PreviewRequestsController` requests the native preview. Larger supported text uses complete transfer metadata and validated chunks instead of accepting a sliced inline response.

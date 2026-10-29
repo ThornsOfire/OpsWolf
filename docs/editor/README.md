@@ -16,6 +16,8 @@ The compact native header is 32 CSS pixels tall; editor tabs and the file-contro
 
 ## Opening and managing files
 
+The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native pages, with one page visible at a time. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
+
 Click a file in the explorer to open it. **E** can also open an empty editor before you've chosen a file.
 
 | Control | Behavior |

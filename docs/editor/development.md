@@ -34,6 +34,7 @@ These commands run from the repository root after UI dependencies are installed.
 | --- | --- |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
 | Native browser/file boundaries, titlebar controls, tab switching, divider drags, embedded-surface position/size notifications and cleanup at zoom | `node scripts/test-native-pane-boundary.mjs` |
+| Single middle pages, pinned Chat, native handlers, overflow, local-file transfer lifecycle and context guards | `node scripts/test-native-middle-pages.mjs` |
 | First chat selection, restored-chat startup, pointer/keyboard activation, delayed readiness and manual reopen | `node scripts/test-native-sidebar.mjs` |
 | Tab wheel/drag/dropdown/pins and close behavior | `node scripts/test-tab-navigation.mjs` |
 | Save/discard/cancel, failed/stale saves and switching | `node scripts/test-close-dialog.mjs` |
@@ -41,7 +42,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Large text and explicit large Markdown rendering | `node scripts/test-large-text.mjs` |
 | Explorer-to-chat absolute path drag | `node scripts/test-drag-file-path.mjs` |
 | Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
-| Citation integration with the actual explorer and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
+| Citation/local-link/native-file transfer integration with the actual explorer, reader and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
 | Preview link classification, tooltips, external/app confirmation, saved permissions and stale-dialog cancellation | `node scripts/test-preview-links.mjs` |
 | Native record history, per-file disclosures, coverage, card restoration | `node scripts/test-change-review.mjs` |
 | Hosting actual native comparison DOM in editor layout | `node scripts/test-native-diff-host.mjs` |

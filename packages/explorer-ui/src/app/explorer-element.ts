@@ -1,5 +1,7 @@
 import { ChangeReviewController } from "../features/workspace/change-review";
+import { attachTooltips } from "../components/tooltips";
 import { NativeDiffHost } from "../features/preview/native-diff-host";
+import { NativeMiddlePages } from "../features/preview/native-middle-pages";
 import { chooseEditorClose,requestDirtyEditorClose } from "../features/preview/close-dialog";
 import { applyPluginCardIcons } from '../components/plugin-icons';
 import {attachPluginPins} from '../components/plugin-pins';
@@ -469,6 +471,7 @@ export class CodeCodexElement extends HTMLElement {
     readonly #blackHoleSettingsCloseButton: HTMLButtonElement;
     #languageCleanup: (() => void) | undefined;
     #pinCleanup: (()=>void) | undefined;
+    #tooltipCleanup: (()=>void) | undefined;
     #languageSubscription: (() => void) | undefined;
     readonly #blackHoleNumericControls = new Map<BlackHoleNumericSettingKey, Readonly<{
         definition: BlackHoleNumericControlDefinition;
@@ -570,9 +573,9 @@ export class CodeCodexElement extends HTMLElement {
             <div class="root-label">Waiting for local task</div>
           </div>
           <div class="masthead-actions">
-            <button class="icon-button refresh" type="button" title="Refresh visible directories" aria-label="Refresh visible directories">${icons.refresh}</button>
-            <button class="icon-button collapse" type="button" title="Collapse explorer" aria-label="Collapse explorer">${icons.collapse}</button>
-            <button class="icon-button disable" type="button" title="Hide until a conversation is selected" aria-label="Hide Code-Codex until a conversation is selected">${icons.close}</button>
+            <button class="icon-button refresh" type="button" data-tooltip="Refresh visible directories" aria-label="Refresh visible directories">${icons.refresh}</button>
+            <button class="icon-button collapse" type="button" data-tooltip="Collapse explorer" aria-label="Collapse explorer">${icons.collapse}</button>
+            <button class="icon-button disable" type="button" data-tooltip="Hide until a conversation is selected" aria-label="Hide Code-Codex until a conversation is selected">${icons.close}</button>
           </div>
         </header>
         <div class="file-search-toolbar" hidden>
@@ -639,7 +642,7 @@ export class CodeCodexElement extends HTMLElement {
       ${blinkingSquaresPanelMarkup()}
       ${startupTransitionPanelMarkup()}
       ${asciiTilesPanelMarkup()}${surfaceOpacityPanelMarkup(bilingualLabelMarkup)}
-      <button class="collapsed-tab" type="button" title="Open Code-Codex" aria-label="Open Code-Codex">${icons.collapse}</button>
+      <button class="collapsed-tab" type="button" data-tooltip="Open Code-Codex" aria-label="Open Code-Codex">${icons.collapse}</button>
       <div class="sr-only live-region" aria-live="polite" aria-atomic="true"></div>
     `;
         applyPluginCardIcons(this.#shadow);
@@ -835,6 +838,7 @@ export class CodeCodexElement extends HTMLElement {
     #changeReview:ChangeReviewController|undefined;
     #citations:CitationController|undefined;
     #nativeDiffHost:NativeDiffHost|undefined;
+    #nativeMiddlePages:NativeMiddlePages|undefined;
     connectedCallback(): void {
         if (this.#connected)
             return;
@@ -866,6 +870,14 @@ export class CodeCodexElement extends HTMLElement {
             setWordWrap:enabled=>owner.#mainPreview?.setNativeWordWrapState(enabled),
         });
         this.#nativeDiffHost.start();
+        this.#nativeMiddlePages??=new NativeMiddlePages({element:this,
+            get context(){return owner.#workspaceSession.context;},
+            get enabled(){return reviewPorts.enabled;},
+            openFile:path=>owner.#openNativeFileInEditor(path),
+            revealMiddle:()=>owner.#mainPreview?.revealMiddle(),
+            announce:message=>owner.#announce(message),
+        });
+        this.#nativeMiddlePages.start();
         this.#citations??=new CitationController({element:this,
             get context(){return owner.#workspaceSession.context;},get enabled(){return reviewPorts.enabled;},
             get preview(){return owner.#mainPreview;},
@@ -887,6 +899,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#backgroundSettingsLanguage = parameterLanguage();
         this.#languageCleanup = localizeOwnedUi(this.#shadow);
         this.#pinCleanup = attachPluginPins(this.#shadow);
+        this.#tooltipCleanup = attachTooltips(this.#shadow);
         this.#languageSubscription = subscribeLanguage(() => this.#applyGlobalLanguage(parameterLanguage()));
         this.#syncBackgroundSettingsLanguagePresentation();
         for (const previewer of this.#readEnabledPreviewers())
@@ -1172,6 +1185,7 @@ export class CodeCodexElement extends HTMLElement {
           this.#citations?.dispose();
         this.#changeReview?.dispose();
         this.#nativeDiffHost?.dispose();
+        this.#nativeMiddlePages?.dispose();
         if (this.#customBackgroundClick)
             this.#shadow.removeEventListener('click', this.#customBackgroundClick, true);
         this.#customBackgroundClick = undefined;
@@ -1179,6 +1193,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#customBackground = undefined;
         this.#languageCleanup?.();
         this.#pinCleanup?.();this.#pinCleanup=undefined;
+        this.#tooltipCleanup?.();this.#tooltipCleanup=undefined;
         this.#languageCleanup = undefined;
         this.#languageSubscription?.();
         this.#languageSubscription = undefined;
@@ -2921,6 +2936,26 @@ export class CodeCodexElement extends HTMLElement {
         const switches=link.kind==='file'?link.path!==editing.drafts.path:link.ranges.some(c=>citationRelativePath(c.path,context.rootPath)!==editing.drafts.path);
         if(switches&&editing.drafts.path&&editing.isEditDirty())void this.#requestEditorClose(editing.drafts.path,open);else open();
     };
+    async #openNativeFileInEditor(path:string):Promise<boolean> {
+        const context=this.#workspaceSession.context,generation=this.#workspaceSession.generation;
+        if(!context)return false;
+        const current=()=>this.#connected&&this.#workspaceSession.generation===generation&&
+            this.#workspaceSession.context?.threadId===context.threadId&&this.#workspaceSession.context?.rootPath===context.rootPath;
+        let opened=false;
+        const open=()=>{if(!current())return;this.#previewWorkspace.openPreviewPath(path,path.split('/').at(-1)??path);opened=this.#activePreviewPath===path;};
+        const editing=this.#previeweditingSettings;
+        if(editing.drafts.path&&editing.drafts.path!==path&&editing.isEditDirty())await this.#requestEditorClose(editing.drafts.path,open);
+        else open();
+        if(!opened)return false;
+        const tab=this.#previewWorkspace.previewTabs.find(tab=>tab.path===path);
+        if(!tab)return false;
+        const deadline=Date.now()+15_000;
+        while(current()&&this.#activePreviewPath===path&&this.#previewWorkspace.previewTabs.includes(tab)&&Date.now()<deadline){
+            if(tab.view.kind!=='loading')return tab.view.kind!=='error'&&tab.view.kind!=='unsupported';
+            await new Promise(resolve=>setTimeout(resolve,50));
+        }
+        return false;
+    }
     #requestTreePreview(row:FlatTreeRow):void {
         const editing=this.#previeweditingSettings;
         const open=()=>this.#previewWorkspace.openPreviewTab(row);

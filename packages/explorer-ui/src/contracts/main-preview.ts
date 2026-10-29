@@ -5,4 +5,5 @@ export interface MainPreviewPort {
   readonly parentElement: HTMLElement | null;
   setState(state: MainPreviewState): void;
   showEditor?(): void;
+  revealMiddle?(): void;
 }
