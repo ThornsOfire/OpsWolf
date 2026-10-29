@@ -107,7 +107,8 @@ impl ChangeTracker {
   crate::application_paths::validate_directory_path(&self.directory).map_err(io_error)?;
   fs::create_dir_all(&self.directory).map_err(io_error)?;Ok(())
  }
- fn cleanup(&mut self,now:u64)->Result<(),WorkspaceError>{
+ fn cleanup(&mut self,now:u64)->Result<(),WorkspaceError>{self.cleanup_reserving(now,0)}
+ fn cleanup_reserving(&mut self,now:u64,reserve:u64)->Result<(),WorkspaceError>{
   self.prepare()?;
   let mut all=Vec::new();
   for project in fs::read_dir(&self.directory).map_err(io_error)?.flatten(){
@@ -128,10 +129,11 @@ impl ChangeTracker {
   }
   all.sort_by(|a,b|a.0.cmp(&b.0).then_with(||a.1.cmp(&b.1)));
   let mut bytes:u64=all.iter().map(|f|f.2).sum();
-  for (_,path,size) in all {if bytes<=HISTORY_BYTES{break;}fs::remove_file(path).map_err(io_error)?;bytes=bytes.saturating_sub(size);}
+  for (_,path,size) in all {if bytes<=HISTORY_BYTES.saturating_sub(reserve){break;}fs::remove_file(path).map_err(io_error)?;bytes=bytes.saturating_sub(size);}
   self.cached=None;Ok(())
  }
  pub fn begin(&mut self,workspace:&Workspace,thread:&str)->Result<(),WorkspaceError>{
+  self.active=None;
   self.cleanup(now_ms())?;
   let snapshot=workspace.review_snapshot()?;
   self.active=Some(Active{project:project_key(workspace),thread:thread_key(thread),snapshot});Ok(())
@@ -148,6 +150,13 @@ impl ChangeTracker {
    let old=before.entries.get(&path);let new=after.entries.get(&path);
    if old.zip(new).is_some_and(|(a,b)|match (&a.text,&b.text){(Some(x),Some(y))=>x==y,_=>a.fingerprint==b.fingerprint}){continue;}
    if old.is_none()&&!before.complete||new.is_none()&&!after.complete{continue;}
+   if new.is_none() {
+    match workspace.review_entry(&path,0){
+     Err(WorkspaceError::NotFound)=>{},
+     Ok(_)=>continue,
+     Err(_)=>{complete=false;continue;},
+    }
+   }
    if changes.len()>=2000||path_bytes+path.len()>256*1024{complete=false;break;}
    path_bytes+=path.len();
    let size=old.and_then(|e|e.text.as_ref()).map_or(0,String::len)+new.and_then(|e|e.text.as_ref()).map_or(0,String::len);
@@ -165,7 +174,7 @@ impl ChangeTracker {
    record.summary.unavailable=record.changes.len();record.summary.files=record.changes.iter().map(|c|c.info.clone()).collect();
    data=serde_json::to_vec(&record).map_err(|_|WorkspaceError::Internal)?;
   }
-  self.prepare()?;let directory=self.directory.join(&project);
+  self.cleanup_reserving(created,data.len() as u64)?;let directory=self.directory.join(&project);
   crate::application_paths::validate_directory_path(&directory).map_err(io_error)?;fs::create_dir_all(&directory).map_err(io_error)?;
   let path=directory.join(format!("{}.json",record.summary.id));
   use std::io::Write as _;
@@ -240,6 +249,7 @@ impl ChangeTracker {
   for i in 1..=3 {let path=project.join(format!("{:013}-{:016x}.json",now-10+i,i));let file=fs::File::create(path).unwrap();file.set_len(80*1024*1024).unwrap();}
   history.cleanup(now).unwrap();let files:Vec<_>=fs::read_dir(project).unwrap().flatten().collect();
   assert_eq!(files.len(),2);assert!(files.iter().map(|f|f.metadata().unwrap().len()).sum::<u64>()<=HISTORY_BYTES);
+  history.cleanup_reserving(now,80*1024*1024).unwrap();assert_eq!(fs::read_dir(history.directory.join("a".repeat(64))).unwrap().count(),1);
  }
 
 }
