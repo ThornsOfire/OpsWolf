@@ -134,7 +134,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       <div class="surface">
         <div class="editor-pane-actions">
           <button type="button" class="tab-pin-toggle" title="Pin this file for this project" aria-pressed="false">Pin</button>
-          <button type="button" class="open-files-toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
+          <button type="button" class="open-files-toggle" popovertarget="open-files-menu" popovertargetaction="toggle" title="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
           <button type="button" class="editor-pane-toggle" title="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
           <button type="button" class="editor-fullscreen-toggle" title="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
           <button type="button" class="editor-pane-close" title="Close editor pane" aria-label="Close editor pane">×</button>
@@ -143,13 +143,15 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         <div class="tab-strip" role="tablist" aria-label="Conversation and file previews"></div>
         <div class="panel-mount"></div>
       </div>
-      <div class="open-files-menu" popover="auto" role="menu" aria-label="Open files"></div>
+      <div id="open-files-menu" class="open-files-menu" popover="auto" role="menu" aria-label="Open files"></div>
     `;
     this._editorHeader=new EditorHeaderControl(this,this._required<HTMLButtonElement>(".editor-pane-toggle"));
     this._tabList = this._required<HTMLElement>(".tab-strip");
     this._panelMount = this._required<HTMLElement>(".panel-mount");
     this._openFilesMenu = this._required('.open-files-menu');
-    this._required('.open-files-toggle').addEventListener('click', () => this._toggleOpenFilesMenu());
+    this._openFilesMenu.addEventListener('beforetoggle', event => {
+      if((event as ToggleEvent).newState==='open') this._prepareOpenFilesMenu();
+    });
     this._openFilesMenu.addEventListener('toggle', () => {
       this._required('.open-files-toggle').setAttribute('aria-expanded', String(this._openFilesMenu.matches(':popover-open')));
     });
@@ -474,13 +476,11 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._openFilesMenu.replaceChildren(fragment);
   }
 
-  _toggleOpenFilesMenu(): void {
-    if (this._openFilesMenu.matches(':popover-open')) { this._openFilesMenu.hidePopover(); return; }
+  _prepareOpenFilesMenu(): void {
     this._renderOpenFilesMenu();
     const rect = this._required('.open-files-toggle').getBoundingClientRect();
     this._openFilesMenu.style.top = `${rect.bottom + 4}px`;
     this._openFilesMenu.style.right = `${Math.max(4, this.ownerDocument.documentElement.clientWidth - rect.right)}px`;
-    this._openFilesMenu.showPopover();
   }
 
   _startTabDrag(event: DragEvent): void {
@@ -1770,6 +1770,12 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _onShadowKeyDown(event: KeyboardEvent): void {
+    if(event.key==='Escape' && this._openFilesMenu.matches(':popover-open')) {
+      event.preventDefault();event.stopPropagation();
+      this._openFilesMenu.hidePopover();
+      this._required<HTMLButtonElement>('.open-files-toggle').focus();
+      return;
+    }
     if (
       this._state.editor &&
       event.key.toLocaleLowerCase() === "s" &&
