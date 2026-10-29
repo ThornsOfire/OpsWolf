@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/ThornsOfire/OpsWolf-Code-Rain",
+  "commit": "939d305a10b82d3258315f565c88ccc1f5f11e68",
+  "files": {
+    "renderer.mjs": {
+      "size": 7408,
+      "sha256": "6e3dbaf56c1e7a774538ddd95c8a81cdc3739b403f7e68f74ee595782f8df63e"
+    },
+    "state.mjs": {
+      "size": 5742,
+      "sha256": "ad8ba514fa40f78daa3af9b33bfc431106c224810078078c93da240023c4fffd"
+    },
+    "LICENSE": {
+      "size": 1130,
+      "sha256": "37e055ddf74cd1194667ae32c5241de021d3309f63f9587423c56f2fd10f035c"
+    }
+  }
+}

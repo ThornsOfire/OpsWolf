@@ -4,3 +4,6 @@ THIRD_PARTY_LICENSES.txt -text -whitespace
 # Downloadable plugin assets are verified by their exact SHA-256 bytes.
 # Preserve generated bundles, shader text and upstream notices on all platforms.
 releases/plugins/** -text -whitespace
+
+# Vendored Code Rain inputs are verified against exact reviewed source bytes.
+packages/explorer-ui/vendor/opswolf-code-rain/** -text
