@@ -9,7 +9,7 @@ Paths below are relative to the repository root.
 | Responsibility | Owner |
 | --- | --- |
 | Native-page qualification, injection and remount | `packages/explorer-ui/src/inject.ts`, `packages/explorer-ui/src/adapters/codex-26.715.ts` |
-| Native sidebar's one-time startup collapse | `packages/explorer-ui/src/native-sidebar.ts` |
+| Native sidebar's one-time collapse after first user chat selection | `packages/explorer-ui/src/native-sidebar.ts` |
 | Application wiring, authenticated workspace lifecycle, dirty-switch orchestration | `packages/explorer-ui/src/app/explorer-element.ts` |
 | Editor DOM, tabs, metadata controls, source/preview switching | `packages/explorer-ui/src/app/main-preview-element.ts` |
 | Pane geometry and native-header reservation | `packages/explorer-ui/src/features/preview/editor-pane.ts` |
@@ -109,7 +109,7 @@ Queue/highlight state is memory-only. References inserted into a message include
 | Pending citation group and active highlights | In memory; queue cleared on chat/project change or disposal; active ranges clear with tabs/context |
 | Sent citation paths and bounded quotes | Part of the user's ordinary chat message; no separate extension archive |
 | Original patch history | Codex's existing native history, outside a new extension snapshot archive |
-| Sidebar startup decision | Document-local Symbol; repeated bundle injection doesn't collapse it again |
+| Sidebar startup decision | Document-local Symbol; waits indefinitely for first trusted chat-row click/keyboard activation, then up to 30 seconds for matching activation and native toggle readiness; manual toggles cancel it; repeated injection doesn't duplicate it |
 | Build outputs, local test captures and developer probes | Ignored `dist/`, `target/`, `artifacts/`; not public source features |
 
 The fork's normal installation/settings/plugin/log storage follows the inherited application paths. A personal launcher may relocate supported data, but no personal Desktop path is required by this editor source.

@@ -30,7 +30,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 - **E** controls editor visibility; the separate fullscreen button controls layout. Hiding the editor keeps its open tabs and running-session draft. ([controls](https://github.com/ThornsOfire/code-codex/commit/64bc327))
 - The editor row's X closes unpinned tabs. Individual pinned-tab closes ask first and retain the pin for next session; Unpin removes the pin without closing the file. ([close behavior](https://github.com/ThornsOfire/code-codex/commit/730027e))
 - Chat/native-tab headers are compact, with slimmer editor tab and file-control rows. ([compact headers](https://github.com/ThornsOfire/code-codex/commit/1af10db))
-- The native Codex sidebar collapses once per launch. Manually reopening it keeps it open for that session; the explorer has independent controls. ([sidebar default](https://github.com/ThornsOfire/code-codex/commit/52eeb34))
+- The native Codex sidebar waits for your first chat selection before collapsing once per launch. Startup, project browsing and automatic chat restoration leave its native state alone. Manually toggling it opts out of further automatic collapse; the explorer has independent controls. ([initial sidebar behavior](https://github.com/ThornsOfire/code-codex/commit/52eeb34))
 
 ### Fixed
 

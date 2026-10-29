@@ -8,7 +8,7 @@ The file explorer, native Codex sidebar, chat, and editor are separate surfaces.
 
 Use the editor's fullscreen button to expand the editor, and the same button to restore the right pane. Drag the pane's left edge to resize it. The focused resize separator also supports Left/Right arrow keys. The pane preserves a minimum amount of chat space when the window becomes narrow.
 
-The native sidebar collapses once at startup through its own toggle. You can reopen it afterward; the extension won't keep snapping it shut. This startup behavior doesn't collapse the file explorer.
+The native sidebar keeps its normal startup state while you browse projects. After your first chat selection by pointer or keyboard, it waits for that chat to become active and collapses once through the native toggle. Automatically restoring a chat doesn't trigger it. You can reopen it afterward; the extension won't keep snapping it shut. Manually toggling the sidebar before choosing a chat also opts out for that launch. The file explorer has independent controls.
 
 The compact native header is 32 CSS pixels tall; editor tabs and the file-control row are 28 CSS pixels. Display scaling and application zoom change their physical pixel size.
 
