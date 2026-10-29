@@ -218,7 +218,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _languageCleanup: (() => void) | undefined;
 
   connectedCallback(): void {
-    if (this._connected) return;
+    if (this._connected) {this._syncSuppression();return;}
     this._connected = true;
     this._citationUi.start();
     this._languageCleanup = localizeOwnedUi(this._shadow);
@@ -234,6 +234,14 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   disconnectedCallback(): void {
     if (this._reparenting) return;
+    // A replacement may mount before deferred media disposal runs. Release our
+    // native leases now, before another editor records them as original state.
+    this._restoreSuppressedChildren();
+    this._editorPane.restore();
+    this._editorHeader.dispose();
+    this._nativeTitleObserver?.disconnect();this._nativeTitleObserverRoot=null;
+    this._syncNativeViewportBounds(this,null);
+    this._citationUi.closeMenu();
     setTimeout(() => {
       if (!this.isConnected) this._disposeDisconnected();
     }, 0);

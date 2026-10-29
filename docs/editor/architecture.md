@@ -118,6 +118,8 @@ The removed snapshot tracker's old retention settings are not current feature po
 
 ## Compatibility and scope
 
+Editor disconnect releases native layout reservations, hidden-chat attributes and header controls synchronously. Expensive reader/media cleanup may remain deferred, but a replacement must never capture another editor's leased styles as original native state. A same-element reconnect reapplies its layout; intentional `reparent()` moves preserve the existing editor session.
+
 This is a Windows desktop integration dependent on native markup. Several adapter labels target the inspected English shell. UI changes require checking new/empty chats, normal source tabs, native comparisons, fullscreen, cached inactive pages and current chat identity.
 
 Upstream update/plugin endpoints remain inherited. This documentation pass doesn't change distribution, install policy, or network behavior, and it isn't a new security audit. Existing license and third-party notices remain applicable.
