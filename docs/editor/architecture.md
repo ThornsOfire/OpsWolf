@@ -28,6 +28,8 @@ Paths below are relative to the repository root.
 
 Abbreviated sibling names in a cell resolve beside the preceding full source path. UI presentation uses capability ports; features don't import application elements or own the authenticated bridge.
 
+Pane top reservations measure marked app-shell headers. Legacy fallback is restricted to headers directly on the main surface or its parent; nested reader/content toolbars aren't app chrome. Including those toolbars creates a layout feedback loop that can push the editor downward.
+
 ## Reading and editing source
 
 1. `PreviewWorkspaceController` opens or reuses a tab for a relative project path and assigns a tab instance/revision.
@@ -51,6 +53,8 @@ The renderer supplies a cursor, not an arbitrary chat ID. The launcher derives t
 The resolver requests `thread/turns/list` with `limit: 1`, descending order and `itemsView: full`. The Rust projection accepts native completed file-change items, validates identifiers and paths, handles adds/deletes/update hunks and renames, and omits records outside the root. Multiple patches for a file remain sequential patches rather than a reconstructed net file diff. The workspace service's sensitive-file policy filters projected paths again.
 
 The persistent renderer skips in-progress turns. It refreshes after a visible response finishes, on explicit Refresh, and at most once per minute while idle. It looks back through at most 40 pages and caches up to 10 useful reviews; newer refreshes reuse immutable older records. Per-file expansion state is in memory and pruned with retained reviews.
+
+Recorded and native comparison opening publishes the requested active tab to the editor before reopening its surface. Otherwise a hidden editor still showing conversation state can auto-select its first old file and overwrite the intended diff selection. The regression fixtures cover both docked and expanded reopening.
 
 | Bound | Current value |
 | --- | --- |
