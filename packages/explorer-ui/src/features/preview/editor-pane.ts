@@ -1,4 +1,5 @@
 /** Reserves space for the editor without hiding or reparenting native chat. */
+import { NativeBrowserGeometry } from './native-browser-geometry';
 export const EDITOR_PANE_KEY = 'code-codex:editor-pane:v1';
 export interface EditorPanePreference { docked: boolean; width: number }
 export function readEditorPanePreference(storage: Storage): EditorPanePreference {
@@ -34,6 +35,7 @@ export class EditorPaneLayout {
   private observer: ResizeObserver | null = null;
   private childrenObserver: MutationObserver | null = null;
   private frame = 0;
+  private readonly browserGeometry = new NativeBrowserGeometry();
   private readonly originals = new Map<HTMLElement, Map<string, [string, string]>>();
   private width = 560;
   constructor(private readonly host: HTMLElement) {}
@@ -112,9 +114,20 @@ export class EditorPaneLayout {
     for (const aside of this.parent.querySelectorAll<HTMLElement>('aside[data-app-shell-focus-area="right-panel"]')) {
       if (aside.closest('[data-code-codex-owned],[data-app-shell-active-page="false"]')) continue;
       desired.add(aside); this.lease(aside, 'max-width', '100%');
+      // The native panel's inner frame can retain an explicit/minimum width even
+      // after its aside has been capped. Only adapt a qualified browser's frame.
+      for (const browser of aside.querySelectorAll<HTMLElement>('[data-browser-sidebar-primary-focus-target]')) {
+        const panel = browser.closest<HTMLElement>('[role="tabpanel"][data-app-shell-tab-panel-controller="right"]');
+        if (!panel || !aside.contains(panel)) continue;
+        for (let frame = panel.parentElement; frame && frame !== aside; frame = frame.parentElement) {
+          if (!frame.style.width && !frame.style.minWidth) continue;
+          desired.add(frame); this.lease(frame, 'width', '100%'); this.lease(frame, 'min-width', '0px');
+        }
+      }
     }
     for (const child of this.originals.keys()) if (!desired.has(child)) this.restoreChild(child);
     setHost('--cle-editor-pane-top', `${top}px`);
+    this.browserGeometry.refresh(this.parent);
   }
 
   private lease(element: HTMLElement, name: string, value: string): void {
@@ -137,6 +150,7 @@ export class EditorPaneLayout {
     this.observer?.disconnect(); this.observer = null;
     this.childrenObserver?.disconnect(); this.childrenObserver = null;
     for (const child of this.originals.keys()) this.restoreChild(child);
+    this.browserGeometry.release();
     this.parent = null;
     this.host.style.removeProperty('--cle-editor-pane-width');
     this.host.style.removeProperty('--cle-editor-pane-top');

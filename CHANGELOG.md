@@ -35,6 +35,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- Embedded browser pages now follow editor/explorer divider movement even when their size stays unchanged. Qualified browser inner frames fit the available pane width, and geometry changes notify the native resize handler instead of leaving the webpage frozen behind its toolbar.
 - Native browser/file panes respect the editor's reserved width instead of overlapping its documents and resize handle. In the qualified shell layout, the native tab bar and right-aligned controls share that boundary, and the docked editor divider extends through the tab-header band. Hiding or expanding the editor restores native sizing.
 - Edit-to-Preview now uses the current unsaved source text immediately, without requiring an application rerender to refresh the editor's draft snapshot.
 - Resizing the editor with native Changes open no longer hits Codex's competing top-layer workspace divider. The hosted comparison leaves room for the editor handle, restores the native divider on release, and keeps its internal file-list divider. Drag widths and chat-space limits now use layout units so zoomed drags track the pointer accurately.

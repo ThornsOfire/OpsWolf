@@ -38,5 +38,24 @@ try{
  await click('chat-portal');await check('Native right titlebar slot cannot cover the chat tab',`portalClicks===1`);
  await check('Native end slot keeps its controls at the divider',`Math.abs(document.querySelector('#portal-new').getBoundingClientRect().right-editor.getBoundingClientRect().left)<1`);
  await ev(`layout.restore()`);await check('Native portal inline dimensions restore exactly',`document.querySelector('[data-app-shell-titlebar-slot="content"]').style.width==='900px'&&document.querySelector('[data-app-shell-header-slot="end"]').style.width==='900px'`);
+ await ev(`aside.innerHTML='<div id="native-frame" style="position:absolute;inset:0 auto 0 0;width:900px;min-width:900px"><div role="tabpanel" data-app-shell-tab-panel-controller="right" style="height:100%"><div data-browser-sidebar-primary-focus-target="webview" style="height:100%"><div id="browser-viewport" data-app-shell-pane-content-viewport style="height:100%;width:100%"></div></div></div></div>';window.nativeUpdates=0;window.nativeBounds=null;window.syncBrowser=()=>{const r=document.querySelector('#browser-viewport').getBoundingClientRect();nativeBounds={x:r.x,y:r.y,width:r.width,height:r.height};nativeUpdates++};window.addEventListener('resize',syncBrowser);window.nativeObserver=new ResizeObserver(syncBrowser);nativeObserver.observe(document.querySelector('#browser-viewport'));window.browserAligned=()=>{const r=document.querySelector('#browser-viewport').getBoundingClientRect();return nativeBounds&&Math.abs(nativeBounds.x-r.x)<.1&&Math.abs(nativeBounds.width-r.width)<.1};width=560;aside.style.width='900px';apply()`);await delay(180);
+ await check('Fixed native inner frame fits the constrained browser aside',`document.querySelector('#native-frame').getBoundingClientRect().width<=aside.getBoundingClientRect().width+.1&&browserAligned()`);
+ for(const zoom of [1,1.2,1.75]){
+  await ev(`document.body.style.zoom='${zoom}';document.querySelector('#page').style.width='1400px';width=280;apply()`);await delay(150);
+  await ev(`window.beforeMove={...nativeBounds};window.beforeUpdates=nativeUpdates;width=360;apply()`);await delay(150);
+  await check(`Position-only editor drag refreshes embedded surface at ${zoom}`,`browserAligned()&&Math.abs(nativeBounds.width-beforeMove.width)<.1&&Math.abs(nativeBounds.x-beforeMove.x)>50&&nativeUpdates>beforeUpdates`);
+  await ev(`window.beforeMove={...nativeBounds};document.querySelector('#page').style.width='1320px'`);await delay(150);
+  await check(`Explorer-side size change refreshes embedded surface at ${zoom}`,`browserAligned()&&Math.abs(nativeBounds.x-beforeMove.x)>50`);
+  await ev(`width=700;apply()`);await delay(150);
+  await check(`Browser surface width follows capped frame at ${zoom}`,`browserAligned()&&document.querySelector('#native-frame').getBoundingClientRect().width<=aside.getBoundingClientRect().width+.1`);
+  const count=await ev('nativeUpdates');await delay(200);assert.equal(await ev('nativeUpdates'),count,'Stable geometry must not keep dispatching resize');checks++;
+ }
+ await ev(`layout.restore()`);await delay(150);
+ await check('Restoring layout notifies final native bounds and restores inner widths',`browserAligned()&&document.querySelector('#native-frame').style.width==='900px'&&document.querySelector('#native-frame').style.minWidth==='900px'`);
+ await ev(`window.beforeUpdates=nativeUpdates;document.querySelector('#page').style.width='1300px'`);await delay(150);
+ await check('Released geometry adapter stops sending position updates',`nativeUpdates===beforeUpdates`);
+ await ev(`apply();window.beforeUpdates=nativeUpdates;document.querySelector('#browser-viewport').style.height='80%'`);await delay(180);
+ await check('Reactivated geometry observer follows browser viewport size changes',`browserAligned()&&nativeUpdates>beforeUpdates`);
+ await ev(`layout.restore();window.removeEventListener('resize',syncBrowser);nativeObserver.disconnect()`);
  console.log(JSON.stringify({checks}));
 }finally{await browser.close();await new Promise(r=>server.close(r));stop()}

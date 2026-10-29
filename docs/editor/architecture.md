@@ -13,6 +13,7 @@ Paths below are relative to the repository root.
 | Application wiring, authenticated workspace lifecycle, dirty-switch orchestration | `packages/explorer-ui/src/app/explorer-element.ts` |
 | Editor DOM, tabs, metadata controls, source/preview switching | `packages/explorer-ui/src/app/main-preview-element.ts` |
 | Pane geometry and native-header reservation | `packages/explorer-ui/src/features/preview/editor-pane.ts` |
+| Embedded browser geometry notifications through the native resize listener | `packages/explorer-ui/src/features/preview/native-browser-geometry.ts` |
 | E control and scoped compact native header | `packages/explorer-ui/src/features/preview/editor-header-control.ts` |
 | Tab collection and per-project pins | `packages/explorer-ui/src/features/preview/tab-store.ts`, `pinned-files.ts` |
 | Preview requests, full text transfer, stale-result checks | `packages/explorer-ui/src/features/workspace/preview-requests.ts` |
@@ -31,6 +32,8 @@ Abbreviated sibling names in a cell resolve beside the preceding full source pat
 Pane top reservations measure marked app-shell headers. Legacy fallback is restricted to headers directly on the main surface or its parent; nested reader/content toolbars aren't app chrome. Including those toolbars creates a layout feedback loop that can push the editor downward.
 
 For the qualified active page with a sibling shell titlebar, docked layout leases the titlebar width and its main-titlebar container to the middle pane boundary. Native end controls remain at that pane's right edge. The editor begins at the same header band's top, converting viewport offsets to layout units for zoom, so its resize strip includes the tab row. Unowned native right-panel asides retain their requested width but are capped to the remaining middle content width; hosted Changes remains under its separate adapter. Native layout writes and child replacement are reconciled, and hiding, expanding, suspension or disposal restores leased properties. Unknown header layouts retain the existing below-header fallback.
+
+Qualified browser panels also release fixed/minimum widths on their inner native frame while docked. `NativeBrowserGeometry` tracks the visible browser content viewport's position and size, coalesces notifications to animation frames, and emits the native window resize event only when geometry changes. This invokes Codex's own embedded-surface bounds handler; it does not call a private browser-host bridge, reload pages, or move native nodes. Position-only divider changes are covered even when ResizeObserver reports no size change. Release disconnects observation and makes one final bounds comparison after style restoration. Hidden/inactive pages and the separately owned Changes host are excluded; stable geometry produces no recurring resize notifications.
 
 ## Reading and editing source
 
