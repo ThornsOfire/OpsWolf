@@ -30,11 +30,12 @@ export class ChangeReviewController {
  private key='';private revision=0;private disposed=false;private running:boolean|undefined;
  private refreshing=false;private finishAt=0;private lastRead=0;private error='';private bounded=false;private ready=false;
  private reviews:NativeReview[]=[];private selectedId='';private expanded=false;
+ private expandedFiles=new Set<string>();
  private host:HTMLElement|undefined;private shadow:ShadowRoot|undefined;private readers:LargeTextReader[]=[];
  private cards=new Map<HTMLElement,NativeCard>();private revealed=new Set<string>();
  constructor(private readonly ports:ChangeReviewPorts){}
  start():void {this.disposed=false;if(!this.timer){this.ports.element.ownerDocument.addEventListener('click',this.onNativeClick,true);this.tick();}}
- dispose():void {this.disposed=true;clearTimeout(this.timer);this.timer=undefined;this.revision++;this.key='';this.ports.element.ownerDocument.removeEventListener('click',this.onNativeClick,true);this.restoreCards();this.remove();this.reviews=[];}
+ dispose():void {this.disposed=true;clearTimeout(this.timer);this.timer=undefined;this.revision++;this.key='';this.ports.element.ownerDocument.removeEventListener('click',this.onNativeClick,true);this.restoreCards();this.remove();this.reviews=[];this.expandedFiles.clear();}
  private currentKey():string {const c=this.ports.context;return this.ports.enabled&&c?c.threadId+'\0'+c.rootPath:'';}
  private remove():void {for(const reader of this.readers)reader.dispose();this.readers=[];this.host?.remove();this.host=undefined;this.shadow=undefined;}
  private restore(card:NativeCard):void {if(card.previousDisplay)card.element.style.setProperty('display',card.previousDisplay,card.previousPriority);else card.element.style.removeProperty('display');card.element.removeAttribute('data-code-codex-native-review-hidden');}
@@ -81,7 +82,7 @@ export class ChangeReviewController {
   this.timer=undefined;if(this.disposed)return;
   const key=this.currentKey(),bridge=this.ports.bridge;
   if(key&&bridge?.available){
-   if(key!==this.key){this.revision++;this.key=key;this.running=undefined;this.reviews=[];this.selectedId='';this.lastRead=0;this.refreshing=false;this.ready=false;this.error='';this.finishAt=0;this.expanded=false;this.revealed.clear();this.restoreCards();this.remove();}
+   if(key!==this.key){this.revision++;this.key=key;this.running=undefined;this.reviews=[];this.selectedId='';this.lastRead=0;this.refreshing=false;this.ready=false;this.error='';this.finishAt=0;this.expanded=false;this.expandedFiles.clear();this.revealed.clear();this.restoreCards();this.remove();}
    const context=this.ports.context!;
    const anchor=[...this.ports.element.ownerDocument.querySelectorAll<HTMLElement>('[data-above-composer-conversation-id]')].find(e=>e.getAttribute('data-above-composer-conversation-id')===context.threadId&&!e.closest('[data-app-shell-active-page="false"]')&&e.closest('[data-codex-composer-root]')?.querySelector('[contenteditable="true"],textarea'));
    if(anchor){
@@ -110,6 +111,8 @@ export class ChangeReviewController {
    }
    if(!current())return;
    const previous=this.reviews[0]?.id;this.reviews=found;this.bounded=!exhausted;this.ready=true;this.error='';
+   const retained=new Set(found.flatMap(r=>r.files.map(f=>r.id+'\0'+f.relativePath)));
+   for(const key of this.expandedFiles)if(!retained.has(key))this.expandedFiles.delete(key);
    if(found[0]&&previous!==found[0].id){this.selectedId=found[0].id;this.expanded=false;}
    else if(!found.some(r=>r.id===this.selectedId))this.selectedId=found[0]?.id??'';
    this.updateCards();this.remove();
@@ -143,15 +146,27 @@ export class ChangeReviewController {
   if(this.bounded)note('Showing recent native reviews; older history remains in chat.');
   if(review?.status!=='completed')note('This response was interrupted or failed; only its completed patches are shown.');
   if(review?.omitted)note('Some patches are outside this project, sensitive, oversized, or unavailable. Their original chat cards remain visible.');
-  for(const file of review?.files??[]){
+  for(const [index,file] of (review?.files??[]).entries()){
    const entry=shadow.ownerDocument.createElement('div');entry.className='file';
+   const heading=shadow.ownerDocument.createElement('div');heading.className='file-heading';heading.style.cssText='display:flex;align-items:center;gap:6px';
+   const disclosure=shadow.ownerDocument.createElement('button');disclosure.type='button';disclosure.className='file-toggle';disclosure.disabled=file.content===null;disclosure.style.cssText='flex:none;min-width:24px;min-height:24px';
    const name=shadow.ownerDocument.createElement('button');name.type='button';name.className='file-name';name.textContent=file.relativePath;name.disabled=file.content===null;
+   name.title='Open diff in editor';
    const kind=shadow.ownerDocument.createElement('div');kind.className='kind';kind.textContent=file.kind;
-   entry.append(name,kind);files.append(entry);
-   if(file.content===null){kind.textContent+=' · Diff unavailable';continue;}
+   heading.append(disclosure,name);entry.append(heading,kind);files.append(entry);
+   if(file.content===null){disclosure.textContent='▸';disclosure.setAttribute('aria-expanded','false');disclosure.setAttribute('aria-label',`Diff unavailable for ${file.relativePath}`);kind.textContent+=' · Diff unavailable';continue;}
    const content=file.content;let added=0,removed=0;for(const line of content.split('\n')){if(line.startsWith('+')&&!line.startsWith('+++ '))added++;else if(line.startsWith('-')&&!line.startsWith('--- '))removed++;}kind.textContent+=` · +${added} −${removed}`;
    name.addEventListener('click',()=>{if(review)this.open(review,file);});
-   const area=shadow.ownerDocument.createElement('div');area.className='diff';const reader=new LargeTextReader(shadow.ownerDocument,content,true);this.readers.push(reader);area.append(reader.element);entry.append(area);
+   const area=shadow.ownerDocument.createElement('div');area.className='diff';area.id=`native-file-diff-${index}`;area.setAttribute('role','region');area.setAttribute('aria-label',`${file.relativePath} diff`);entry.append(area);
+   disclosure.setAttribute('aria-controls',area.id);
+   const key=review!.id+'\0'+file.relativePath;let reader:LargeTextReader|undefined;
+   const sync=()=>{
+    const open=this.expandedFiles.has(key);area.hidden=!open;disclosure.textContent=open?'▾':'▸';disclosure.setAttribute('aria-expanded',String(open));
+    disclosure.title=`${open?'Collapse':'Expand'} diff for ${file.relativePath}`;disclosure.setAttribute('aria-label',disclosure.title);
+    if(open&&!reader){reader=new LargeTextReader(shadow.ownerDocument,content,true);this.readers.push(reader);area.append(reader.element);}
+    if(!open&&reader){reader.dispose();this.readers=this.readers.filter(r=>r!==reader);reader=undefined;area.replaceChildren();}
+   };
+   disclosure.addEventListener('click',()=>{if(this.key!==this.currentKey())return;if(this.expandedFiles.has(key))this.expandedFiles.delete(key);else this.expandedFiles.add(key);sync();});sync();
   }
  }
 }

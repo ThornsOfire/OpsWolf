@@ -417,7 +417,10 @@ switch**, **Discard**, and **Cancel**. A failed save keeps the current file and 
 
 A compact **Native changes** panel stays above the active chat composer. It reads
 persisted native `fileChange` records through the official read-only App Server
-`thread/turns/list` interface. Expand it for per-file patches; clicking a file
+`thread/turns/list` interface. Expand it for a compact list of filenames and change
+counts. Each file starts collapsed; its arrow independently expands the inline
+diff. Inline readers load only while expanded. File expansion choices survive
+switching between recent reviews during the session. Clicking a filename
 opens its diff in the custom right-side editor. The existing dirty-editor
 Save and switch / Discard / Cancel flow still applies. Unsent chat text is untouched.
 A response without native patches keeps the latest meaningful review available.

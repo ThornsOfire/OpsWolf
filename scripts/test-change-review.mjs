@@ -32,7 +32,14 @@ try{
  await check('Latest native review stays collapsed directly above composer',`q('.toggle').getAttribute('aria-expanded')==='false'&&document.querySelector('[data-code-codex-change-review]').parentElement.hasAttribute('data-above-composer-conversation-id')`);
  await check('Only completely mapped native card is hidden; incomplete and unknown cards stay in feed',`document.querySelector('#native-latest').style.display==='none'&&document.querySelector('#native-old').style.display!== 'none'&&document.querySelector('#native-unknown').style.display!=='none'`);
  await click('.toggle');
+ await check('File list opens compact with all inline diffs collapsed and no readers created',`[...q('.files').querySelectorAll('.file-toggle')].every(b=>b.getAttribute('aria-expanded')==='false')&&[...q('.files').querySelectorAll('.diff')].every(e=>e.hidden)&&!q('.large-text-reader')`);
+ await click('.file-toggle');
  await check('Panel shows each native diff, line counts, coverage boundary and no extra disk copies',`q('.files').textContent.includes('IDEAS.md')&&q('.kind').textContent.includes('+1')&&q('.diff').textContent.includes('new line')&&q('.files').textContent.includes('Shell/script edits may not appear')`);
+ await ev(`q('.files').querySelectorAll('.file-toggle')[1].click()`);
+ await check('Individual files expand independently',`q('.files').querySelectorAll('.large-text-reader').length===2&&[...q('.files').querySelectorAll('.file-toggle')].every(b=>b.getAttribute('aria-expanded')==='true')`);
+ await click('.file-toggle');
+ await check('Collapsing one file releases its reader and preserves its sibling reader',`q('.diff').hidden&&!q('.diff').children.length&&q('.files').querySelectorAll('.large-text-reader').length===1&&q('.files').querySelectorAll('.file-toggle')[1].getAttribute('aria-expanded')==='true'`);
+ await click('.file-toggle');
  await click('.file-name');
  await check('File opens recorded native diff in right editor without opening a native middle tab',`workspace.previewTabs.length===1&&workspace.previewTabs[0].view.content.includes('-old line\\n+new line')&&viewer.hasAttribute('data-editor-pane-open')&&nativeTabs===0`);
  await ev(`document.querySelector('#native-latest .original-view').click()`);
@@ -48,6 +55,7 @@ try{
  await ev(`q('.history').value='turn-old';q('.history').dispatchEvent(new Event('change'));`);
  await check('Older native review remains accessible; omitted diff and interrupted response are explicit',`q('.files').textContent.includes('image.png')&&q('.file-name').disabled&&q('.files').textContent.includes('Diff unavailable')&&q('.files').textContent.includes('interrupted')`);
  await ev(`q('.history').value='turn-review';q('.history').dispatchEvent(new Event('change'));`);
+ await check('Expanded file choices survive switching between reviews',`[...q('.files').querySelectorAll('.file-toggle')].every(b=>b.getAttribute('aria-expanded')==='true')`);
  await check('Changing reviews leaves existing unsent prompt untouched',`document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
  await ev(`window.beforeReadCount=actions.length;q('.retry').click()`);await until(`actions.length>beforeReadCount`);await delay(150);
  await check('Refresh reuses older cached native records instead of rereading all history',`actions.length-beforeReadCount===2`);
@@ -55,6 +63,8 @@ try{
  await ev(`nextReview=true;nativeCard('msg-new','native-new');document.querySelector('#stop').remove()`);await until(`q('.toggle')?.textContent.includes('1 file')`);
  await check('Completed response automatically replaces summary with newest meaningful native review',`document.querySelector('#native-new').style.display==='none'&&q('.toggle').getAttribute('aria-expanded')==='false'`);
  await click('.toggle');
+ await check('Files in a new response begin collapsed',`q('.file-toggle').getAttribute('aria-expanded')==='false'&&q('.diff').hidden`);
+ await click('.file-toggle');
  const out=resolve(ui,'../../artifacts/native-review');mkdirSync(out,{recursive:true});const screenshot=await browser.command('Page.captureScreenshot',{format:'png'});writeFileSync(resolve(out,'native-panel.png'),Buffer.from(screenshot.data,'base64'));
  await ev(`failure=true;q('.retry').click()`);await until(`q('.toggle')?.textContent==='Changes unavailable'`);
  await check('Read failure restores native feed cards and presents a visible retry state',`document.querySelector('#native-latest').style.display!=='none'&&document.querySelector('#native-new').style.display!=='none'&&q('.retry').textContent==='Refresh'`);
