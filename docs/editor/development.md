@@ -50,6 +50,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Large text and explicit large Markdown rendering | `node scripts/test-large-text.mjs` |
 | Explorer-to-chat absolute path drag | `node scripts/test-drag-file-path.mjs` |
 | Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
+| Running native activity disclosures, shared reading/following, manual collapse, completion and cached chats | `node scripts/test-chat-activity.mjs`; `node scripts/test-chat-reading.mjs` |
 | Citation/local-link/native-file transfer integration with the actual explorer, reader and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
 | Preview link classification, tooltips, external/app confirmation, saved permissions and stale-dialog cancellation | `node scripts/test-preview-links.mjs` |
 | Native record history, per-file disclosures, coverage, card restoration | `node scripts/test-change-review.mjs` |
@@ -110,7 +111,7 @@ Update the appropriate Unreleased changelog entry alongside each meaningful user
 | Compact citation composer chips and readable hover tooltips | Core citation routing is implemented and live-tested; presentation remains unfinished. See [citation status](citations.md). |
 | Broader editable-format support | Planned; additional formats and priorities are still to be chosen. Track preview, source/structured editing, and save support separately; don't treat a preview plugin as an editor. |
 | Structured Markdown table-cell editing | Source editing exists; a dedicated matrix editor doesn't |
-| Configurable name/logo/appearance branding | Not implemented |
+| Configurable name/logo/appearance branding | Owned menu/settings profile candidate; Windows/launcher/Discord identity remains open. See [identity scope](identity.md). |
 | Fork-specific update selection/distribution | Upstream endpoints remain inherited |
 | Language servers, completion and debugger integration | Outside the current basic editor |
 

@@ -1,4 +1,4 @@
-/** Owns only paused reading. Native Codex remains responsible for following output. */
+/** Owns paused reading and a shared, guarded activity-follow command. */
 export class ReadingAnchor {
   private anchors: {element: HTMLElement; offset: number}[] = [];
   private textAnchor: {range: Range; node: Text; offset: number} | undefined;
@@ -10,6 +10,7 @@ export class ReadingAnchor {
   private inputBudget = Infinity;
   private dragging = false;
   private lastTop = 0;
+  private following = false;
   private readonly resize = new ResizeObserver(() => this.schedule());
   private readonly mutations = new MutationObserver(() => this.schedule());
   private readonly abort = new AbortController();
@@ -22,6 +23,7 @@ export class ReadingAnchor {
     pausedChanged: (paused: boolean) => void;
   }) {
     this.lastTop = scroller.scrollTop;
+    this.following = this.bottom();
     const options = {signal: this.abort.signal, passive: true};
     scroller.addEventListener('wheel', this.onWheel, options);
     scroller.addEventListener('touchmove', this.onGesture, options);
@@ -41,6 +43,14 @@ export class ReadingAnchor {
   resume(): void {
     if (this.disposed || !this.ports.valid()) return;
     this.setPaused(false);
+    this.following = true;
+    this.scroller.scrollTo({top: this.scroller.scrollHeight, behavior: 'instant'});
+    this.lastTop = this.scroller.scrollTop;
+  }
+
+  /** Activity uses this same owner; it cannot override manual reading or an ongoing gesture. */
+  followLatest(): void {
+    if (this.disposed || !this.ports.valid() || this.paused || !this.following || this.dragging || performance.now() < this.userUntil) return;
     this.scroller.scrollTo({top: this.scroller.scrollHeight, behavior: 'instant'});
     this.lastTop = this.scroller.scrollTop;
   }
@@ -132,6 +142,7 @@ export class ReadingAnchor {
       this.setPaused(true); this.capture();
     }
     this.lastTop = this.scroller.scrollTop;
+    if (this.bottom() && !this.paused) this.following = true;
   };
   private capture(): void {
     const top = this.scroller.getBoundingClientRect().top;

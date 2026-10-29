@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Recognized running activity opens available native tool disclosures once and follows new entries through the shared reading controller. Scrolling up pauses following; Jump to latest resumes. Manual collapse, cached-chat choices and native completion/cancellation remain respected. Unknown/localized layouts stay native; live candidate verification is pending.
+
 - Personal identity profiles in the owned settings panel: local PNG logo, display name and name-badge colors, with draft preview, explicit next-launch save, default/reset and up to eight personal profiles. Saved changes leave the current renderer identity intact. Windows names/icons, shortcuts and Discord identity remain unchanged; see the [scope matrix](docs/editor/identity.md).
 
 - Optional Code Rain background candidate, built from pinned MIT-licensed OpsWolf Code Rain sources through the verified plugin system. Its settings include colors, glyphs, motion, presets, pause and timed/looped blends; only explicit Save persists the rain settings. Native appearance changes stop the effect, disabling restores its prior theme lease, and hidden/reduced-motion/high-contrast behavior limits animation. Startup selection includes Rain. Package import and browser integration are locally tested; live Codex presentation and publication remain pending.

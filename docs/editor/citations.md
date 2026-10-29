@@ -35,6 +35,8 @@ Run `node scripts/test-citations.mjs`, `node scripts/test-citations-host.mjs`, a
 
 **Rich paste isn't a proven shortcut.** A short synthetic HTML-link paste was tested in an empty native composer and undone without sending. The inspected host retained literal Markdown. A compact chip must preserve the reference through editing and send serialization; looking compact in the DOM alone doesn't prove that.
 
+**Current integration boundary.** The locally generated installed app-server request schema was inspected on 2026-10-29. It provides turn input and thread attachment operations, but no native composer rich-node, draft-editing or citation-chip interface. Starting a turn is not an acceptable substitute for editing an unsent draft. This does not prove that every future host lacks an extension point; it means no supported rich-composer adapter has been established for this candidate. No private editor store or visual replacement was added. Inspection of sent-link hover markup remains pending: this chat was inactive and its older citation anchors were virtualized out, so no tooltip override was guessed from unrelated links.
+
 ## Follow-up work, not shipped behavior
 
 1. Investigate a compact composer reference with a readable filename/range and accessible full-path/draft information. Preserve surrounding draft text, native editing/undo, keyboard behavior, group references and exact outgoing citation data. Never submit automatically or manipulate private React stores.
