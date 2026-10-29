@@ -10,7 +10,7 @@ export function normalizeNativePage(raw:unknown):NativePage {
  const page=asRecord(raw);if(!page||!(page.nextCursor===null||typeof page.nextCursor==='string'&&page.nextCursor.length<=4096)||!(page.turnId===null||identifier(page.turnId)))throw Error('Invalid native review page');
  if(page.review===null)return page as unknown as NativePage;
  const r=asRecord(page.review);
- if(!r||!identifier(r.id)||r.id!==page.turnId||!['completed','interrupted','failed'].includes(String(r.status))||!(r.completedMs===null||Number.isSafeInteger(r.completedMs))||!Number.isSafeInteger(r.omitted)||Number(r.omitted)<0||!Array.isArray(r.messageIds)||r.messageIds.length>128||!r.messageIds.every(identifier)||!Array.isArray(r.files)||r.files.length>128)throw Error('Invalid native review');
+ if(!r||!identifier(r.id)||r.id!==page.turnId||!['completed','interrupted','failed','inProgress'].includes(String(r.status))||!(r.completedMs===null||Number.isSafeInteger(r.completedMs))||!Number.isSafeInteger(r.omitted)||Number(r.omitted)<0||!Array.isArray(r.messageIds)||r.messageIds.length>128||!r.messageIds.every(identifier)||!Array.isArray(r.files)||r.files.length>128)throw Error('Invalid native review');
  let bytes=0;
  for(const item of r.files){const file=asRecord(item);if(!file||typeof file.relativePath!=='string'||!file.relativePath||file.relativePath.length>4096||/[\0\r\n:\\]/.test(file.relativePath)||file.relativePath.startsWith('/')||file.relativePath.split('/').some(p=>!p||p==='.'||p==='..')||!['add','delete','update','renamed','multiple patches'].includes(String(file.kind))||!(file.content===null||typeof file.content==='string'))throw Error('Invalid native changed file');if(typeof file.content==='string')bytes+=new TextEncoder().encode(file.content).length;}
  if(bytes>1024*1024)throw Error('Native diff budget exceeded');
@@ -103,7 +103,7 @@ export class ChangeReviewController {
    const found:NativeReview[]=[];let cursor:string|null=null;const seen=new Set<string>();let exhausted=false;
    for(let pageIndex=0;pageIndex<40;pageIndex++){
     const page=normalizeNativePage(await bridge.request('explorer.changes.native',{cursor},30_000));if(!current())return;
-    if(page.review&&!found.some(r=>r.id===page.review!.id))found.push(page.review);
+    if(page.review&&page.review.status!=='inProgress'&&!found.some(r=>r.id===page.review!.id))found.push(page.review);
     // Once we reach our previous newest review, older immutable records are already in memory.
     if(page.turnId===this.reviews[0]?.id){for(const review of this.reviews){if(found.length>=10)break;if(!found.some(r=>r.id===review.id))found.push(review);}exhausted=!this.bounded;break;}
     if(found.length>=10||page.nextCursor===null){exhausted=page.nextCursor===null;break;}

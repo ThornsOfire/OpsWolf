@@ -1,4 +1,5 @@
 import { ChangeReviewController } from "../features/workspace/change-review";
+import { NativeActivityFiles } from "../features/workspace/native-activity-files";
 import { chooseEditorClose,requestDirtyEditorClose } from "../features/preview/close-dialog";
 import { applyPluginCardIcons } from '../components/plugin-icons';
 import {attachPluginPins} from '../components/plugin-pins';
@@ -829,22 +830,26 @@ export class CodeCodexElement extends HTMLElement {
         this.#marqueeElement = this.#required<HTMLElement>(".tree-marquee");
     }
     #changeReview:ChangeReviewController|undefined;
+    #activityFiles:NativeActivityFiles|undefined;
     connectedCallback(): void {
         if (this.#connected)
             return;
         this.#connected = true;
         const owner=this;
-        this.#changeReview??=new ChangeReviewController({element:this,
+        const reviewPorts={element:this,
             get bridge(){return owner.#workspaceSession.bridge;},get context(){return owner.#workspaceSession.context;},
             get enabled(){return owner.#connected&&!owner.#dismissed&&owner.#homeViewActive&&(owner.#state==='ready'||owner.#state==='empty');},
-            openDiff:(id,path,content)=>{
+            openDiff:(id:string,path:string,content:string)=>{
                 const open=()=>owner.#previewWorkspace.openReviewDiff(id,path,content);
                 const editing=owner.#previeweditingSettings;
                 if(editing.drafts.path&&editing.isEditDirty())void owner.#requestEditorClose(editing.drafts.path,open);
                 else open();
             },
-        });
+        };
+        this.#changeReview??=new ChangeReviewController(reviewPorts);
         this.#changeReview.start();
+        this.#activityFiles??=new NativeActivityFiles(reviewPorts,text=>owner.#announce(text));
+        this.#activityFiles.start();
         const appearanceInitializationGeneration = ++this.#appearanceInitializationGeneration;
         this.#requestedPlacement = this.dataset.placement || "inline";
         this.#rememberInlineMount();
@@ -1135,6 +1140,7 @@ export class CodeCodexElement extends HTMLElement {
     }
     #disposeDisconnected(): void {
         this.#changeReview?.dispose();
+        this.#activityFiles?.dispose();
         if (this.#customBackgroundClick)
             this.#shadow.removeEventListener('click', this.#customBackgroundClick, true);
         this.#customBackgroundClick = undefined;

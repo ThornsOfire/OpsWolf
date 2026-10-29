@@ -51,6 +51,7 @@ export class PreviewWorkspaceController {
       tab={path:tabPath,name:path.split('/').at(-1)||path,view:{kind:'git-diff',path:tabPath,name:path.split('/').at(-1)||path,sourcePath:path,content,truncated:false,shortHash:'Last response'},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false};
       this.tabStore.append(tab);
     }
+    else if(tab.view.kind==='git-diff')tab.view={...tab.view,content};
     this.activePreviewPath=tabPath;preview.showEditor?.();this.syncMainPreview();this.host.renderVisible();
   }
   async openGitDiff(hash: string,path: string): Promise<void> {

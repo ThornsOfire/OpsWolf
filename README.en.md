@@ -448,6 +448,16 @@ the inspected English desktop markup; an upstream layout/language change falls
 back to the original cards. Native virtualized cards must be mounted for Undo to
 be available; the recorded diff itself remains readable through history.
 
+The native live **files changed** tooltip is preserved. A normal click on one of
+its files reads a fresh native patch record and opens that diff in the right-side
+editor. Reopening the same live file updates the existing diff tab. The adapter
+requires the complete tooltip filename list to match the latest available patch
+record, with unique basenames; duplicate names, unavailable diffs, and unmatched
+markup retain the original native action. Modified clicks keep native behavior.
+Live lookup reads at most six single-turn pages, never a workspace scan. Applied
+patches from an active response are available to this adapter without publishing
+that response as a completed review. Pending/failed patch applications are excluded.
+
 Initial history lookup is bounded to forty single-turn pages and ten useful
 reviews. Later reads reuse older cached records. Refresh occurs after a visible
 response finishes, on explicit **Refresh**, and at most once a minute while idle.
