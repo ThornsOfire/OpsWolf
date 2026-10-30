@@ -10,6 +10,22 @@ export const BACKGROUND_SURFACE_ATTRIBUTES = [
 export const BACKGROUND_SURFACE_CONTEXT = `:host-context(html:is(${BACKGROUND_SURFACE_ATTRIBUTES.map(name=>`[${name}]`).join(',')}))`;
 
 export const backgroundPreviewSurfaceStyles = String.raw`
+  @media (forced-colors: none) {
+    /* The no-file placeholder paints its own solid theme backing. Let the
+     * containing main surface supply Rain's mask just as for an open file. */
+    :host-context(html[data-code-codex-code-rain-background]) .editor-empty {
+      background-color: transparent !important;
+    }
+    :host-context(html[data-code-codex-code-rain-background]) .native-diff-mount {
+      background-color: transparent !important;
+    }
+  }
+  /* Inner transparency cannot expose Rain through an opaque docked host. The
+   * containing main surface already supplies its readability mask. */
+  :host-context(html[data-code-codex-code-rain-background]):host([data-editor-pane-open]) {
+    background-color: transparent !important;
+  }
+
   /* The Codex main surface already supplies the background plugins' .58
    * conversation mask. Clear the preview's own opaque layers so opening a
    * file does not stack a second mask over the effect. Keep PDF pages, slides,

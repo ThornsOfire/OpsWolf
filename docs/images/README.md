@@ -1,0 +1,9 @@
+# Screenshot provenance
+
+Both images were refreshed on 2026-10-30, Pacific time, after owner acceptance of OpsWolf 0.1.0-dev.9. `editor-demo.png` comes from the repository's dev.9 browser demo using installed Chrome and a fresh disposable profile; its footer shows OpsWolf v0.1.0-dev.9 alongside Upstream v0.5.40. It is genuine `Page.captureScreenshot` output at 1600 × 960, without image retouching. `settings-demo.png` is a fresh, genuine 1000 × 960 capture of the production default settings panel in another synthetic host; the bundled wolf logo decoded, the heading was verified and localStorage stayed empty. Both images were visually inspected for layout and private content.
+
+The demo renders the production explorer/editor components against its synthetic bridge. The surrounding conversation is an intentionally simple fixture, not native Codex UI. The screenshot shows a synthetic Markdown draft entered through the editor's normal input event. No real workspace, chat, key or profile was loaded, and nothing was saved to a user file. It demonstrates source editing, line numbers and the adjacent layout; it does not establish native host compatibility or Markdown preview plugin availability.
+
+The driver and detailed audit evidence remain in ignored `artifacts/docs-audit/`. No dependencies were downloaded, running application bytes changed or sealed artifacts modified. A native capture can replace this clearly labelled demo after a separately reviewed, private-data-free desktop setup.
+
+`opswolf.svg` is original project vector artwork; `opswolf.png` is its existing 512-pixel transparent preview, reused without image edits. The same bounded PNG bytes are embedded in the public default branding configuration. These are deliberately shared product assets, not personal identity/profile uploads. Code Rain and Nova Fox retain their independent branding and screenshots.

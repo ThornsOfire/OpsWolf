@@ -1,7 +1,9 @@
+import {mountNovaRestore} from '../features/nova-restore';
 import { ChangeReviewController } from "../features/workspace/change-review";
 import { nativeReviewRevisions } from "../features/workspace/native-review-revisions";
 import { RootRevalidation } from "../features/workspace/root-revalidation";
 import { CURSADEX_VERSION } from "../core/version";
+import { PRODUCT_NAME } from "../core/branding";
 import { attachTooltips } from "../components/tooltips";
 import { NativeDiffHost } from "../features/preview/native-diff-host";
 import { NativeMiddlePages } from "../features/preview/native-middle-pages";
@@ -638,7 +640,7 @@ export class CodeCodexElement extends HTMLElement {
             </div>
           </div>
           <div class="build-versions" aria-label="Build versions">
-            <span class="fork-version" data-i18n-skip title="Cursadex development build; fork updates are managed separately">Cursadex v${CURSADEX_VERSION}</span>
+            <span class="fork-version" data-i18n-skip title="${PRODUCT_NAME} development build; fork updates are managed separately">${PRODUCT_NAME} v${CURSADEX_VERSION}</span>
             <button class="status-code" type="button" title="Check GitHub for upstream updates" aria-label="Check GitHub for upstream updates" aria-haspopup="dialog" aria-controls="cle-update-dialog" aria-expanded="false">WAIT</button>
           </div>
         </footer>
@@ -856,11 +858,14 @@ export class CodeCodexElement extends HTMLElement {
     #citations:CitationController|undefined;
     #chatFileLinks:ChatFileLinks|undefined;
     #nativeDiffHost:NativeDiffHost|undefined;
+    #novaRestoreDispose: (() => void) | undefined;
     #nativeMiddlePages:NativeMiddlePages|undefined;
     connectedCallback(): void {
         if (this.#connected)
             return;
         this.#connected = true;
+        this.#novaRestoreDispose?.();
+        this.#novaRestoreDispose = mountNovaRestore(this.#required<HTMLElement>('.masthead-actions'), this.ownerDocument);
         const owner=this;
         const reviewPorts={element:this,
             get bridge(){return owner.#workspaceSession.bridge;},get context(){return owner.#workspaceSession.context;},
@@ -1205,6 +1210,7 @@ export class CodeCodexElement extends HTMLElement {
         queueMicrotask(() => {
             if (this.isConnected || !this.#connected)
                 return;
+            this.#novaRestoreDispose?.(); this.#novaRestoreDispose = undefined;
             if (!this.#dismissed && !isExplorerDismissedForSession() &&
                 window.__codeCodexRuntimeOwner?.tagName === this.localName && document.body) {
                 this.setHomeViewActive(false);

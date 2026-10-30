@@ -1,9 +1,10 @@
+import {PRODUCT_NAME, PRODUCT_LOGO} from '../branding';
 /** User-facing identity only. Never used for paths, package IDs or native process identity. */
 export interface IdentityColors { background: string; foreground: string; accent: string }
 export interface IdentityProfile { id: string; name: string; logo: string | null; colors: IdentityColors | null }
 export interface IdentityRecord { schema: 1; selected: string; profiles: IdentityProfile[] }
 export const IDENTITY_KEY = 'cursadex:identity:v1';
-export const DEFAULT_IDENTITY: Readonly<IdentityProfile> = Object.freeze({id: 'default', name: 'Cursadex', logo: null, colors: null});
+export const DEFAULT_IDENTITY: Readonly<IdentityProfile> = Object.freeze({id: 'default', name: PRODUCT_NAME, logo: PRODUCT_LOGO, colors: null});
 export const MAX_IDENTITY_PROFILES = 8;
 export const MAX_LOGO_BYTES = 128 * 1024;
 const MAX_RECORD_CHARS = 1_500_000;
@@ -112,7 +113,7 @@ export class IdentityProfileStore {
   }
   select(id: string): void { this.write({...this.saved, selected: id}); }
   remove(id: string): void {
-    if (id === 'default') throw Error('The Cursadex default cannot be deleted.');
+    if (id === 'default') throw Error(`The ${PRODUCT_NAME} default cannot be deleted.`);
     const next = this.saved;
     next.profiles = next.profiles.filter(p => p.id !== id);
     if (next.selected === id) next.selected = 'default';

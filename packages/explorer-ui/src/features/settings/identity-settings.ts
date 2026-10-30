@@ -2,6 +2,7 @@ import {DEFAULT_IDENTITY, identityProfiles, validateIdentityLogo, validateIdenti
   type IdentityProfile, type IdentityProfileStore} from '../../core/configuration/identity-profiles';
 import {renderIdentityMark} from '../../components/identity-mark';
 import {getLocale, subscribeLanguage} from '../../i18n';
+import {PRODUCT_NAME} from '../../core/branding';
 
 /** A draft/preview inside owned Settings. Save never changes the current app identity. */
 export function mountIdentitySettings(parent: HTMLElement, store: IdentityProfileStore = identityProfiles(parent.ownerDocument.defaultView!)): () => void {
@@ -92,7 +93,7 @@ export function mountIdentitySettings(parent: HTMLElement, store: IdentityProfil
       ['[data-logo-label]','Local PNG logo (128 KiB, up to 512 × 512)','本地 PNG 标志（128 KiB，最大 512 × 512）'],
       ['[data-remove-logo]','Remove logo','移除标志'], ['[data-colors-label]','Custom identity colors','自定义标识颜色'],
       ['[data-color-label="background"]','Background','背景'], ['[data-color-label="foreground"]','Text','文字'], ['[data-color-label="accent"]','Accent','强调色'],
-      ['[data-save]','Save for next launch','保存以供下次启动使用'], ['[data-default]','Use Cursadex default','使用 Cursadex 默认值'],
+      ['[data-save]','Save for next launch','保存以供下次启动使用'], ['[data-default]',`Use ${PRODUCT_NAME} default`,`使用 ${PRODUCT_NAME} 默认值`],
       ['[data-limits]','Windows title, taskbar, executable name/icon and Discord activity are not changed by this profile. Upstream credit and internal identifiers stay intact.','此配置不会更改 Windows 标题、任务栏、可执行文件名称/图标或 Discord 活动。上游署名和内部标识保持不变。'],
     ];
     for (const [selector,en,cn] of labels) q(selector).textContent = text(en,cn);

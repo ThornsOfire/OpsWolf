@@ -1,4 +1,4 @@
-# Working on this fork
+# Working on OpsWolf
 
 Keep changes understandable, keep the tests useful, and tell people what actually changed. We don't need a mountain of release machinery to do that ;3
 
@@ -57,4 +57,4 @@ Build/test the matching native and UI sources, verify assets and checksums, and 
 
 ## Credit and scope
 
-Retain the original project's license/credit and existing third-party notices. Report fork-specific behavior to this fork's maintainer. Keep examples portable and synthetic. There is no requirement to reproduce a maintainer's personal Desktop or application-data layout.
+OpsWolf is the public product default, formerly Cursadex. Keep existing repository URLs, technical filenames, storage/event keys and theme hooks compatible; visible branding is not a bulk technical rename. Retain the original project's license/credit and existing third-party notices. Report fork-specific behavior to this fork's maintainer. Keep examples portable and synthetic. There is no requirement to reproduce a maintainer's personal Desktop or application-data layout.

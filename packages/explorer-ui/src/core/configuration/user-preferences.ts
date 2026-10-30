@@ -1,7 +1,7 @@
-export interface UserPreferences { schema: 1; typingMeter: boolean; wordWrap: boolean; minimap: boolean; collapseSidebar: boolean }
+export interface UserPreferences { schema: 1; typingMeter: boolean; wordWrap: boolean; minimap: boolean; collapseSidebar: boolean; novaCompanion: boolean }
 export const USER_PREFERENCES_KEY = 'cursadex:preferences:v1';
 export const LEGACY_MINIMAP_KEY = 'code-codex:code-minimap:v1';
-const defaults: UserPreferences = {schema: 1, typingMeter: false, wordWrap: false, minimap: true, collapseSidebar: true};
+const defaults: UserPreferences = {schema: 1, typingMeter: false, wordWrap: false, minimap: true, collapseSidebar: true, novaCompanion: true};
 type BooleanPreference = Exclude<keyof UserPreferences, 'schema'>;
 
 /** One owned preference store for toolbar and settings consumers; no draft content. */
@@ -12,7 +12,12 @@ export class UserPreferenceStore {
   constructor(private readonly storage?: Pick<Storage, 'getItem' | 'setItem'>) {
     this.value = {...defaults};
     try {
-      const stored = JSON.parse(storage?.getItem(USER_PREFERENCES_KEY) ?? 'null');
+      const raw = storage?.getItem(USER_PREFERENCES_KEY) ?? null;
+      const legacyWrap = storage?.getItem('code-codex:word-wrap:v1') ?? null;
+      const legacyMinimap = storage?.getItem(LEGACY_MINIMAP_KEY) ?? null;
+      // Only genuinely fresh preferences show Nova by default; existing choices stay intact.
+      if (raw !== null || legacyWrap !== null || legacyMinimap !== null) this.value.novaCompanion = false;
+      const stored = JSON.parse(raw ?? 'null');
       if (!stored || stored.schema === 1) {
         this.value.wordWrap = storage?.getItem('code-codex:word-wrap:v1') === 'true';
         this.value.minimap = storage?.getItem(LEGACY_MINIMAP_KEY) !== 'false';
@@ -20,7 +25,7 @@ export class UserPreferenceStore {
           if (key !== 'schema' && typeof stored?.[key] === 'boolean') this.value[key] = stored[key];
         }
       }
-    } catch { this.saved = false; /* Unavailable/malformed storage starts with safe defaults. */ }
+    } catch { this.value.novaCompanion = false; this.saved = false; /* Unavailable/malformed storage starts with safe defaults. */ }
   }
   get current(): Readonly<UserPreferences> { return {...this.value}; }
   get persisted(): boolean { return !!this.storage && this.saved; }

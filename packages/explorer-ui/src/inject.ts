@@ -1,4 +1,5 @@
 import {nativeSettingsBackgroundCss} from './native-background-surfaces';
+import {CODE_RAIN_NATIVE_SURFACE_CSS} from './code-rain-native-surfaces';
 import {collapseNativeSidebarOnStartup} from './native-sidebar';
 import {installChatReading} from './host/native-surfaces/chat-reading';
 import {installComposerTyping} from './host/native-surfaces/composer-typing';
@@ -494,7 +495,7 @@ function installParticleBackgroundStyle(): void {
     style.dataset.codeCodexParticleBackground = "v1";
     (document.head ?? document.documentElement).append(style);
   }
-  const css = PARTICLE_BACKGROUND_CSS + PAGE_SURFACE_BACKGROUND_CSS + LOGIN_BACKGROUND_CSS + SURFACE_OPACITY_NATIVE_CSS;
+  const css = PARTICLE_BACKGROUND_CSS + PAGE_SURFACE_BACKGROUND_CSS + LOGIN_BACKGROUND_CSS + SURFACE_OPACITY_NATIVE_CSS + CODE_RAIN_NATIVE_SURFACE_CSS;
   if (style.textContent !== css) style.textContent = css;
 }
 

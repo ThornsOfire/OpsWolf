@@ -323,6 +323,16 @@ export const mainPreviewStyles = String.raw`
     white-space: nowrap;
   }
 
+  .preview-edit-restriction {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--cle-deleted, #b42318);
+    font-weight: 600;
+  }
+
   .preview-content {
     min-width: 0;
     min-height: 0;

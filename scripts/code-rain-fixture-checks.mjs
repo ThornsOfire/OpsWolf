@@ -5,6 +5,7 @@ import {delay} from './browser-fixture.mjs';
 
 /** Exercise the production UI/runtime; the parent fixture owns native RPC mocks. */
 export async function checkCodeRain({browser,shadow,check,wait,root}) {
+  await browser.command('Emulation.setFocusEmulationEnabled',{enabled:true});
   const e=browser.evaluate;
   const card=`${shadow}.querySelector('[data-appearance-plugin="code-codex.code-rain-background"]')`;
   const button=`${card}.querySelector('.preview-extension-action')`;
@@ -21,10 +22,14 @@ export async function checkCodeRain({browser,shadow,check,wait,root}) {
   await check('Rain decoration does not intercept mouse input',`getComputedStyle(document.querySelector('[data-code-codex-rain-layer]')).pointerEvents==='none'`);
   await e(`${card}.querySelector('.code-rain-settings').click()`);
   await check('Rain settings open with all agreed controls',`${panel}.matches(':popover-open')&&${panel}.querySelectorAll('[data-rain-control]').length===12&&${input('preset')}.options.length===4`);
+  await check('Inactive-window pause defaults on',`${runtime}.pauseWhenUnfocused&&${input('inactive')}.checked`);
+  await e(`${input('inactive')}.click()`);
+  await check('Unchecking inactive-window pause changes session without autosave',`!${runtime}.pauseWhenUnfocused&&${runtime}.dirty&&!localStorage.getItem('cursadex:code-rain:v1')`);
   await e(`${input('speed')}.value='21';${input('speed')}.dispatchEvent(new Event('input',{bubbles:true}))`);
   await check('Settings change live without autosaving',`${runtime}.settings.speed===21&&${runtime}.dirty&&!localStorage.getItem('cursadex:code-rain:v1')`);
   await e(`${input('glyphs')}.value='ABC123';${input('glyphs')}.dispatchEvent(new Event('change',{bubbles:true}));${action('save')}.click()`);
   await check('Explicit Save persists the current rain settings',`JSON.parse(localStorage.getItem('cursadex:code-rain:v1')).rain.speed===21&&${runtime}.settings.glyphs==='ABC123'&&!${runtime}.dirty`);
+  await check('Explicit Save includes the inactive-window option',`JSON.parse(localStorage.getItem('cursadex:code-rain:v1')).pauseWhenUnfocused===false`);
   await e(`${input('glyphs')}.value='bad characters';${input('glyphs')}.dispatchEvent(new Event('change',{bubbles:true}))`);
   await check('Invalid glyph entry keeps the previous value',`${runtime}.settings.glyphs==='ABC123'&&${input('glyphs')}.value==='ABC123'`);
   await e(`${action('pause')}.click();${input('preset')}.value='1';${input('duration')}.value='0.5';${input('hold')}.value='0';${action('blend')}.click()`);await delay(100);

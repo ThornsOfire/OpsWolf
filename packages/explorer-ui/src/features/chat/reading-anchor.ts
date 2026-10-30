@@ -11,6 +11,7 @@ export class ReadingAnchor {
   private dragging = false;
   private lastTop = 0;
   private following = false;
+  private userRevision = 0;
   private readonly resize = new ResizeObserver(() => this.schedule());
   private readonly mutations = new MutationObserver(() => this.schedule());
   private readonly abort = new AbortController();
@@ -38,11 +39,14 @@ export class ReadingAnchor {
   }
 
   get reading(): boolean { return this.paused; }
+  get interactionRevision(): number { return this.userRevision; }
 
   /** Shared by explicit Jump to latest and future activity-follow controls. */
   resume(): void {
     if (this.disposed || !this.ports.valid()) return;
     this.setPaused(false);
+    this.userUntil = 0;
+    this.inputDirection = 0; this.inputBudget = Infinity; this.dragging = false;
     this.following = true;
     this.scroller.scrollTo({top: this.scroller.scrollHeight, behavior: 'instant'});
     this.lastTop = this.scroller.scrollTop;
@@ -86,9 +90,9 @@ export class ReadingAnchor {
 
   private onGesture = (event: Event): void => {
     if (!event.isTrusted || !this.ports.valid()) return;
+    this.userRevision++;
     this.userUntil = performance.now() + 180;
     this.inputDirection = 0; this.inputBudget = Infinity;
-    if (!this.bottom()) { this.setPaused(true); this.capture(); }
   };
   private onWheel = (event: WheelEvent): void => {
     if (event.ctrlKey || event.deltaY === 0 || this.nestedScroller(event.target)) return;
@@ -134,13 +138,12 @@ export class ReadingAnchor {
         this.userUntil = 0; this.schedule(); return;
       }
       this.inputBudget -= Math.abs(movement);
-      this.setPaused(!this.bottom());
+      if (this.bottom()) this.setPaused(false);
+      else if (this.paused || movement < -1 && this.inputDirection <= 0) this.setPaused(true);
       if (this.paused) this.capture();
     } else if (this.paused) this.schedule();
-    // A first native/manual upward move away from bottom establishes reading too.
-    else if (!this.bottom() && this.scroller.scrollTop < this.lastTop - 1) {
-      this.setPaused(true); this.capture();
-    }
+    // Only explicit user scroll gestures establish reading; native layout or
+    // programmatic jumps must not silently lock a newly sent conversation.
     this.lastTop = this.scroller.scrollTop;
     if (this.bottom() && !this.paused) this.following = true;
   };

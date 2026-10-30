@@ -4,6 +4,7 @@ import {semanticThemeStyles} from '../../components/styles/appearance-tokens';
 import {identityProfiles} from '../../core/configuration/identity-profiles';
 import {mountIdentitySettings} from './identity-settings';
 import {renderIdentityMark} from '../../components/identity-mark';
+import {PRODUCT_NAME} from '../../core/branding';
 
 export interface PreferencesPanelPorts {
   readonly linkPermissions: () => readonly string[];
@@ -44,6 +45,7 @@ export function openPreferencesPanel(ports: PreferencesPanelPorts, doc: Document
   const identity = identityProfiles(doc.defaultView!);
   const disposeIdentity = mountIdentitySettings(shadow.querySelector<HTMLElement>('[data-identity]')!, identity);
   const options: [Exclude<keyof UserPreferences, 'schema'>, string, string, string, string][] = [
+    ['novaCompanion', 'Nova Fox Companion restore button', 'Nova 狐狸伙伴恢复按钮', 'Optional: show Nova from the explorer header. Requires Nova’s restore link to be enabled in its settings.', '可选：从文件树标题栏显示 Nova。需要在 Nova 设置中启用恢复链接。'],
     ['typingMeter', 'Typing speed (WPM)', '输入速度（WPM）', 'Gross characters ÷ 5 per active minute. No accuracy score or typing history.', '每活跃分钟输入字符数 ÷ 5。不会记录输入历史或准确率。'],
     ['wordWrap', 'Wrap source text', '源文本自动换行', 'Applies to our editor and source previews. Native Changes keeps its own wrap control.', '适用于本编辑器与源码预览。原生更改视图有独立的换行设置。'],
     ['minimap', 'Code minimap', '代码缩略图', 'Show the overview beside supported source files.', '在支持的源文件旁显示缩略图。'],
@@ -75,7 +77,7 @@ export function openPreferencesPanel(ports: PreferencesPanelPorts, doc: Document
     list.replaceChildren(...ports.linkPermissions().map(value => { const li = doc.createElement('li'); li.textContent = value; return li; }));
     set('[data-links-reset]', text('Reset link warnings', '重置链接警告'));
     shadow.querySelector<HTMLButtonElement>('[data-links-reset]')!.disabled = !list.childElementCount;
-    set('[data-credit]', text('Cursadex builds on Code-Codex. Upstream tools and native Codex settings remain available.', 'Cursadex 基于 Code-Codex 构建。上游工具与 Codex 原生设置仍然可用。'));
+    set('[data-credit]', text(`${PRODUCT_NAME} builds on Code-Codex. Upstream tools and native Codex settings remain available.`, `${PRODUCT_NAME} 基于 Code-Codex 构建。上游工具与 Codex 原生设置仍然可用。`));
     set('[data-reset]', text('Reset these preferences', '重置这些偏好'));
     set('[data-close]', text('Done', '完成'));
     set('[data-status]', !preferences.persisted ? text('Storage unavailable: preferences apply to this session only.', '存储不可用：偏好仅适用于本次会话。')

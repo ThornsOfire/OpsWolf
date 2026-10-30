@@ -1,6 +1,7 @@
 import {activePageElements, annotationConsensusThreadId, MAIN_SURFACE_SELECTOR} from '../../adapters/codex-26.715';
 import {ReadingAnchor} from '../../features/chat/reading-anchor';
 import {ChatActivity, createChatActivityState, type ChatActivityState} from './chat-activity';
+import {SendFollow} from './send-follow';
 
 const OWNER = Symbol.for('code-codex:chat-reading:v1');
 const VIEWPORT = '.thread-scroll-container[data-app-action-timeline-scroll]';
@@ -10,11 +11,11 @@ const MESSAGES = '[data-content-search-unit-key],[data-response-annotation-targe
 export function installChatReading(doc: Document = document): () => void {
   const registry = doc as unknown as Record<symbol, (() => void) | undefined>;
   registry[OWNER]?.();
-  let current: {scroll: HTMLElement; thread: string; anchor: ReadingAnchor; control: HTMLElement; activity: ChatActivity} | undefined;
+  let current: {scroll: HTMLElement; thread: string; anchor: ReadingAnchor; control: HTMLElement; activity: ChatActivity; send: SendFollow} | undefined;
   let frame = 0;
   let disposed = false;
   const activityStates = new Map<string, ChatActivityState>();
-  const release = () => { current?.anchor.dispose(); current?.control.remove(); current = undefined; };
+  const release = () => { current?.send.dispose(); current?.anchor.dispose(); current?.control.remove(); current = undefined; };
   const qualify = () => {
     const thread = annotationConsensusThreadId(doc, true);
     const mains = activePageElements<HTMLElement>(doc, MAIN_SURFACE_SELECTOR);
@@ -29,7 +30,7 @@ export function installChatReading(doc: Document = document): () => void {
     frame = 0; if (disposed) return;
     const next = qualify();
     if (!next) { release(); return; }
-    if (current?.scroll === next.scroll && current.thread === next.thread) { current.activity.sync(); return; }
+    if (current?.scroll === next.scroll && current.thread === next.thread) { current.send.sync(); current.activity.sync(); return; }
     release();
     const control = doc.createElement('div'); control.dataset.codeCodexReadingControl = 'true'; control.hidden = true;
     const shadow = control.attachShadow({mode:'open'});
@@ -54,7 +55,13 @@ export function installChatReading(doc: Document = document): () => void {
     const activity = new ChatActivity({scroll: next.scroll, composer: next.portal.closest<HTMLElement>('[data-codex-composer-root]') ?? next.portal,
       valid: () => { const active = qualify(); return active?.scroll === next.scroll && active.thread === next.thread; },
       follow: () => anchor.followLatest()}, state);
-    current = {...next, anchor, control, activity};
+    const send = new SendFollow(doc, {scroll: next.scroll,
+      composer: () => { const active = qualify(); return active?.scroll === next.scroll && active.thread === next.thread ? active.portal.closest<HTMLElement>('[data-codex-composer-root]') ?? active.portal : undefined; },
+      valid: () => { const active = qualify(); return active?.scroll === next.scroll && active.thread === next.thread; },
+      interactionRevision: () => anchor.interactionRevision,
+      resume: () => anchor.resume(),
+    });
+    current = {...next, anchor, control, activity, send};
     activity.sync();
   };
   const schedule = () => { if (!frame) frame = requestAnimationFrame(sync); };

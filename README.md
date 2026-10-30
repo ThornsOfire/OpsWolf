@@ -1,6 +1,8 @@
-# Code-Codex — Editor Fork
+# OpsWolf
 
-Or, as we've started calling it: **Cursadex** ;3
+Formerly **Cursadex**. An experimental Codex Desktop editor fork with a file explorer, editing beside chat, source citations, and native diff review. ;3
+
+**Developer alpha — `0.1.0-alpha.1` (build from source).** There is no ready-to-run OpsWolf installer or portable ZIP yet. Setup requires the official Codex desktop app plus the development tools listed in [Getting it running](#getting-it-running). Fresh-machine installation has not been validated yet; a clean Windows VM test is planned. Known limitations and the tested local baseline are documented below.
 
 I wanted a file tree on the left, chat in the middle, and an editor on the right where I could actually work on files. Then I wanted tabs, pins, word wrap, and somewhere useful to look at everything the agent changed.
 
@@ -10,15 +12,33 @@ Want to see how we got here? The [changelog](CHANGELOG.md) tracks the notable ch
 
 This is an experimental fork of [Rice-dog/code-codex](https://github.com/Rice-dog/code-codex). The original devs built the launcher, workspace bridge, file explorer, and plugin system that made this possible. We've been building an editor workflow on top of that foundation.
 
-**The actual editor code lives on [`feature/right-editor-pane`](https://github.com/ThornsOfire/code-codex/tree/feature/right-editor-pane).** The GitHub homepage on `main` has this overview; the build commands below select the right branch for you.
+**Alpha source branch: [`candidate/planned-development`](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development).** Use that branch for this checkpoint. The older [`feature/right-editor-pane`](https://github.com/ThornsOfire/OpsWolf/tree/feature/right-editor-pane) branch is a historical baseline; `main` carries the homepage overview. Source publication, local deployment and a downloadable release are separate steps.
 
 This is an unofficial community project, independent of OpenAI and the original maintainers. It's a basic source editor inside Codex; language servers, autocomplete, and a debugger aren't part of it.
+
+## Take a look
+
+![OpsWolf explorer, sample conversation and editable Markdown source beside each other](docs/images/editor-demo.png)
+
+*OpsWolf dev.9 production explorer/editor components in the repository's synthetic browser demo. The sample draft and conversation are disposable; this is not a native Codex screenshot. [Capture details](docs/images/README.md).*
+
+![OpsWolf default settings with the wolf logo and shared preferences](docs/images/settings-demo.png)
+
+*The real settings panel with disposable default preferences. Personal profiles keep their own names and artwork.*
 
 ## What we've added so far
 
 The local development candidate also includes an optional Code Rain background with its own motion, color, preset and transition controls. It uses the normal verified plugin system; no published Rain download is available yet. See the [integration guide and verification limits](docs/editor/code-rain-integration.md).
 
-The footer identifies the Cursadex development version separately from the upstream version. Our [versioning guide](docs/editor/versioning.md) explains build handoffs and release rules. This is still an unreleased development fork. Live testing confirms activity following and scroll-to-pause; automatic activity expansion currently has a known compatibility failure. See [reading/activity coverage](docs/editor/chat-reading.md).
+The footer identifies the OpsWolf development version separately from the upstream version. Our [versioning guide](docs/editor/versioning.md) explains build handoffs and release rules. This is still an unreleased development fork. Live testing confirms activity following and scroll-to-pause; automatic activity expansion currently has a known compatibility failure. See [reading/activity coverage](docs/editor/chat-reading.md).
+
+The current owner-used baseline is **OpsWolf 0.1.0-dev.9**, alongside upstream **0.5.40**, with Rain plugin **0.1.2**. Header spacing, product-menu alignment and explicit read-only text warnings passed the owner's checklist. Rain generally looks smoother, but preset blending can still drop frames, and cross-theme transparency remains open. See [current limitations](docs/editor/known-issues.md). No downloadable OpsWolf release is implied.
+
+Dev.7 includes the **OpsWolf** visible rebrand alongside the earlier empty-editor Rain repair and corrected repository link. The repository URL, technical filenames and compatibility keys retain their existing names; changing the product label does not migrate your settings or replace personal profiles. Dev.8 addresses the reported header overlap and stacked logo with owner acceptance for those cases. The synthetic README screenshots were refreshed after dev.9 acceptance; their capture setup and limits are documented.
+
+### Shared settings
+
+Open **OpsWolf → OpsWolf settings…** for typing speed, source wrap, minimap, first-chat sidebar collapse and the optional Nova restore button. Personal identity profiles customize our owned menu/settings name, PNG logo and badge colors for the next launch; Windows and Discord identity are still separate work. See [settings](docs/editor/settings.md) and [identity limits](docs/editor/identity.md).
 
 ### An editor that lives beside the chat
 
@@ -79,9 +99,11 @@ You'll need:
 - Current stable Rust with the MSVC toolchain, and Visual Studio Build Tools with Desktop C++ support.
 - Git. MSI packaging also needs the .NET SDK.
 
+Build this alpha from its source branch:
+
 ```powershell
-git clone --branch feature/right-editor-pane https://github.com/ThornsOfire/code-codex.git
-Set-Location code-codex
+git clone --branch candidate/planned-development https://github.com/ThornsOfire/OpsWolf.git
+Set-Location OpsWolf
 .\scripts\build.ps1 -Configuration Release
 ```
 
@@ -96,7 +118,7 @@ $uiBundle = (Resolve-Path .\packages\explorer-ui\dist\explorer.js).Path
 
 Use that companion to launch this fork. The normal Codex shortcut won't load the custom bundle. I learned that one by opening the old shortcut and wondering why nothing changed lol.
 
-You don't need my Desktop layout, an OpsWolf folder, or any particular project name. Those are local choices, not requirements baked into the source.
+OpsWolf is the product name now; you still don't need my Desktop layout, a folder named OpsWolf, or any particular project name. Those are local choices, not requirements baked into the source. The GitHub repository has also been renamed to `ThornsOfire/OpsWolf`; the clone commands above use its canonical URL and default clone directory. Choosing another local directory is fine.
 
 ### Optional previews and appearance
 
@@ -130,13 +152,13 @@ This hooks into the native desktop layout, so Codex updates can break parts of t
 
 Project pins and UI preferences stay local. Native chat history is the source of recorded patches; we don't add a separate permanent diff archive. **Open file** loads the current file, which might have changed since that patch was recorded. Deleted-file and combined comparisons don't get a source-file button.
 
-The context meter, compact citation chips/readable hover tooltips, broader editable-format support, richer Markdown table editing, configurable branding, and a fork-specific update workflow are on the wishlist. They aren't shipped features yet. Source-text citation routing is implemented; its composer presentation still needs work. We'll choose additional formats as we go and document preview, editing, and saving support separately.
+The context meter, compact citation chips/readable hover tooltips, broader editable-format support, richer Markdown table editing, Windows/Discord identity customization, direct active-theme settings in the explorer header, and a fork-specific update workflow remain future work. Source-text citation routing and owned identity profiles exist; their deeper integrations are separate. We'll document preview, editing, and saving support separately for additional formats.
 
 ## Credit and contributing
 
 Big credit to [Rice-dog and the Code-Codex contributors](https://github.com/Rice-dog/code-codex). They built the foundation here. This fork is our take on the editing workflow, maintained independently.
 
-The [inherited Chinese overview](README.zh-CN.md) is preserved for reference. This README describes what the fork currently does.
+The [inherited Chinese overview](README.zh-CN.md) and its [English translation](README.upstream.en.md) are preserved for reference. Those describe upstream behavior and downloads; this README describes the fork.
 
 If something breaks in our additions, bring it to this fork's maintainer with your Codex version, what you clicked, what happened, and what you expected. A small example helps a ton. Leave private client documents, credentials, and chat contents out of the report.
 

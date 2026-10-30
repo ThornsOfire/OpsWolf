@@ -8,6 +8,8 @@ When available, inherited public host variables supply the surface, primary text
 
 ## Theme-author hooks
 
+OpsWolf keeps the existing `--cursadex-*` hook names for compatibility with themes written before the visible rebrand. The product name does not change the CSS contract.
+
 Set these on a parent of the owned elements, such as the document root. Values must be CSS colors. They override the matching native/fallback role; they do not change Codex's own theme.
 
 | Hook suffix (prefix with `--cursadex-`) | Purpose |

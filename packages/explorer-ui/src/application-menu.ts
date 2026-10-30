@@ -34,7 +34,7 @@ const MENU_STATE = Symbol.for("code-codex:application-menu:v1");
 const MENU_HOST_SELECTOR = "[data-code-codex-application-menu]";
 const MENU_POPUP_SELECTOR = "[data-code-codex-application-menu-popup]";
 const MENU_STYLE_SELECTOR = "style[data-code-codex-application-menu-style]";
-const REPOSITORY_URL = "https://github.com/Rice-dog/code-codex";
+const REPOSITORY_URL = "https://github.com/ThornsOfire/OpsWolf";
 const owner = {};
 
 const MENU_CSS = `
@@ -47,6 +47,9 @@ ${MENU_HOST_SELECTOR} {
   -webkit-app-region: no-drag;
 }
 ${MENU_HOST_SELECTOR} > button {
+  display: inline-flex;
+  flex-flow: row nowrap;
+  align-items: center;
   -webkit-app-region: no-drag;
 }
 ${MENU_HOST_SELECTOR} > button[aria-expanded="true"] {

@@ -1,0 +1,35 @@
+import assert from 'node:assert/strict';
+import {createRequire} from 'node:module';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createServer} from 'node:http';
+import {launchFixture} from './browser-fixture.mjs';
+const root=resolve(import.meta.dirname,'..'),ui=resolve(root,'packages/explorer-ui'),out=resolve(root,'artifacts/rain-empty-editor');mkdirSync(out,{recursive:true});
+const {build,stop}=createRequire(resolve(ui,'package.json'))('esbuild');
+const bundle=await build({stdin:{contents:`import {mainPreviewStyles} from './components/styles/main-preview';window.previewStyles=mainPreviewStyles;`,resolveDir:resolve(ui,'src'),loader:'ts'},bundle:true,write:false,format:'iife'});stop();
+const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/fixture.js'?'text/javascript':'text/html');res.end(req.url==='/fixture.js'?bundle.outputFiles[0].text:'<!doctype html><style>body{margin:0;background:#345}main{height:600px;position:relative;background:rgba(11,12,15,.58)}</style><main><cc-preview data-editor-pane data-editor-pane-open data-editor-visible></cc-preview></main><script src=/fixture.js></script>')});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;const report={scope:'Synthetic browser using production preview CSS and exact empty-editor class; no live app acceptance',checks:[],failures:[]};
+try{
+ browser=await launchFixture('http://127.0.0.1:'+server.address().port);const e=browser.evaluate;
+ const check=async(name,expression)=>{const actual=await e(expression);report.checks.push({name,actual});if(!actual)report.failures.push(name)};
+ await e(`window.host=document.querySelector('cc-preview');host.style.setProperty('--cle-editor-pane-width','500px');window.s=host.attachShadow({mode:'open'});s.innerHTML='<style>'+previewStyles+'</style><div class=surface><div class=tab-strip><button>Tabs</button></div><div class=panel-mount><div class=editor-empty>Open a file from the explorer to start editing.</div></div></div>';window.empty=s.querySelector('.editor-empty');window.alpha=n=>{const c=getComputedStyle(n).backgroundColor;return c==='transparent'||c==='rgba(0, 0, 0, 0)'?0:c.startsWith('rgba')?Number(c.split(',').at(-1).replace(')','')):1};document.documentElement.setAttribute('data-code-codex-particle-image-background','');document.documentElement.setAttribute('data-code-codex-code-rain-background','fixture')`);
+ await check('Docked empty editor clears placeholder and host over existing main mask',`alpha(empty)===0&&alpha(host)===0&&Math.abs(alpha(document.querySelector('main'))-.58)<.001`);
+ await check('Placeholder text remains full opacity and accepts pointer interaction',`getComputedStyle(empty).opacity==='1'&&getComputedStyle(empty).pointerEvents==='auto'&&empty.textContent==='Open a file from the explorer to start editing.'`);
+ await e(`host.removeAttribute('data-editor-pane-open')`);
+ await check('Fullscreen empty placeholder also clears its solid background',`alpha(empty)===0`);
+ await e(`host.setAttribute('data-editor-pane-open','');window.button=s.querySelector('button');button.focus()`);
+ await check('Focus survives appearance style changes',`s.activeElement===button`);
+ await e(`document.documentElement.removeAttribute('data-code-codex-code-rain-background')`);
+ await check('Other background effects keep their existing empty-editor styling',`alpha(empty)===1`);
+ await e(`document.documentElement.removeAttribute('data-code-codex-particle-image-background')`);
+ await check('Disabling Rain restores the normal solid empty editor',`alpha(empty)===1&&alpha(host)===1&&s.activeElement===button`);
+ await e(`document.documentElement.setAttribute('data-code-codex-particle-image-background','');document.documentElement.setAttribute('data-code-codex-code-rain-background','fixture')`);
+ await browser.command('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
+ await check('Forced colors keeps a solid system placeholder',`alpha(empty)===1`);
+ await browser.command('Emulation.setEmulatedMedia',{features:[]});
+ await e(`empty.remove();window.reopened=document.createElement('div');reopened.className='editor-empty';reopened.textContent='Open a file from the explorer to start editing.';s.querySelector('.panel-mount').append(reopened)`);
+ await check('New empty placeholders inherit the fix without reactivation',`alpha(reopened)===0&&s.activeElement===button`);
+ report.passed=!report.failures.length;
+ writeFileSync(resolve(out,'fixture.png'),Buffer.from((await browser.command('Page.captureScreenshot')).data,'base64'));
+}finally{writeFileSync(resolve(out,'results.json'),JSON.stringify(report,null,2));await browser?.close();await new Promise(r=>server.close(r))}
+console.log(JSON.stringify(report));assert.equal(report.passed,true);

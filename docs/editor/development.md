@@ -18,6 +18,8 @@ Changing the checkout doesn't replace a running renderer. A UI-only change needs
 
 Personal launcher paths, relocated app state, test captures, rollback builds and client workspaces aren't prerequisites for cloning this repository. Avoid putting any of those into public documentation or hard-coded defaults.
 
+For handoffs, follow scoped source → relevant checks → exact commit/snapshot → immutable runnable bundle and inventory → coordinator review → owner activation → live acceptance/rollback. `source-ready` components are not standalone applications. Record version/build ID, SHA-256/byte counts, dependencies, evidence, included/excluded work, settings policy and a preserved previous working build. A commit, source push and installer release are different deliverables. Project `AGENTS.md` carries these requirements even outside the maintainer's workspace; optional shared workspace tools are not clone prerequisites. Never include profiles, keys or chat/client data in a handoff or source commit.
+
 To rebuild only the UI:
 
 ```powershell
@@ -41,11 +43,13 @@ These commands run from the repository root after UI dependencies are installed.
 | Personal identity profiles, local logo upload/fallback, explicit save and next-document application | `node scripts/test-identity-profiles.mjs`; see [identity scope and Windows/Discord boundaries](identity.md) |
 | Composer WPM timing, trusted input policy, IME boundaries, preferences and cleanup | `node scripts/test-typing-meter.mjs`; see [measurement and verification limits](typing-meter.md) |
 | Chat reading anchor, native scroll displacement, reflow, zoom and lifecycle | `node scripts/test-chat-reading.mjs`; see [candidate behavior](chat-reading.md) |
+| Accepted Enter/button send resumes following, multiline/IME/blocked sends, history, rerenders and stale chats | `node scripts/test-send-follow.mjs`; also reading and activity suites |
 | Same-chat project/cwd moves, empty destination, deferred dirty drafts and stale metadata replies | `node scripts/test-root-revalidation.mjs`; `node scripts/test-workspace-root-host.mjs`; `cargo test -p context-resolver --locked --offline`; `cargo test -p code-codex --bin code-codex context_ --locked --offline -- --test-threads=1` |
 | Shared bubble hover/focus, dismissal, bounds, colors and editor/E lifecycle | `node scripts/test-tooltips.mjs`; `node scripts/test-editor-pane.mjs` |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
 | Native browser/file boundaries, titlebar controls, tab switching, divider drags, embedded-surface position/size notifications and cleanup at zoom | `node scripts/test-native-pane-boundary.mjs` |
 | Single middle pages, pinned Chat, native handlers, overflow, local-file transfer lifecycle and context guards | `node scripts/test-native-middle-pages.mjs` |
+| Header action reservations with actual E/middle-page/pane controllers, native tab transitions, zoom, pointer hits and cleanup | `node scripts/test-header-action-layout.mjs` |
 | First chat selection, restored-chat startup, pointer/keyboard activation, delayed readiness and manual reopen | `node scripts/test-native-sidebar.mjs` |
 | Tab wheel/drag/dropdown/pins and close behavior | `node scripts/test-tab-navigation.mjs` |
 | Save/discard/cancel, failed/stale saves and switching | `node scripts/test-close-dialog.mjs` |
@@ -54,6 +58,10 @@ These commands run from the repository root after UI dependencies are installed.
 | Explorer-to-chat absolute path drag | `node scripts/test-drag-file-path.mjs` |
 | Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
 | Running native activity disclosures, shared reading/following, manual collapse, completion and cached chats | `node scripts/test-chat-activity.mjs`; `node scripts/test-chat-reading.mjs` |
+| Accepted-send resumes following without intercepting drafts/IME or later user scrolling | `node scripts/test-send-follow.mjs` |
+| Inactive Rain pause, explicit-save opt-out, manual pause and blend lifetime | `node scripts/test-code-rain-focus.mjs`; `node scripts/test-code-rain-runtime.mjs` |
+| Rain native hover menu, editor/Changes layers, forced colors and restoration | `node scripts/test-code-rain-layered-surfaces.mjs`; `node scripts/test-background-surfaces.mjs` |
+| Optional Nova restore control and fresh/legacy preferences | `node scripts/test-nova-restore.mjs`; `node scripts/test-preferences.mjs` |
 | Citation/local-link/native-file transfer integration with the actual explorer, reader and save/cancel/conflict handling | `node scripts/test-citations-host.mjs` |
 | Ordinary chat-file references: native button/anchor routing, keyboard, project scope and cleanup | `node scripts/test-chat-file-links.mjs` |
 | Preview link classification, tooltips, external/app confirmation, saved permissions and stale-dialog cancellation | `node scripts/test-preview-links.mjs` |
@@ -73,7 +81,7 @@ Browser checks launch their own headless Chrome with a temporary profile and loo
 
 `test-complete-text.mjs` optionally accepts `CODE_CODEX_COMPLETE_TEXT_FIXTURE` for a local document. Its normal fixture is synthetic; use that by default so the check is reproducible and doesn't depend on private files.
 
-The [custom editor workflow](https://github.com/ThornsOfire/code-codex/blob/feature/right-editor-pane/.github/workflows/editor-build.yml) runs the three native test packages and builds the native reader/launcher when matching native paths change on the editor branch. Its artifacts are temporary and aren't permanent fork releases. A documentation or UI-only push doesn't trigger that native rebuild under the current path filter.
+The [custom editor workflow](https://github.com/ThornsOfire/OpsWolf/blob/feature/right-editor-pane/.github/workflows/editor-build.yml) runs the three native test packages and builds the native reader/launcher when matching native paths change on the editor branch. Its artifacts are temporary and aren't permanent fork releases. A documentation or UI-only push doesn't trigger that native rebuild under the current path filter.
 
 ## Checking the real host
 
@@ -119,4 +127,4 @@ Update the appropriate Unreleased changelog entry alongside each meaningful user
 | Fork-specific update selection/distribution | Upstream endpoints remain inherited |
 | Language servers, completion and debugger integration | Outside the current basic editor |
 
-The public fork should work with ordinary project roots. Personal OpsWolf branding and local application-data organization aren't requirements for contributors.
+OpsWolf is the public product name, formerly Cursadex. The fork should work with ordinary project roots; a maintainer's personal branding, folder names and local application-data organization aren't requirements for contributors. Keep technical identifiers such as `cursadex-version.json`, `cursadex:*` keys and `--cursadex-*` hooks compatible, and retain exact repository URLs and historical build evidence.

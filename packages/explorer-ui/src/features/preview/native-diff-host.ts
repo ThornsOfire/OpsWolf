@@ -116,7 +116,7 @@ export class NativeDiffHost {
   }
   this.layout.set(aside,'position','fixed');this.layout.set(aside,'margin','0px');this.layout.set(aside,'min-width','0px');this.layout.set(aside,'pointer-events','auto');
   this.styleObserver?.observe(aside,{attributes:true,attributeFilter:['style']});
-  this.layout.set(aside,'background','var(--color-surface, #1d1d1c)');
+  this.layout.set(aside,'background','var(--code-codex-hosted-diff-background, var(--color-surface, #1d1d1c))');
   // The native outer divider can be a top-layer popover, above every z-index.
   // Only our pane resizer owns the hosted outer edge; internal diff dividers stay native.
   for(const separator of aside.querySelectorAll<HTMLElement>('[role="separator"][aria-label="Resize workspace panes"][aria-orientation="vertical"]')){

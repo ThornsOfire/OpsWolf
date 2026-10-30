@@ -2417,24 +2417,24 @@
         "name": "Code Rain Background",
         "category": "appearance",
         "api": 1,
-        "version": "0.1.1",
+        "version": "0.1.2",
         "releaseTag": "plugin-assets-2026-10-29",
         "capabilities": [
           "background",
           "startup",
           "preview"
         ],
-        "asset": "CodeCodex-background-code-rain-0.1.1.js",
-        "relativePath": "CodeCodex-background-code-rain-0.1.1.js",
-        "size": 10422,
-        "sha256": "751c10db39c69748738c36cc8fce3e7cc8afaf1ab8e2dfe6cae08a26861af639",
+        "asset": "CodeCodex-background-code-rain-0.1.2.js",
+        "relativePath": "CodeCodex-background-code-rain-0.1.2.js",
+        "size": 10580,
+        "sha256": "8e2909de7967c0d1a8432833c45c71320d08a9f3220d0c29a42f2bd84977cdae",
         "resources": [],
         "source": "https://github.com/ThornsOfire/OpsWolf-Code-Rain",
-        "sourceCommit": "4d68d1fcdddd458d08be1523497b4f2a7af57f55"
+        "sourceCommit": "c976189e3ec78d0f902a27e5aacf33470c38ebd8"
       },
       "inputs": {
         "vendor/opswolf-code-rain/state.mjs": "ad8ba514fa40f78daa3af9b33bfc431106c224810078078c93da240023c4fffd",
-        "vendor/opswolf-code-rain/renderer.mjs": "667dfef7acec3983b9e1b2ad46a2f21145d548e57e9c47f5dfa8523eff7fb07d",
+        "vendor/opswolf-code-rain/renderer.mjs": "cdb2918d07a442c8ede6157f0243a6afa5a188ca07348d184d62c20dc1004a83",
         "scripts/build-code-rain.mjs": "96c0ffb989bdb21fbad1529d9cc5acf7055783b3daaa5c87dc64ad9856c8e86a",
         "scripts/build.mjs": "aab918aaa39e2a5b219928c8c3f45cadce9536258f55d1e7ca710af162c6beeb",
         "scripts/rebuild-plugins.mjs": "e5c8f4e905e0c6abae384c20ac6ecc5ac5c131d20ac1a2e9ca82b48abd49d037",
@@ -2442,12 +2442,12 @@
         "scripts/plugin-build-inputs.mjs": "0cc1a975735b637d30c1671fb95b2a1ad89c9efe5f27b81425ffc0443c9adca3",
         "scripts/plugin-distribution.mjs": "8e83015a8984811bf0d18391977cd26a7ea847179604902dcf2fd4d0bba54bb4",
         "../../THIRD_PARTY_NOTICES_EN.md": "903973f4a96f7109af6a60d9c44b0adb7304d6c40733783880914cb59a46b13a",
-        "vendor/opswolf-code-rain/provenance.json": "a8e884c942bfd5786cca26b2aef3860fe64ca99a7c5832e2b12c9ff72962e1f9",
+        "vendor/opswolf-code-rain/provenance.json": "ba605587fc7d4ef846bc5c7e64a87390f2b16889de77c1ba7f0062e95aabaeeb",
         "vendor/opswolf-code-rain/LICENSE": "37e055ddf74cd1194667ae32c5241de021d3309f63f9587423c56f2fd10f035c"
       },
       "inputFormat": "lf-v1",
       "buildMetadata": {
-        "definition": "800814688038a28f20175b736a673e6c45c42100ad3c84a90b6149052ed7a871",
+        "definition": "477e1275cc138de2b48bc2850bb510bedbf7ee4dcf6517a9fd33893088c60370",
         "compiler": "0.25.12"
       },
       "artifactRoot": "releases/plugins/appearance/code-rain"

@@ -1,8 +1,12 @@
-# Using the editor fork
+# Using OpsWolf
 
 This is the longer version of the [main README](../../README.md): what the buttons do, what stays saved, and where the edges are.
 
+This describes the first alpha source checkpoint. [Known issues](known-issues.md) distinguish the owner-accepted dev.9 app, source changes and pending work. A feature description is not blanket native-version acceptance.
+
 ## Getting around
+
+The **OpsWolf** top menu's **Open GitHub Repository** link targets [our renamed fork](https://github.com/ThornsOfire/OpsWolf). Alpha source uses the canonical URL; older installed builds can use GitHub's redirect from the previous repository name. The OpsWolf labels and header/menu alignment are present in the owner-accepted dev.9 app. Custom identity profiles can retain their own labels.
 
 The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Hiding it exits fullscreen, so the next E opens it beside chat at its saved width. Open files and the current draft stay in the running session; hiding doesn't save to disk. Selecting the editor's chat tab or using Escape to return to chat also resets fullscreen after the switch is accepted. Cancelling a dirty-file switch leaves the layout intact.
 
@@ -14,6 +18,8 @@ The native sidebar keeps its normal startup state while you browse projects. Aft
 
 The compact native header is 32 CSS pixels tall; editor tabs and the file-control row are 28 CSS pixels. Display scaling and application zoom change their physical pixel size.
 
+The owned product-menu logo/name use a horizontal row even when native buttons inherit grid styling. In qualified middle-page layouts, the header reserves the measured end controls separately from chat actions and positions New tab by its actual visible bounds; this avoids overlap during Hide/Show tabs and hosted Changes. These source fixes require their matching reviewed build and live acceptance.
+
 ## Opening and managing files
 
 The explorer normally follows the active local chat’s current working directory. Once Codex reports a changed directory, Refresh, app focus or the visible-chat metadata check (every 15 seconds) can update the tree. An empty destination shows the normal empty-project state. A launcher configured with an explicit workspace keeps that override instead.
@@ -24,7 +30,7 @@ If an editor draft is dirty or saving, the automatic root switch waits. Save or 
 
 The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native pages, with one page visible at a time. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
 
-The explorer footer shows the Cursadex fork version beside the inherited upstream version. The upstream button still checks upstream releases; the fork label is separate. See [versioning](versioning.md) before staging a replacement build or publishing a release.
+The explorer footer shows the OpsWolf fork version beside the inherited upstream version. The upstream button still checks upstream releases; the fork label is separate. See [versioning](versioning.md) before staging a replacement build or publishing a release.
 
 Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width.
 
@@ -53,6 +59,8 @@ Dragging an explorer file into chat supplies its absolute local path in the text
 ## Preview, edit, save
 
 **Preview** is read-only. **Edit** enables source editing when the native reader marks the file editable. **Save**, or **Ctrl+S**, writes the complete draft using the loaded file version for conflict detection.
+
+Read-only text shows a red warning in place of the unavailable mode buttons. Hover or focus it for the reason and next step. A file mixing Windows CRLF and Unix LF line endings is read-only to avoid silently rewriting its formatting. Normalize its line endings consistently in an external editor, then close/reopen it here. Larger files and unverified versions retain their existing restrictions; this UI does not override the workspace reader's save policy. The warning follows the theme's error/deletion color and system high-contrast colors.
 
 For Markdown, editing shows the source text, including the pipe-delimited table rows. Rendered Markdown is provided by the optional preview plugin. Previewing an unsaved draft keeps that draft in memory; it isn't an implicit save.
 

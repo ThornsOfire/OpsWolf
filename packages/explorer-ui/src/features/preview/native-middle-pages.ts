@@ -40,7 +40,8 @@ export class NativeMiddlePages {
   private pending = false;
   private returnToChat = false;
   private readonly originals = new Map<HTMLElement, Map<string, string | null>>();
-  private readonly headerVariables = new Map<HTMLElement, [string, string]>();
+  private readonly headerVariables = new Map<HTMLElement, Map<string, [string, string]>>();
+  private readonly geometryObserved = new Set<Element>();
   constructor(private readonly ports: NativeMiddlePagesPorts) {}
 
   start(): void {
@@ -78,10 +79,13 @@ export class NativeMiddlePages {
   }
   private release(): void {
     this.resize?.disconnect();
+    this.geometryObserved.clear();
     for (const element of this.originals.keys()) this.restore(element);
-    for (const [header, [value, priority]] of this.headerVariables) {
-      if (value) header.style.setProperty('--cle-middle-new-tab-right', value, priority);
-      else header.style.removeProperty('--cle-middle-new-tab-right');
+    for (const [header, variables] of this.headerVariables) {
+      for (const [name, [value, priority]] of variables) {
+        if (value) header.style.setProperty(name, value, priority);
+        else header.style.removeProperty(name);
+      }
     }
     this.headerVariables.clear();
     this.control?.remove(); this.control = undefined; this.shadow = undefined;
@@ -109,7 +113,6 @@ export class NativeMiddlePages {
     if (exit && !exit.disabled) { exit.click(); this.schedule(); return; }
     if (this.scope !== scope || this.header !== header || this.control?.parentElement !== toolbar) {
       this.release(); this.scope = scope; this.header = header; this.mount(toolbar);
-      this.resize?.observe(header); this.resize?.observe(toolbar);
     }
     const pages: Page[] = [];
     for (const node of header.querySelectorAll<HTMLElement>('[data-app-shell-tab-controller="right"][data-tab-id]')) {
@@ -154,21 +157,65 @@ export class NativeMiddlePages {
     }
     for (const element of this.originals.keys()) if (!desired.has(element)) this.restore(element);
     this.render();
-    const rect = header.getBoundingClientRect(), scale = rect.width / (Number.parseFloat(getComputedStyle(header).width) || rect.width || 1);
+    this.layoutHeader(header, toolbar);
+  }
+  private headerVariable(header: HTMLElement, name: string, value: string): void {
+    let variables = this.headerVariables.get(header);
+    if (!variables) { variables = new Map(); this.headerVariables.set(header, variables); }
+    if (!variables.has(name)) variables.set(name, [header.style.getPropertyValue(name), header.style.getPropertyPriority(name)]);
+    if (header.style.getPropertyValue(name) !== value) header.style.setProperty(name, value);
+  }
+  private layoutHeader(header: HTMLElement, toolbar: HTMLElement): void {
+    const rect = header.getBoundingClientRect();
+    const scale = rect.width / (Number.parseFloat(getComputedStyle(header).width) || rect.width || 1);
+    if (!(scale > 0) || !rect.width) return;
     const end = header.querySelector<HTMLElement>('[data-app-shell-header-slot="end"]');
-    const actions = toolbar.lastElementChild;
-    const actionsRect = actions?.getBoundingClientRect();
-    const boundary = actionsRect?.width ? actionsRect.left : end?.getBoundingClientRect().left ?? rect.right;
-    const right = (rect.right - boundary) / (scale || 1) + 8;
-    const position = `${right.toFixed(2)}px`;
-    if (!this.headerVariables.has(header)) this.headerVariables.set(header, [header.style.getPropertyValue('--cle-middle-new-tab-right'), header.style.getPropertyPriority('--cle-middle-new-tab-right')]);
-    if (header.style.getPropertyValue('--cle-middle-new-tab-right') !== position) header.style.setProperty('--cle-middle-new-tab-right', position);
+    const main = toolbar.closest<HTMLElement>('[data-app-shell-titlebar-slot="main"][data-app-shell-focus-area="main"]');
+    const portal = header.querySelector<HTMLElement>('[data-app-shell-titlebar-slot="content"][data-app-shell-focus-area="right-panel"]');
+    const observed = new Set<Element>([header, toolbar]);
+    for (const item of [end, main, portal]) if (item) observed.add(item);
+    // The portal itself can stay 28px wide while a themed control grows beyond it.
+    for (const item of portal?.querySelectorAll('button,[role="button"]') ?? []) observed.add(item);
+    for (const item of this.geometryObserved) if (!observed.has(item)) this.resize?.unobserve(item);
+    for (const item of observed) if (!this.geometryObserved.has(item)) this.resize?.observe(item);
+    this.geometryObserved.clear(); for (const item of observed) this.geometryObserved.add(item);
+    const rtl = getComputedStyle(header).direction === 'rtl';
+    const gap = Number.parseFloat(getComputedStyle(toolbar).columnGap) || 8;
+    const endRect = end?.getBoundingClientRect();
+    // Native tab transitions can drop their trailing-width reservation while E
+    // and Hide tabs remain in a separate end grid. Cap the actual main slot;
+    // do not make native controls share that grid or change their handlers.
+    if (main && header.contains(main) && endRect?.width && !main.contains(end!)) {
+      const mainRect = main.getBoundingClientRect(), style = getComputedStyle(main);
+      const extra = style.boxSizing === 'border-box' ? 0 :
+        ['paddingLeft', 'paddingRight', 'borderLeftWidth', 'borderRightWidth'].reduce((sum, name) => sum + (Number.parseFloat(style[name as keyof CSSStyleDeclaration] as string) || 0), 0);
+      const available = (rtl ? mainRect.right - endRect.right : endRect.left - mainRect.left) / scale - gap - extra;
+      this.headerVariable(header, '--cle-middle-main-max-width', `${Math.max(0, available).toFixed(2)}px`);
+    } else this.headerVariable(header, '--cle-middle-main-max-width', '100%');
+    // Read after the reservation applies. Native portal children can overflow
+    // their declared 28px slot, so place the visible controls' envelope rather
+    // than assuming that the slot width is the button width.
+    const actions = toolbar.lastElementChild?.getBoundingClientRect();
+    const edges = [actions, endRect].filter((r): r is DOMRect => !!r?.width);
+    const boundary = rtl ? Math.max(rect.left, ...edges.map(r => r.right)) : Math.min(rect.right, ...edges.map(r => r.left));
+    const buttons = portal ? [...portal.querySelectorAll<HTMLElement>('button,[role="button"]')].filter(item =>
+      !item.closest('[hidden],[aria-hidden="true"]') && getComputedStyle(item).visibility !== 'hidden').map(item => item.getBoundingClientRect()).filter(r => r.width && r.height) : [];
+    let right = (rtl ? boundary - rect.left : rect.right - boundary) / scale + gap;
+    if (portal && buttons.length) {
+      const style = getComputedStyle(portal), box = portal.getBoundingClientRect();
+      const current = Number.parseFloat(style.insetInlineEnd);
+      const offset = Number.isFinite(current) ? current : (rtl ? box.left - rect.left : rect.right - box.right) / scale;
+      const edge = rtl ? Math.min(...buttons.map(r => r.left)) : Math.max(...buttons.map(r => r.right));
+      right = offset + (rtl ? boundary - edge : edge - boundary) / scale + gap;
+    }
+    this.headerVariable(header, '--cle-middle-new-tab-right', `${Math.max(0, right).toFixed(2)}px`);
   }
   private mount(toolbar: HTMLElement): void {
     const document = this.ports.element.ownerDocument, key = this.key;
     this.style = document.createElement('style'); this.style.dataset.codeCodexOwned = 'middle-pages';
     this.style.textContent = `
       [data-code-codex-middle-owner="${key}"] [data-app-shell-main-titlebar]{width:100%!important;max-width:100%!important}
+      [data-code-codex-middle-owner="${key}"] [data-app-shell-titlebar-slot="main"][data-app-shell-focus-area="main"]{max-width:var(--cle-middle-main-max-width,100%)!important;min-width:0!important}
       [data-code-codex-middle-owner="${key}"] [data-app-shell-tab-strip-controller="right"],
       [data-code-codex-middle-owner="${key}"] [data-app-shell-titlebar-divider="pane"],
       [data-code-codex-middle-original-title="${key}"], [data-code-codex-middle-divider="${key}"],

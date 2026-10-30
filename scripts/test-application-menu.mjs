@@ -11,7 +11,7 @@ window.fixture={enabled:false,supported:true,writes:[],alerts:[],readError:false
 window.localeRevision=0;window.setLocale=locale=>applyLanguage({schema:1,locale,revision:++window.localeRevision,source:'menu'});setLocale('en');window.alert=text=>fixture.alerts.push(text);window.confirm=()=>{throw Error('Browser confirmation must not be used');};
 window.reconcile=()=>reconcileApplicationMenu({isExplorerVisible:()=>true,toggleExplorer(){},openPreferences(){fixture.settingsOpened=true;},openPreviewMarket(){},checkForUpdates(){},openRuntimeInformation(){},openInstallationFolder(){},openUninstaller:async()=>{fixture.uninstalls++;return{opened:true};},
 getLoginStartup:async()=>{if(fixture.readError)throw Error('fixture read denied');return {supported:fixture.supported,enabled:fixture.enabled};},setLoginStartup:async enabled=>{fixture.writes.push(enabled);if(fixture.writeError)throw Error('fixture write denied');if(fixture.defer)await new Promise(resolve=>fixture.finish=resolve);fixture.enabled=enabled;return {supported:true,enabled};}});reconcile();`,resolveDir:resolve(ui,'src'),loader:'ts'},bundle:true,format:'iife',outfile:resolve(out,'fixture.js')});
-const html=`<!doctype html><html><meta charset="utf-8"><style>:root{--color-codex-application-menu-selection:rgb(225,230,235);--color-text:#1a1c1f}body{margin:0;font-family:Segoe UI}header{display:flex;align-items:center;background:#f4f4f4;height:38px}[role=menubar]{display:flex;gap:2px}.native{border:0;border-radius:8px;padding:5px 15px;color:#888;background:transparent;font:14px Segoe UI}.native[data-state=open]{background:var(--color-codex-application-menu-selection);color:var(--color-text)}#application-menu-content{position:fixed;top:38px;left:0;background:#eee;width:220px;height:100px}</style><body><header><div role="menubar"><button class="native" id="application-menu-trigger-file-menu" aria-expanded="false" data-state="closed">File</button><button class="native" id="application-menu-trigger-help-menu" aria-expanded="false" data-state="closed">Help</button></div></header><main>Workspace</main><script>
+const html=`<!doctype html><html><meta charset="utf-8"><style>:root{--color-codex-application-menu-selection:rgb(225,230,235);--color-text:#1a1c1f}body{margin:0;font-family:Segoe UI}header{display:flex;align-items:center;background:#f4f4f4;height:38px}[role=menubar]{display:flex;gap:2px}.native{display:grid;place-items:center;height:30px;line-height:20px;border:0;border-radius:8px;padding:5px 15px;color:#888;background:transparent;font:14px Segoe UI}.native[data-state=open]{background:var(--color-codex-application-menu-selection);color:var(--color-text)}#application-menu-content{position:fixed;top:38px;left:0;background:#eee;width:220px;height:100px}</style><body><header><div role="menubar"><button class="native" id="application-menu-trigger-file-menu" aria-expanded="false" data-state="closed">File</button><button class="native" id="application-menu-trigger-help-menu" aria-expanded="false" data-state="closed">Help</button></div></header><main>Workspace</main><script>
 window.nativeButtons=[...document.querySelectorAll('[role=menubar] button')];
 window.closeNative=()=>{document.querySelector('#application-menu-content')?.remove();for(const b of nativeButtons){b.dataset.state='closed';b.setAttribute('aria-expanded','false');}};
 window.openNative=b=>{closeNative();b.dataset.state='open';b.setAttribute('aria-expanded','true');const menu=document.createElement('div');menu.id='application-menu-content';menu.role='menu';menu.tabIndex=-1;menu.dataset.radixMenubarContent='';menu.setAttribute('aria-labelledby',b.id);menu.textContent=b.textContent+' native content';menu.addEventListener('keydown',e=>{if(e.key==='Escape')closeNative();});document.body.append(menu);menu.focus();};
@@ -83,12 +83,41 @@ try{
  await ev(`window.readsBefore=fixture.writes.length;reconcile();`);
  await check('Reconcile keeps one menu instance',`document.querySelectorAll('#code-codex-application-menu-trigger').length===1&&fixture.writes.length===readsBefore`);
  await ev(`trigger.click();document.querySelector('[data-cursadex-preferences]').click();`);
- await check('Cursadex settings action closes menu and restores a visible focus origin',`trigger.textContent==='Cursadex'&&fixture.settingsOpened&&popup.hidden&&document.activeElement===trigger`);
+ await check('OpsWolf settings action closes menu and restores a visible focus origin',`trigger.textContent==='OpsWolf'&&fixture.settingsOpened&&popup.hidden&&document.activeElement===trigger`);
  await ev(`localStorage.setItem('cursadex:identity:v1',JSON.stringify({schema:1,selected:'profile-fixture',profiles:[{id:'profile-fixture',name:'Fixture Command',logo:null,colors:{background:'#1f1f1f',foreground:'#f2f2f2',accent:'#79b8ff'}}]}))`);
  await browser.command('Page.reload');await delay(300);
  await ev(`window.trigger=document.querySelector('#code-codex-application-menu-trigger');window.popup=document.querySelector('#code-codex-application-menu-popup');window.item=document.querySelector('[data-code-codex-login-startup]');`);
  await check('Fresh menu uses the saved personal name and badge without changing native menus',`trigger.textContent==='Fixture Command'&&trigger.firstElementChild.style.backgroundColor==='rgb(31, 31, 31)'&&nativeButtons[0].textContent==='File'&&nativeButtons[1].textContent==='Help'`);
  await ev(`trigger.click();document.querySelector('[data-cursadex-preferences]').click()`);
  await check('Personalized settings label keeps the original action and focus behavior',`document.querySelector('[data-cursadex-preferences]').textContent==='Fixture Command settings…'&&fixture.settingsOpened&&popup.hidden&&document.activeElement===trigger`);
+ // Restore the production default after the personal-identity checks. Native
+ // buttons deliberately inherit grid layout; the owned trigger must override it.
+ await ev(`localStorage.removeItem('cursadex:identity:v1')`);
+ await browser.command('Page.reload');await delay(300);
+ await ev(`window.trigger=document.querySelector('#code-codex-application-menu-trigger');window.popup=document.querySelector('#code-codex-application-menu-popup');window.item=document.querySelector('[data-code-codex-login-startup]');`);
+ await wait(`trigger?.querySelector('img')?.complete&&trigger.querySelector('img').naturalWidth>0`);
+ for(const [width,zoom] of [[1500,1],[420,1],[420,1.25]]){
+  await browser.command('Emulation.setDeviceMetricsOverride',{width,height:700,deviceScaleFactor:1,mobile:false});
+  await ev(`document.documentElement.style.zoom='${zoom}';${settle}`);
+  const geometry=await ev(`(()=>{const image=trigger.querySelector('img'),label=trigger.querySelector('span');return{image:image.getBoundingClientRect().toJSON(),label:label.getBoundingClientRect().toJSON(),trigger:trigger.getBoundingClientRect().toJSON(),native:nativeButtons[0].getBoundingClientRect().toJSON(),bar:document.querySelector('header').getBoundingClientRect().toJSON(),viewport:innerWidth,nativeDisplay:getComputedStyle(nativeButtons[0]).display,name:label.textContent}})()`);
+  writeFileSync(resolve(out,`identity-layout-${width}-${zoom}.json`),JSON.stringify(geometry,null,2));
+  const {image,label,trigger:button,native,bar,viewport,nativeDisplay,name}=geometry;
+  assert.equal(nativeDisplay,'grid','Fixture reproduces inherited native grid button layout');
+  assert.equal(name,'OpsWolf','Geometry measures the default product identity');
+  assert.ok(image.right<=label.left&&Math.abs(image.y+image.height/2-label.y-label.height/2)<1,
+   `Default logo/name are horizontally adjacent and centered at width ${width}, zoom ${zoom}; geometry=${JSON.stringify(geometry)}`);
+  assert.ok(Math.abs(button.height-native.height)<1&&button.top>=bar.top&&button.bottom<=bar.bottom+1
+   &&image.top>=button.top&&image.bottom<=button.bottom+1&&label.top>=button.top&&label.bottom<=button.bottom+1
+   &&button.left>=0&&button.right<=viewport&&Math.abs(button.y+button.height/2-bar.y-bar.height/2)<1,
+   `Identity fits the native-height menu bar at width ${width}, zoom ${zoom}`);
+  checks.push(`Default identity stays horizontal, centered and within native bar: ${width}px / ${zoom} zoom`);
+  await ev(`trigger.click();${settle}`);
+  await check(`Aligned trigger click opens menu at ${width}px / ${zoom}`,`!popup.hidden&&trigger.getAttribute('aria-expanded')==='true'`);
+  await ev(`popup.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));${settle}`);
+  await check(`Escape restores aligned trigger focus at ${width}px / ${zoom}`,`popup.hidden&&document.activeElement===trigger`);
+  await ev(`trigger.dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true,cancelable:true}));${settle}`);
+  await check(`Aligned trigger keyboard opens first menu item at ${width}px / ${zoom}`,`!popup.hidden&&document.activeElement===popup.firstElementChild`);
+  await ev(`popup.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));${settle}`);
+ }
  writeFileSync(resolve(out,'result.json'),JSON.stringify({passed:true,checks},null,2));console.log(`Application menu: ${checks.length} browser checks passed; no OS state changed`);
-}finally{await browser.close();await new Promise(r=>server.close(r));}
+}catch(error){writeFileSync(resolve(out,'result.json'),JSON.stringify({passed:false,checks,error:error.message},null,2));throw error;}finally{await browser.close();await new Promise(r=>server.close(r));}

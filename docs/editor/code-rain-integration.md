@@ -1,6 +1,44 @@
 # Code Rain integration candidate
 
+## Current local state — OpsWolf dev.9 baseline / Rain plugin 0.1.2
+
+The owner-used dev.9 baseline retains reviewed renderer commit `c976189e3ec78d0f902a27e5aacf33470c38ebd8`. Plugin 0.1.2 is independently named and pinned: 10,580 bytes, SHA-256 `8e2909de7967c0d1a8432833c45c71320d08a9f3220d0c29a42f2bd84977cdae`. Its fixed 30 FPS deadlines correct the reproduced 20–23 FPS cadence slip without changing appearance, resource caps, persistence or opt-ins. The matching native/UI build passed normal offline import of all 27 locked packages; the other 26 lock entries were unchanged. Source/public plugin releases remain unapproved. Drawing the intended extra frames can increase work; this is a smoothness fix, not a GPU-saving claim.
+
+The current baseline retains dev.5's repairs for the peeking sidebar's overflowing menu and the opaque inner mount/scroll/file layers in hosted Changes. It also includes dev.6's reviewed empty-placeholder repair: in docked/fullscreen layouts it shares the existing Rain main-surface mask, while text stays opaque and forced-colors retains the system backing. Robbie reports editor transparency works with Code Rain but not other themes (BUG-012); this does not establish general theme compatibility. Current Changes/flyout/file-tree opacity and existing inactive-window/manual pause behavior stay intact. The visible OpsWolf rebrand is integrated, with header/menu alignment accepted in the owner's dev.9 checklist.
+
+The owner reports generally smoother Rain, with remaining frame drops during preset → Save → Start blend, resolving after the blend completes (BUG-011). This is newly noticed, not a confirmed regression or measured FPS result. Native Hide tabs/header overlap (BUG-009) is repaired and owner-accepted for tested layouts; unknown future layouts remain a compatibility boundary. Direct active-theme settings in the explorer header is a recorded request (F26); settings still open through Preview Market. See [known issues](known-issues.md).
+
+The integration history below describes the prior 0.1.1 package and its original source pin. Preserve the previous working host/plugin set for rollback. An integrate-only component never activates itself. Current per-repository instructions must work without a maintainer's private workspace layout.
+
+Inactive-window playback and the default-on pause preference are described in [window focus behavior](code-rain-focus.md).
+
+## Historical initial integration and verification
+
+The following initial-checkpoint notes predate dev.5 and are retained as historical evidence. Their old package/runtime identities and pending activation statements are not current launch instructions.
+
+**Initial owner check, 2026-10-29:** Code Rain appeared to work in the activated host. This confirmed initial live use only.
+
+The same owner pass found two appearance mismatches: distracting bleed-through in the collapsed native sidebar's hover flyout, and a fully opaque custom editor including native Changes. The fully expanded native sidebar looks good. These are open integration reports, not a diagnosis that the renderer is at fault. Inspect surface ownership and content readability before adjusting opacity; preserve the expanded-sidebar appearance and do not claim full theme compatibility from animation alone.
+
 The standalone [OpsWolf Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) renderer is integrated as an independent API 1 background package. Its catalog entry, runtime bindings and settings are implemented. The owner has activated the matching test UI/native pair with Rain imported through normal verification. **Live effect interaction, document readability and restart persistence remain unverified.** The original host installation remains preserved; no source or plugin release has been published.
+
+## Rain host repair review — BUG-003/004/005
+
+The following checkpoint supersedes the investigation status in the original owner report above. These are host repairs; standalone 0.1.0 and the verified Rain plugin 0.1.1 remain unchanged.
+
+- **Settings:** the outer content box/border and inherited CSS zoom were not accounted for in viewport positioning. The complete border box now fits the visual viewport, including short/narrow windows and inherited zoom. Internal scrolling remains; Save is reachable by scrolling or Tab. Repositioning does not recreate inputs, save settings or move focus. Visual-viewport listeners use the existing abort scope. Existing market resize-close behavior remains; reopening retains session values.
+- **Collapsed native sidebar:** the floating-panel marker previously shared the expanded sidebar's .66 mask. Rain now uses a solid dark backing only for that flyout, even with the optional sidebar opacity control set low. The expanded sidebar keeps its original styling. The exact current live hover container still needs qualification.
+- **Editor and Changes:** cleared child layers were still covered by the docked editor host's opaque backing. Rain now clears that host, exposing the existing main readability mask. Hosted native Changes separately used an opaque leased background; it now consumes a Rain-owned backing variable, falling back to the original native theme when Rain stops. Toolbar controls, text colors, document paper and native comparison nodes/handlers are preserved. Unknown native markup retains existing behavior.
+
+The isolated **0.1.0-dev.2 review snapshot** uses base commit `6e010a631c40c5fb59977b53f7324987ad52d319` plus the exact Rain working-file hashes in ignored `artifacts/rain-review/review-manifest.json`. This is not a committed source revision or an activated build. Concurrent Companion/send-follow edits are excluded from the snapshot. The shared checkout's version metadata remains unchanged; coordinate the next combined build version before any activation.
+
+UI SHA-256: `ee74d4bcb54d9d213389cad3ed625807edec502ab531477bfeabe9ddb6bb72c1`. Normal production build verification passed without rebuilding plugins or changing catalog/lock/provenance. Rain remains 10,422 bytes, SHA-256 `751c10db39c69748738c36cc8fce3e7cc8afaf1ab8e2dfe6cae08a26861af639`. The pinned shared native-style helper remains unchanged; Rain-specific rules live in the host-only `code-rain-native-surfaces.ts`.
+
+Evidence: 20 focused layout/sidebar checks (six viewport/zoom cases through 320×240 at 200%, keyboard Save access, focus/unsaved input and disable restoration); 51 native Changes checks; 33 production UI checks including 19 Rain checks; 23 verified package checks; 160 shared surfaces; 24 controller checks; 31 startup/pin checks. TypeScript, version validation, architecture (222 files, 621 runtime edges, zero cycles), changelog structure and diff checks passed. These are separate synthetic suites. Narrow production settings capture reviewed. Baseline failures remain in `artifacts/rain-layout/baseline.json`.
+
+TaskKit returned no visible Cursadex window during this pass. No desktop input, restart, installation replacement or publication occurred. Live hover qualification, appearance over real content and physical window/zoom acceptance remain open. No backend code changed.
+
+Do **not** restart expecting this fix from the current launcher. First review the snapshot and arrange a separate verified, immutable UI/native activation handoff. After that handoff, test: (1) open Rain settings at normal and enlarged zoom, shorten the window, scroll/Tab to Save; (2) compare collapsed hover and fully expanded sidebar readability; (3) compare text Edit/Preview, Markdown and native Changes in docked/fullscreen layouts; (4) disable Rain and verify appearance restoration, document drafts and composer text; (5) explicitly Save a harmless Rain setting and verify it on the next owner-controlled normal restart. Do not restart during other active work.
 
 ## Source and package identity
 
@@ -48,7 +86,7 @@ Activation uses Dark appearance. Disabling restores a prior Light/System prefere
 
 Run `node scripts/check-version.mjs` first for host/fork identity validation. This does not change standalone Rain's package version or the pinned plugin identity.
 
-Run the normal candidate build with `node packages/explorer-ui/scripts/build.mjs`. For a deliberate source/package update, use `--rebuild-plugins=all` and review `dist/plugin-rebuild-report.json` plus the distribution lock. Shared builder input changes require an explicit audit even when asset bytes are unchanged. This integration preserved the exact identities of all 25 unchanged packages. The startup player changed to candidate `1.1.28` because its source list now includes Rain; Rain itself is `0.1.1`.
+Run the normal candidate build with `node packages/explorer-ui/scripts/build.mjs`. For a deliberate Rain-only source/package update, select `--rebuild-plugins=code-rain` and review `dist/plugin-rebuild-report.json` plus the distribution lock. Use `all` only for an explicitly reviewed all-package update. Shared builder input changes require an audit even when asset bytes stay unchanged. Historically, the initial integration preserved 25 other packages and advanced the startup player to `1.1.28`; dev.5 separately preserves all 26 other entries while advancing Rain to `0.1.2`.
 
 Two build-portability issues were discovered and corrected: the verbatim ASCII shader must retain LF checkout endings, and esbuild must preserve dependency symlink paths so a worktree's local `node_modules` junction produces checkout-relative input provenance. The existing distribution path/hash checks remain intact. Generated metafiles stay local; the lock records reviewed input hashes.
 
@@ -63,3 +101,14 @@ The production UI fixture passes 33 checks, including 19 Rain checks for normal 
 The matching native release built with `cargo build --offline --locked --release -p code-codex --bin code-codex`. Its ordinary `plugins --import-dir <package-directory>` command imported Rain into a unique fixture folder containing the executable and a schema-1 Code-Codex storage marker. `plugins` then reported only Rain installed, and the cache's 10,422 bytes matched SHA-256 `751c10db39c69748738c36cc8fce3e7cc8afaf1ab8e2dfe6cae08a26861af639`. Evidence remains under ignored `artifacts/code-rain-package/` and `artifacts/code-rain-native-*`.
 
 Remaining: live integrated presentation, real interaction/readability with documents and startup on the owner's actual host. The owner has activated the test host and its imported plugin cache; full effect acceptance is still pending. Publication remains subject to review. Standalone 0.1.0, host plugin 0.1.1 and the later Cursadex fork display 0.1.0-dev.1 identify different artifacts. The public Rain remote remains unpushed; no version tag or downloadable package release is implied by local import.
+
+## Historical dev.2 staging record
+
+
+Owner-authorized staging checkpoint, 2026-10-29: staged candidate-rain-0.1.0-dev.2-ee74d4bc under AppData/CursadexTest/versions. All 50 staged assets passed SHA-256 checks; normal offline import verified 27 plugins, including unchanged Rain 0.1.1. Native executable/launcher are the verified e4fe78b pair from the current candidate; repository native/Cargo sources have no differences from that native commit to this snapshot base. Staging receipt: artifacts/rain-review/staging-receipt.json. The current launcher and active launch-manifest.json were hashed before/after and are unchanged. No running build, live settings, databases or process was changed. No restart, activation or publication.
+
+This staged snapshot contains Rain fixes only, excluding concurrent Companion/send-follow patches. Existing Test Cursadex Update.cmd still selects 0b47a7d. Before restarting for multiple agents' fixes, coordinate a combined reviewed build/activation. Otherwise a separate Rain-only activation handoff is still required. Do not run the old activation helper expecting this staged version.
+
+## Empty editor follow-up / dev.5 owner feedback
+
+Owner accepts the current flyout opacity and, after reconsidering left/right, requests no Changes-opacity adjustment. Empty editor remains solid: its .editor-empty placeholder independently paints the theme background and was omitted by Rain's transparency rules. Component cursadex-code-rain-0.1.0-dev.5-empty.1-sc88facfbf3e0 adds only a Rain-specific placeholder clear inside forced-colors:none; current Changes/tree/flyout levels stay unchanged. Eight focused, 11 existing layered-surface and 160 shared-surface browser checks pass. These are synthetic; no current host/source/plugin/launcher changed. Frozen manifest: Code Rain/artifacts/handoffs/cursadex-code-rain-0.1.0-dev.5-empty.1-sc88facfbf3e0/handoff.json. Coordinator must merge the CSS delta plus supplied Unreleased/guide note and build a new application; owner then checks empty docked/fullscreen editor, restoration and retained controls/drafts. No restart for this component alone.

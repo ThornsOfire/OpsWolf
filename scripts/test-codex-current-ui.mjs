@@ -97,7 +97,7 @@ try{
  for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}
  assert.ok(result,'fixture completed');
  const versions=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot;return {fork:s.querySelector('.fork-version')?.textContent,upstream:s.querySelector('.status-code')?.textContent};})()`);
- assert.equal(versions.fork,'Cursadex v'+forkVersion,'fork identity comes from manifest');
+ assert.equal(versions.fork,'OpsWolf v'+forkVersion,'fork identity comes from manifest');
  assert.equal(versions.upstream,'Upstream v0.5.40','upstream identity stays separate');
  await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.status-code').click()`);
  await delay(150);

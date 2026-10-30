@@ -707,6 +707,17 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       isDiagramPreviewPath(view.path) &&
       !editor;
     const metadata = `${view.kind === "text" && view.sizeBytes > INLINE_TEXT_BYTES ? this._largeMarkdownKey === `${view.path}\0${view.version}` ? "Large file · rendered · read only · " : "Large file · plain text · read only · " : markdownPreview ? "Markdown preview · " : csvPreview ? "CSV preview · " : diagramPreview ? "Diagram preview · " : ""}${this._metadataFor(view)}`;
+    const readOnly = (view.kind === 'text' || view.kind === 'empty') && !view.editable && !draftEditor
+      ? view.lineEnding === 'mixed'
+        ? { label: 'Read only: mixed line endings', explanation: 'This file has mixed line endings. Normalize it to LF or CRLF, then reopen it to edit safely.' }
+        : view.sizeBytes > INLINE_TEXT_BYTES
+          ? { label: 'Read only: above 512 KiB', explanation: 'Editing is limited to complete text files up to 512 KiB. This complete file remains readable.' }
+          : view.kind === 'text' && view.truncated
+            ? { label: 'Read only: incomplete preview', explanation: 'Editing requires the complete file. Reopen it before editing.' }
+            : !view.version
+              ? { label: 'Read only: unverified version', explanation: 'Editing requires a verified file version. Reopen the file before editing.' }
+              : { label: 'Read only: workspace restriction', explanation: 'The workspace reader marked this file read only.' }
+      : undefined;
     metaBar.append(location, this._textSpan(metadata, "preview-metadata"));
     const action=(label:string,title:string,callback:()=>void,disabled=false):HTMLButtonElement=>{
       const button=this.ownerDocument.createElement('button');button.type='button';button.textContent=label;
@@ -721,7 +732,13 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     }
     if(view.kind==='text'||view.kind==='empty') {
       const path=view.path;
-      if(view.editable || draftEditor) {
+      if(readOnly) {
+        const warning = this._textSpan(readOnly.label, 'preview-edit-restriction');
+        warning.dataset.tooltip = readOnly.explanation;
+        warning.tabIndex = 0;
+        warning.setAttribute('role', 'note');
+        metaBar.append(warning);
+      } else {
         const previewButton=action('Preview','Read only; unsaved draft is retained',()=>{this._draftPreviewPath=path;this._renderPanel();});
         previewButton.setAttribute('aria-pressed',String(!editor));
         const editButton=action('Edit','Enable editing',()=>{

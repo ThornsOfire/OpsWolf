@@ -14,7 +14,7 @@ export class CodeRain {
     Object.assign(this.canvas.style,{display:'block',width:'100%',height:'100%',pointerEvents:'none'});
     this.ctx=this.canvas.getContext('2d',{alpha:false});if(!this.ctx)throw Error('Canvas 2D is unavailable');
     container.append(this.canvas);
-    this.paused=false;this.offscreen=false;this.disposed=false;this.frame=0;this.previous=0;this.time=0;
+    this.paused=false;this.offscreen=false;this.disposed=false;this.frame=0;this.previous=0;this.nextDraw=0;this.time=0;
     this.frames=0;this.drawn=0;this.columns=0;this.width=0;this.height=0;this.transition=null;
     this.motion=this.win.matchMedia('(prefers-reduced-motion: reduce)');
     this.contrast=this.win.matchMedia('(forced-colors: active)');this.phases=Array.from({length:RENDER_BUDGET.columns},(_,i)=>noise(i+83));
@@ -46,9 +46,9 @@ export class CodeRain {
   reconcile(){
     if(this.disposed)return;
     if(!this.canAnimate()){
-      this.scheduler.cancel(this.frame);this.frame=0;this.previous=0;
+      this.scheduler.cancel(this.frame);this.frame=0;this.previous=0;this.nextDraw=0;
       if(!this.doc.hidden&&!this.offscreen)this.draw();
-    }else if(!this.frame){this.previous=0;this.frame=this.scheduler.request(time=>this.tick(time));}
+    }else if(!this.frame){this.previous=0;this.nextDraw=0;this.frame=this.scheduler.request(time=>this.tick(time));}
     this.notify();
   }
   tick(now){
@@ -56,9 +56,13 @@ export class CodeRain {
     // Media state can change before its change event is delivered. Settle the
     // same lifecycle here so the status agrees with the stopped animation.
     if(!this.canAnimate()){this.finishReducedTransition();this.reconcile();return;}
-    if(!this.previous)this.previous=now;
+    const interval=1000/RENDER_BUDGET.fps,tolerance=.5;
+    if(!this.previous){this.previous=now;this.nextDraw=now+interval;}
     const elapsed=now-this.previous;
-    if(elapsed>=1000/RENDER_BUDGET.fps){
+    if(now+tolerance>=this.nextDraw){
+      // Keep deadlines on their original cadence, but advance motion using
+      // actual elapsed time. Skip missed deadlines; never draw catch-up bursts.
+      this.nextDraw+=Math.max(1,Math.floor((now-this.nextDraw+tolerance)/interval)+1)*interval;
       const delta=Math.min(elapsed,100);this.previous=now;this.time+=delta/1000;
       if(this.transition){
         const result=this.transition.advance(delta);this.settings=result.rain;

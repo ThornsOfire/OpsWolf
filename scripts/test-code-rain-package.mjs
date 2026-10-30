@@ -12,13 +12,13 @@ const artifacts=resolve(root,'artifacts/code-rain-package');
 await mkdir(artifacts,{recursive:true});
 const run=await mkdtemp(resolve(artifacts,'run-'));
 // This identity is a local package candidate, not a published catalog entry.
-const definition={id:'code-rain',name:'Code Rain Background',category:'appearance',api:1,version:'0.1.1',releaseTag:'plugin-assets-2026-10-29',capabilities:['background','startup','preview']};
+const definition={id:'code-rain',name:'Code Rain Background',category:'appearance',api:1,version:'0.1.2',releaseTag:'plugin-assets-2026-10-29',capabilities:['background','startup','preview']};
 const report={checks:[],failures:[]};
 let browser, server;
 const check=async(name,condition)=>{assert.ok(await condition,name);report.checks.push(name);};
 try {
   const provenance=await verifyCodeRainSource(ui);
-  await check('Reviewed standalone commit is pinned',provenance.commit==='4d68d1fcdddd458d08be1523497b4f2a7af57f55');
+  await check('Reviewed standalone commit is pinned',provenance.commit==='c976189e3ec78d0f902a27e5aacf33470c38ebd8');
   const descriptor=await buildCodeRain(ui,{bundle:true,absWorkingDir:ui,target:['chrome120'],charset:'utf8',legalComments:'none'},run,definition);
   const repeat=await buildCodeRain(ui,{bundle:true,absWorkingDir:ui,target:['chrome120'],charset:'utf8',legalComments:'none'},resolve(run,'repeat'),definition);
   await check('Repeated local builds produce identical package bytes',descriptor.sha256===repeat.sha256&&descriptor.size===repeat.size);

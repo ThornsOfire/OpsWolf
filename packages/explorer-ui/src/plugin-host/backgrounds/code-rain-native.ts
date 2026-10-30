@@ -1,4 +1,5 @@
 import {CodeRainBackgroundController, type RainRenderer} from './code-rain';
+import {codeRainWindowFocus} from './code-rain-focus';
 import {CODE_RAIN_PLUGIN_ID as ID, type RainSettings} from '../../effects/code-rain/model';
 import {ensureBackgroundPackage} from '../../plugin-load-diagnostics';
 import {backgroundModule} from '../../background-plugin-runtime';
@@ -77,6 +78,7 @@ export function getCodeRainBackgroundController():CodeRainBackgroundController {
       const renderer=new (Factory as RainFactory)(target,settings,{onTransition,frameScheduler:{request:callback=>requestBackgroundFrame(target,callback),cancel:cancelBackgroundFrame}});
       registerBackgroundOpening(target,renderer);return renderer;
     },
+    focus:codeRainWindowFocus(window),
     storage:()=>window.localStorage,
   });
   const priorDisposal=existing&&typeof existing==='object'&&'dispose' in existing&&typeof existing.dispose==='function'

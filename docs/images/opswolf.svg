@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">OpsWolf</title>
+  <desc id="desc">An angular navy and ice-blue wolf head with cyan eyes on a transparent background.</desc>
+  <!-- Original vector reconstruction. Three flat colors; no embedded bitmap or external assets. -->
+  <defs>
+    <g id="face-left" fill="#DDF5FF">
+      <path d="M109 57 80 151 91 191 124 164 142 146Z"/>
+      <path d="m119 104 20 34-19 7 9 20-35 24 10-53Z" fill="#091A38"/>
+      <path d="m154 175 43 21 23 28-27-8 25 37 18 44 20-17v171l-28-13-25-22-28-13-29-25 26 5-25-38-28-12 30-1-35-39-42 2 31-31-43 7 35-36 27-9-20-6 30-16-20 1Z"/>
+      <path d="m129 244 29 2 34 21 21 26 11 37-21-24-21-15-27-9-14-18Z" fill="#091A38"/>
+      <path d="m163 261 32 16 10 18-28-10Z" fill="#00D4F5"/>
+      <path d="m174 331 12 12 10 37-11 22-11-28 4-19Z" fill="#091A38"/>
+    </g>
+  </defs>
+  <g id="wolf">
+    <path id="silhouette" fill="#091A38" d="m256 125 42-23-9 23 35-11L407 24l37 114-5 29 15 33-18-6 35 48-21-2 39 51-25-2 14 27-39 5 9 23-28-3-21 34-33 26-27 18-34 37-49 28-49-28-34-37-27-18-33-26-21-34-28 3 9-23-39-5 14-27-25 2 39-51-21 2 35-48-18 6 15-33-5-29L105 24l83 90 35 11-9-23Z"/>
+    <use href="#face-left"/>
+    <use href="#face-left" transform="translate(512 0) scale(-1 1)"/>
+    <path id="nose" fill="#091A38" d="m226 367 60 0 15 15-5 20-32 19v9l37 10-9 10-36-10-36 10-9-10 37-10v-9l-32-19-5-20Z"/>
+    <path id="chin" fill="#DDF5FF" d="m230 451 26-7 26 7-9 10-17 9-17-9Z"/>
+  </g>
+</svg>

@@ -1,12 +1,14 @@
 # Personal identity: local candidate
 
-Open **Cursadex → Cursadex settings → Personal identity**. A custom display name replaces those two owned labels after a fresh app window loads. The default remains Cursadex. This is the first part of the broader personal control-center work; it does not rename the Windows application.
+Open **OpsWolf → OpsWolf settings → Personal identity**. A custom display name replaces those two owned labels after a fresh app window loads. OpsWolf is the public default, formerly Cursadex. The visible rebrand keeps existing selected personal profiles and technical storage identities; an explicitly saved custom name remains a custom name. This is the first part of the broader personal control-center work; it does not rename the Windows application.
 
 ## Profiles and controls
 
-You can keep eight personal profiles in addition to the permanent Cursadex default. Load a profile to edit its draft, or choose New profile. Previewing and switching drafts do not save anything. **Save for next launch** saves and selects the displayed profile; a restart notice appears when it differs from the identity this renderer loaded with. There is no automatic restart. A full renderer reload also loads the saved choice; ordinary chat changes, menu remounts and extension reinjection retain the captured identity.
+You can keep eight personal profiles in addition to the permanent OpsWolf default. Load a profile to edit its draft, or choose New profile. Previewing and switching drafts do not save anything. **Save for next launch** saves and selects the displayed profile; a restart notice appears when it differs from the identity this renderer loaded with. There is no automatic restart. A full renderer reload also loads the saved choice; ordinary chat changes, menu remounts and extension reinjection retain the captured identity.
 
-**Use Cursadex default** selects the default for next launch without deleting personal profiles. **Delete saved profile** removes the loaded personal profile; deleting the selected one selects the default. **Reload saved profiles** reads another window's saved choices without replacing this window's active identity. Loading another draft or closing Settings discards edits that have not been saved. Preference reset and preview-link reset are separate operations.
+The public default includes the bundled OpsWolf wolf logo, derived from this repository's original vector artwork. Its name/logo come from `core/branding.json` through `core/branding.ts`; it needs no network access. Existing selected personal profiles, including explicitly saved Cursadex names, keep their exact stored values. Choose **Use OpsWolf default** if you want to replace a custom identity with the new default.
+
+**Use OpsWolf default** selects the default for next launch without deleting personal profiles. **Delete saved profile** removes the loaded personal profile; deleting the selected one selects the default. **Reload saved profiles** reads another window's saved choices without replacing this window's active identity. Loading another draft or closing Settings discards edits that have not been saved. Preference reset and preview-link reset are separate operations.
 
 Names use 1–48 visible Unicode characters and are rendered as text. The optional local PNG logo is embedded in the profile, so moving the original image does not break it. Input is limited to 128 KiB and 512×512 pixels, decoded and re-encoded before saving. Remote URLs, SVG markup and file paths are not accepted. An undecodable saved image falls back to the name; invalid replacement uploads retain the previous logo. Personal artwork is never part of public defaults.
 
@@ -30,7 +32,7 @@ Writes validate first and publish in-memory saved state only after storage accep
 | Existing shortcut label/icon | Unchanged | Existing integration owns verified names/targets/manifests; a general personal shortcut handoff is not implemented |
 | Taskbar application identity | Unchanged | Companion process identity does not rename the separate signed host |
 | Discord activity / other app detectors | Not enabled or implemented | Registered application setup and a supported presence bridge would be separate work; no SDK installed or activity sent |
-| Public default / personal profile | Cursadex default, optional locally supplied artwork | No maintainer name, logo or paths in public defaults |
+| Public default / personal profile | OpsWolf default, optional locally supplied artwork | No maintainer name, logo or paths in public defaults |
 
 Windows' `SetCurrentProcessExplicitAppUserModelID` sets the **calling process** identity for taskbar grouping and is intended for application startup before UI. Calling it in our launcher would not by itself set the existing host's process identity. [Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-setcurrentprocessexplicitappusermodelid).
 
