@@ -18,6 +18,8 @@ This is an unofficial community project, independent of OpenAI and the original 
 
 The local development candidate also includes an optional Code Rain background with its own motion, color, preset and transition controls. It uses the normal verified plugin system; no published Rain download is available yet. See the [integration guide and verification limits](docs/editor/code-rain-integration.md).
 
+The footer identifies the Cursadex development version separately from the upstream version. Our [versioning guide](docs/editor/versioning.md) explains build handoffs and release rules. This is still an unreleased development fork. Live testing confirms activity following and scroll-to-pause; automatic activity expansion currently has a known compatibility failure. See [reading/activity coverage](docs/editor/chat-reading.md).
+
 ### An editor that lives beside the chat
 
 - Files open in a resizable right editor pane, so you can keep talking to the agent while looking at your work.

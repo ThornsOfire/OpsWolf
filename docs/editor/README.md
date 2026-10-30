@@ -16,11 +16,15 @@ The compact native header is 32 CSS pixels tall; editor tabs and the file-contro
 
 ## Opening and managing files
 
-The explorer normally follows the active local chat’s current working directory. Moving that chat into a different local project updates its root on Refresh, when the app regains focus, or during a visible-chat metadata check (every 15 seconds). An empty destination shows the normal empty-project state. A launcher configured with an explicit workspace keeps that override instead.
+The explorer normally follows the active local chat’s current working directory. Once Codex reports a changed directory, Refresh, app focus or the visible-chat metadata check (every 15 seconds) can update the tree. An empty destination shows the normal empty-project state. A launcher configured with an explicit workspace keeps that override instead.
+
+Project display name, linked folder and an existing chat's working directory are separate. After renaming a folder on disk, correct its project folder through native Edit. In one live check, the existing chat adopted the corrected directory on its next ordinary turn and the explorer followed; immediate or bulk updates to every chat are not guaranteed. The refresher only reads metadata: it does not rename folders, relink other chats, or rewrite paths inside code. Review absolute paths separately. See [folder-link troubleshooting](workspace-root-refresh.md).
 
 If an editor draft is dirty or saving, the automatic root switch waits. Save or discard the edit, then refresh; the draft stays associated with its original workspace until switching is safe. A failed metadata check preserves the existing root rather than guessing a destination. This behavior requires the matching updated native companion and UI; reloading only the UI cannot fix the older companion’s cached root.
 
 The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native pages, with one page visible at a time. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
+
+The explorer footer shows the Cursadex fork version beside the inherited upstream version. The upstream button still checks upstream releases; the fork label is separate. See [versioning](versioning.md) before staging a replacement build or publishing a release.
 
 Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width.
 

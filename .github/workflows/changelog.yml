@@ -20,5 +20,7 @@ jobs:
           node-version: 24
       - name: Test changelog validation and change-range policy
         run: node --test scripts/test-changelog.mjs
+      - name: Check fork and upstream version identity
+        run: node scripts/check-version.mjs
       - name: Check notes for this change
         run: node scripts/check-changelog.mjs --event "$GITHUB_EVENT_PATH"

@@ -5,6 +5,7 @@ import {launchFixture,delay} from './browser-fixture.mjs';
 import assert from 'node:assert/strict';
 import {join, resolve} from 'node:path';
 const root=resolve(import.meta.dirname,'..');
+const forkVersion=JSON.parse(readFileSync(join(root,'cursadex-version.json'),'utf8')).version;
 const tag='code-codex-v'+JSON.parse(readFileSync(join(root,'packages/explorer-ui/package.json'),'utf8')).version.replaceAll('.', '-');
 const page=(active,id,title)=>`<div data-app-shell-active-page="${active}" style="display:${active?'contents':'none'}"><div class="_Workspace_new" data-app-shell-page-surface="true"><header data-app-shell-titlebar="true"><span data-app-shell-titlebar-content>${title}</span></header><div class="_MainContentClip_new"><main data-app-shell-main-surface="default"><div class="_WorkspaceContent_new"><div data-app-shell-workspace-layout="split"><div data-app-shell-main-content-top-fade="visible"><div class="_MainContentTopFade_new"></div></div><article data-response-annotation-conversation="${id}">Conversation</article><div data-thread-scroll-footer="true"><div class="pointer-events-none bg-surface"></div><div data-above-composer-conversation-id="${id}"><textarea>Preserved draft</textarea></div></div></div></div></main></div></div></div>`;
 const script=`
@@ -17,6 +18,7 @@ if(method==='explorer.context')return {threadId:params.threadId,projectName:'Fix
 if(method==='explorer.list')return {entries:[{name:'README.md',relativePath:'README.md',kind:'file'},{name:'main.ts',relativePath:'main.ts',kind:'file'}]};
 if(method==='explorer.preview')return {kind:'text',text:params.relativePath==='README.md'?'# Preview':'const value = 1;',sizeBytes:10,truncated:false,editable:true,version:'a'.repeat(64),lineEnding:'lf'};
 if(method==='explorer.watch.start'){await new Promise(r=>setTimeout(r,1500));watchFinished=true;return {watching:true};}
+if(method==='explorer.update.check')return {currentVersion:'0.5.40',latestVersion:'0.5.40',status:'upToDate',tagName:'v0.5.40',releaseUrl:'https://github.com/Rice-dog/code-codex/releases/tag/v0.5.40'};
 return {};}};
 window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
 `;
@@ -90,6 +92,26 @@ writeFileSync(fixture,html);
 const server=createServer((req,res)=>{if(req.url==='/explorer.js'){res.setHeader('Content-Type','text/javascript');res.end(readFileSync(join(root,'packages/explorer-ui/dist/explorer.js')));return;}if(req.url==='/app-initial-current-ui.js'){res.setHeader('Content-Type','text/javascript');res.end(`export const adapter={appActions:{runInPrimaryWindow:async({action})=>({mode:action.mode??'dark'})},clientCoordination:{invalidateQueryCache:async()=>({})}};`);return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser,result;
-try{browser=await launchFixture(`http://127.0.0.1:${server.address().port}/`);for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}assert.ok(result,'fixture completed');writeFileSync(join(root,'artifacts/current-ui-result.json'),JSON.stringify(result,null,2));const shot=await browser.command('Page.captureScreenshot');writeFileSync(join(root,'artifacts/current-ui.png'),Buffer.from(shot.data,'base64'));}finally{await browser?.close();await new Promise(r=>server.close(r));}
+try{
+ browser=await launchFixture(`http://127.0.0.1:${server.address().port}/`);
+ for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}
+ assert.ok(result,'fixture completed');
+ const versions=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot;return {fork:s.querySelector('.fork-version')?.textContent,upstream:s.querySelector('.status-code')?.textContent};})()`);
+ assert.equal(versions.fork,'Cursadex v'+forkVersion,'fork identity comes from manifest');
+ assert.equal(versions.upstream,'Upstream v0.5.40','upstream identity stays separate');
+ await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.status-code').click()`);
+ await delay(150);
+ assert.equal(await browser.evaluate(`calls.filter(m=>m==='explorer.update.check').length`),1,'upstream button still uses normal check action');
+ assert.equal(await browser.evaluate(`calls.includes('explorer.update.install')`),false,'checking does not install');
+ for(const width of [220,390]){
+  await browser.evaluate(`(()=>{const e=document.querySelector('${tag}');for(const p of ['width','min-width','max-width'])e.style.setProperty(p,'${width}px','important');})()`);
+  await delay(80);
+  const fits=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot,f=s.querySelector('.statusbar'),r=f.getBoundingClientRect();return f.scrollWidth<=f.clientWidth+1&&[s.querySelector('.fork-version'),s.querySelector('.status-code')].every(e=>{const b=e.getBoundingClientRect();return b.left>=r.left-1&&b.right<=r.right+1&&b.top>=r.top-1&&b.bottom<=r.bottom+1;});})()`);
+  assert.equal(fits,true,'both version labels fit footer at '+width+'px');
+ }
+ result.versionFooter={fork:versions.fork,upstream:versions.upstream,upstreamCheckPreserved:true,installNotCalled:true,widths:[220,390]};
+ writeFileSync(join(root,'artifacts/current-ui-result.json'),JSON.stringify(result,null,2));
+ const shot=await browser.command('Page.captureScreenshot');writeFileSync(join(root,'artifacts/current-ui.png'),Buffer.from(shot.data,'base64'));
+}finally{await browser?.close();await new Promise(r=>server.close(r));}
 console.log({...result,calls:result.calls.length});
 assert.equal(result.error,undefined);for(const key of ['moduleBootstrapRetained','readyBeforeWatch','rootResynced','positions','titleTracksRename','replacementTitleTracked','dockedTitleVisible','ambiguousTitleSafe','expandedTitleRetained','cachedTitleScoped','maskClear','fileTransparent','clickable','switchInline'])assert.equal(result[key],true,key);assert.equal(result.label,'Current title');assert.deepEqual(result.errors,[]);

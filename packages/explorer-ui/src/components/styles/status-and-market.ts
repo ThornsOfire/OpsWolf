@@ -3,6 +3,8 @@ export const style4 = String.raw`  .statusbar {
     z-index: 12;
     grid-row: 4;
     display: flex;
+    flex-wrap: wrap;
+    column-gap: 8px;
     align-items: center;
     justify-content: space-between;
     min-height: 28px;
@@ -13,6 +15,17 @@ export const style4 = String.raw`  .statusbar {
     font-size: 11px;
     line-height: 16px;
   }
+  .build-versions {
+    display: flex;
+    flex: 0 1 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    column-gap: 6px;
+    margin-left: auto;
+    min-width: 0;
+  }
+  .fork-version { font-variant-numeric: tabular-nums; white-space: nowrap; }
   .preview-market-button {
     display: inline-flex;
     align-items: center;

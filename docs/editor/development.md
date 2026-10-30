@@ -30,6 +30,8 @@ For the full native/UI build, use `scripts/build.ps1 -Configuration Release` fro
 
 ## Choose checks for what changed
 
+Before building, run `node scripts/check-version.mjs`. Fork metadata lives in `cursadex-version.json`; upstream package/plugin identity remains separate. The current-UI fixture also checks both footer labels, narrow widths and the unchanged upstream update-check action. Follow [version handoff rules](versioning.md).
+
 These commands run from the repository root after UI dependencies are installed. Tests exercise different boundaries; the goal is useful coverage, not running every appearance/plugin test for a documentation edit.
 
 | Change | Focused check |

@@ -10,7 +10,9 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
-- Recognized running activity opens available native tool disclosures once and follows new entries through the shared reading controller. Scrolling up pauses following; Jump to latest resumes. Manual collapse, cached-chat choices and native completion/cancellation remain respected. Unknown/localized layouts stay native; live candidate verification is pending.
+- Separate Cursadex development version in the explorer footer alongside the inherited upstream version. Fork identity starts at `0.1.0-dev.1` in `cursadex-version.json`; the upstream update action, package/plugin versions and protocol identities remain separate. See the [versioning workflow](docs/editor/versioning.md).
+
+- Recognized running activity has a fixture-tested adapter to open available native tool disclosures and follow new entries through the shared reading controller. Owner testing confirms following and scroll-to-pause, but automatic disclosure expansion is failing in the current live host and remains unresolved. Manual collapse and native completion remain owned by Codex; unknown/localized layouts stay native.
 
 - Personal identity profiles in the owned settings panel: local PNG logo, display name and name-badge colors, with draft preview, explicit next-launch save, default/reset and up to eight personal profiles. Saved changes leave the current renderer identity intact. Windows names/icons, shortcuts and Discord identity remain unchanged; see the [scope matrix](docs/editor/identity.md).
 

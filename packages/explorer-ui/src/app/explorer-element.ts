@@ -1,6 +1,7 @@
 import { ChangeReviewController } from "../features/workspace/change-review";
 import { nativeReviewRevisions } from "../features/workspace/native-review-revisions";
 import { RootRevalidation } from "../features/workspace/root-revalidation";
+import { CURSADEX_VERSION } from "../core/version";
 import { attachTooltips } from "../components/tooltips";
 import { NativeDiffHost } from "../features/preview/native-diff-host";
 import { NativeMiddlePages } from "../features/preview/native-middle-pages";
@@ -636,7 +637,10 @@ export class CodeCodexElement extends HTMLElement {
               <button class="update-install" type="button">Update</button>
             </div>
           </div>
-          <button class="status-code" type="button" title="Check GitHub for updates" aria-label="Check GitHub for updates" aria-haspopup="dialog" aria-controls="cle-update-dialog" aria-expanded="false">WAIT</button>
+          <div class="build-versions" aria-label="Build versions">
+            <span class="fork-version" data-i18n-skip title="Cursadex development build; fork updates are managed separately">Cursadex v${CURSADEX_VERSION}</span>
+            <button class="status-code" type="button" title="Check GitHub for upstream updates" aria-label="Check GitHub for upstream updates" aria-haspopup="dialog" aria-controls="cle-update-dialog" aria-expanded="false">WAIT</button>
+          </div>
         </footer>
         <div class="action-notice" popover="manual" role="status" hidden></div>
         <div class="context-menu" role="menu" aria-label="Explorer actions" aria-busy="false" hidden></div>
@@ -3776,7 +3780,7 @@ export class CodeCodexElement extends HTMLElement {
     }
     #renderStatus(): void {
         const versionVisible = this.#state === "ready" || this.#state === "empty" || this.#state === "no-project";
-        this.#statusCode.textContent = versionVisible ? (this.#versionFeedback.text ?? `v${__CODE_CODEX_VERSION__}`) : this.#state.toUpperCase().slice(0, 8);
+        this.#statusCode.textContent = versionVisible ? (this.#versionFeedback.text ?? `Upstream v${__CODE_CODEX_VERSION__}`) : this.#state.toUpperCase().slice(0, 8);
         this.#versionFeedback.sync(versionVisible);
         this.#statusCode.disabled = !versionVisible || this.#updatesSettings.updateCheckPending || this.#updatesSettings.updateInstallPending;
         this.#statusCode.dataset.updateState = versionVisible ? this.#updatesSettings.updateCheckPresentation : "idle";

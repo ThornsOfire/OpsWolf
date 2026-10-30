@@ -38,6 +38,7 @@ These rules apply inside this repository. They supplement workspace/user instruc
 ## Build, installation and live verification
 
 - Pair backend changes with a matching native build and UI; an old native binary plus a new UI can be incompatible. Verify the source/artifact identity and installed hash, and keep a rollback copy when replacing installed assets.
+- Keep the fork display version in `cursadex-version.json`, separate from upstream package/protocol/plugin identity. Run `node scripts/check-version.mjs` before a build. Follow `docs/editor/versioning.md`; increment the development version for a new reviewed build handoff, record source/hashes, and never overwrite an immutable running candidate or publish/tag as a side effect of versioning.
 - Never restart/kill live Codex or relocate live app state as a routine test step. Other chats may be working. Install for the next launch and leave restarts to the user unless a restart is explicitly authorized.
 - Prefer TaskKit for Windows UI work where available. Use bounded inspection and synthetic test documents; preserve unsent chat and open files, and end control sessions/clean up temporary probes when finished.
 - A fixture pass isn't proof of every native app version, language or Windows/GPU configuration. State real-host and CI verification separately from local tests, and don't label checksum matching as a whole-program safety audit.

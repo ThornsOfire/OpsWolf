@@ -1,6 +1,6 @@
 # Workspace-root refresh fix
 
-Prepared 2026-10-29 on `fix/workspace-root-revalidation`, from baseline `142c2b8c434a026761a68bd9a0225deccc228c23`. This is a separate candidate; the working installation has not been replaced or reloaded.
+Prepared 2026-10-29 on `fix/workspace-root-revalidation`, from baseline `142c2b8c434a026761a68bd9a0225deccc228c23`, and integrated into the development candidate. The owner has since activated the matching candidate UI/native pair. Validation sections below preserve their original checkpoint evidence; the live findings at the end supersede their pending-launch status.
 
 ## Root selection and failure
 
@@ -44,8 +44,20 @@ On the combined candidate, the 16 root-controller checks, 13 context-resolver te
 
 All six native release executables built with locked, offline dependencies. Existing compiler warnings remain. The everyday installation was not replaced; the owner still chooses deployment and restart after review.
 
-## Activation and current stale panel
+## Historical activation requirement for the older companion
 
 The installed companion retains the old cache in process memory. Neither another ordinary directory Refresh nor switching chats is a reliable eviction mechanism; a UI-only reload would still use that companion. There is no verified supported in-place repair for that existing process without altering the live environment.
 
 After running work finishes, integrate/review this local change with the other candidate, deploy a matching native/UI build, and relaunch through the custom companion. A Windows reboot is not required by this fix. The user should choose the restart time; no restart was attempted. Actual metadata availability after a real project move and the native installation/launch remain live verification steps.
+
+## Live folder-link finding — 2026-10-29
+
+An owner renamed a root folder from A to B. The native project's display name had changed, but both its saved folder and an existing chat cwd still pointed at A, which was now empty. Revalidation correctly read that unchanged metadata; this was not evidence that a new cache had been introduced.
+
+The owner corrected the project's folder through native Edit. The existing chat still reported A until its next ordinary read-only turn. That turn ran without an explicit cwd override and returned B; chat metadata then also reported B. After selecting that chat, its active identity, ready explorer heading and repository entries matched B. The immediate blocker was resolved with no source patch or additional restart.
+
+The supported project-membership move action, including removing/re-adding membership, did not itself update that chat's cwd. Do not use it as a verified directory-repair command. This one-chat observation does not establish propagation across every nested chat, worktree, remote host or native version.
+
+For troubleshooting, distinguish the project label, project folder and chat cwd. Correct the native folder link, save current edits, and verify the next turn's actual cwd and explorer root. If they still disagree, preserve diagnostics and report the mismatch rather than guessing a folder, editing live databases or adding an unrelated tree override. Normal metadata revalidation remains useful and is retained.
+
+Automatic root-folder rename plus immediate project/chat relinking is not implemented. It is parked for now. The existing refresher does not rewrite imports, configuration, shortcuts or absolute paths inside source files; those need a separate refactor/review.
