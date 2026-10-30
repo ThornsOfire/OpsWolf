@@ -80,6 +80,14 @@ try{
  await check('Successful coordinator switch selects only Rain',`r.enabled&&!group.prior.enabled&&group.enabled.size===1&&group.enabled.has('rain')&&!group.actions.busy`);
  await e(`await group.actions.toggle('prior')`);
  await check('Switching away removes Rain and restores the other runtime',`!r.enabled&&group.prior.enabled&&s.surfaces===0&&group.enabled.has('prior')&&!group.enabled.has('rain')`);await e(`await r.dispose()`);
+ await e(`item=make();r=item.runtime;s=item.state;group=makeActions(r,s);group.enabled.clear();group.enabled.add('rain');group.prior.enabled=false;s.mode='appearance-fail';await r.enable().catch(()=>{});window.acquiredBefore=s.acquired;window.preparedBefore=s.prepared;s.mode='ok';await group.actions.toggle('rain')`);
+ await check('Selected but failed Rain is deselected without activation, appearance acquisition or a settings write',`!r.enabled&&!r.pending&&!r.error&&!group.enabled.has('rain')&&!group.actions.busy&&s.acquired===acquiredBefore&&s.prepared===preparedBefore&&s.writes===0&&s.surfaces===0`);await e(`await r.dispose()`);
+ await e(`item=make();r=item.runtime;s=item.state;group=makeActions(r,s);group.enabled.clear();group.enabled.add('rain');group.prior.enabled=false;await r.enable();acquiredBefore=s.acquired;s.mode='release-fail';await group.actions.toggle('rain')`);
+ await check('Owned appearance restoration failure keeps saved selection and honest error after surface cleanup',`!r.enabled&&!r.pending&&r.error==='restore refused'&&group.enabled.has('rain')&&!group.actions.busy&&s.surfaces===0&&s.acquired===acquiredBefore`);
+ await e(`s.mode='release-wait';window.retry=group.actions.toggle('rain');await new Promise(resolve=>setTimeout(resolve,20))`);
+ await check('Restoration retry is pending without a new renderer or prematurely committing deselection',`r.pending&&group.actions.busy&&group.enabled.has('rain')&&!r.enabled&&s.surfaces===0&&s.acquired===acquiredBefore`);
+ await e(`s.mode='ok';s.resumeRelease();await retry`);
+ await check('Successful restoration retry clears selection and error without reactivation',`!r.pending&&!r.error&&!r.enabled&&!group.enabled.has('rain')&&!group.actions.busy&&s.acquired===acquiredBefore&&s.surfaces===0`);await e(`await r.dispose()`);
  await check('Tests leave the draft and DOM intact with no asynchronous errors',`document.querySelector('textarea').value==='Keep draft'&&!document.querySelector('canvas')&&errors.length===0`);
 }catch(error){report.failures.push(error.stack??String(error));}
 finally{await browser?.close();await new Promise(r=>server.close(r));stop();await mkdir(resolve(root,'artifacts/code-rain-runtime'),{recursive:true});await writeFile(resolve(root,'artifacts/code-rain-runtime/results.json'),JSON.stringify(report,null,2)+'\n');}

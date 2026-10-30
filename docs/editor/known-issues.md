@@ -1,11 +1,12 @@
 # Current limitations and pending work
 
-Updated 2026-10-30. OpsWolf (formerly Cursadex) development builds are local and unreleased. The owner-used baseline is OpsWolf 0.1.0-dev.9 with Rain plugin 0.1.2. The owner accepts header-spacing/product-menu alignment across the reported checklist layouts and dev.9's red explanation where read-only text mode controls were silently unavailable. Passing fixtures alone does not close a reported live failure; other known limitations below remain open.
+Updated 2026-10-30. OpsWolf development builds remain separate from a public installer. Current local app is OpsWolf 0.1.0-alpha.3 with Rain plugin 0.1.2; the matching source checkpoint is alpha.3. The owner accepts header-spacing/product-menu alignment across the reported checklist layouts and dev.9's red explanation where read-only text mode controls were silently unavailable. Passing fixtures alone does not close a reported live failure; other known limitations below remain open.
 
 Mixed CRLF/LF text remains read-only under the existing native save policy. Normalize line endings consistently and reopen to edit; the warning does not bypass that protection. Editing above 512 KiB and unverified versions retain their existing restrictions.
 
 | Item | Observed behavior / status |
 | --- | --- |
+| BUG-017: host appearance discovery | Resolved for the tested Codex package 26.1027.3384.0 in alpha.3: guarded export inspection and intrinsic RPC invocation. All 33 combined commands pass, including 48 focused and 9 whole-explorer recovery cases. Owner confirms startup, Enable/Disable, retained saved settings and previous-theme restoration. A later restart check remains a follow-up. Alpha.2 is preserved failed evidence; renderer blend performance and blend-option persistence remain separate. |
 | BUG-001: activity expansion | Activity disclosures still need manual expansion in the owner's native layout. Following and scroll-to-pause work separately. |
 | BUG-009: native header spacing | Repaired from dev.8 and owner-accepted in the tested dev.9 layouts: tabs/Hide/Show, hosted Changes, resizing and zoom. 81 focused checks pass. Unknown future layouts and untested RTL remain compatibility limits. |
 | BUG-015: product menu alignment | Repaired from dev.8 and owner-accepted: the wolf sits beside the name. 45 menu checks pass. |

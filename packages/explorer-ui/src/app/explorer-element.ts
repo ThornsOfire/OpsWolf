@@ -425,7 +425,8 @@ export class CodeCodexElement extends HTMLElement {
     readonly #updateMessage: HTMLElement;
     readonly #updateLaterButton: HTMLButtonElement;
     readonly #updateInstallButton: HTMLButtonElement;
-    readonly #previewMarketButton: HTMLButtonElement;
+    #previewMarketReturnFocus: HTMLElement | null = null;
+    readonly #codexVersion: HTMLElement;
     readonly #previewMarketPopover: HTMLElement;
     readonly #previewMarketList: HTMLElement;
     readonly #previewMarketCloseButton: HTMLButtonElement;
@@ -630,7 +631,6 @@ export class CodeCodexElement extends HTMLElement {
               </section>
             </div>
           </div>
-          <button class="preview-market-button" type="button" aria-haspopup="dialog" aria-controls="cle-preview-market" aria-expanded="false">${icons.preview}<span>Preview Market</span></button>
           <div class="update-popover" id="cle-update-dialog" role="dialog" aria-modal="false" aria-labelledby="cle-update-title" aria-describedby="cle-update-message" hidden>
             <h3 id="cle-update-title">Code-Codex update available</h3>
             <p class="update-message" id="cle-update-message"></p>
@@ -640,6 +640,7 @@ export class CodeCodexElement extends HTMLElement {
             </div>
           </div>
           <div class="build-versions" aria-label="Build versions">
+            <span class="codex-version" data-i18n-skip>Codex version unavailable</span>
             <span class="fork-version" data-i18n-skip title="${PRODUCT_NAME} development build; fork updates are managed separately">${PRODUCT_NAME} v${CURSADEX_VERSION}</span>
             <button class="status-code" type="button" title="Check GitHub for upstream updates" aria-label="Check GitHub for upstream updates" aria-haspopup="dialog" aria-controls="cle-update-dialog" aria-expanded="false">WAIT</button>
           </div>
@@ -684,7 +685,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#updateMessage = this.#required<HTMLElement>(".update-message");
         this.#updateLaterButton = this.#required<HTMLButtonElement>(".update-later");
         this.#updateInstallButton = this.#required<HTMLButtonElement>(".update-install");
-        this.#previewMarketButton = this.#required<HTMLButtonElement>(".preview-market-button");
+        this.#codexVersion = this.#required<HTMLElement>(".codex-version");
         this.#previewMarketPopover = this.#required<HTMLElement>(".preview-market-popover");
         this.#previewMarketList = this.#required<HTMLElement>(".preview-market-list");
         this.#previewMarketCloseButton = this.#required<HTMLButtonElement>(".preview-market-close");
@@ -1784,7 +1785,6 @@ export class CodeCodexElement extends HTMLElement {
             });
             this.#updateLaterButton.addEventListener("click", () => this.#updatesSettings.closeUpdateDialog(true));
             this.#updateInstallButton.addEventListener("click", () => void this.#updatesSettings.installUpdate());
-            this.#previewMarketButton.addEventListener("click", () => this.#togglePreviewMarket());
             this.#previewMarketCloseButton.addEventListener("click", () => this.#closePreviewMarket(true));
             this.#previewMarketList.addEventListener("click", (event) => {
                 const button = (event.target as Element | null)?.closest<HTMLButtonElement>("button[data-preview-market-category]");
@@ -2271,7 +2271,6 @@ export class CodeCodexElement extends HTMLElement {
         }
         if (!this.#previewMarketPopover.hidden
             && !path.includes(this.#previewMarketPopover)
-            && !path.includes(this.#previewMarketButton)
             && !path.includes(this.#particleSettingsPanel)
             && !path.includes(this.#blackHoleSettingsPanel)
             && !path.includes(this.#glowHorizonSettingsPanel)
@@ -3442,7 +3441,8 @@ export class CodeCodexElement extends HTMLElement {
         this.#updatesSettings.closeUpdateDialog(false);
         this.#previewMarketOpen = true;
         this.#previewMarketPopover.hidden = false;
-        this.#previewMarketButton.setAttribute("aria-expanded", "true");
+        this.#previewMarketReturnFocus = this.#shadow.activeElement instanceof HTMLElement
+            ? this.#shadow.activeElement : document.activeElement instanceof HTMLElement ? document.activeElement : null;
         this.#renderPreviewMarket();
         this.#selectPreviewMarketCategory("appearance", false);
         queueMicrotask(() => {
@@ -3514,9 +3514,12 @@ export class CodeCodexElement extends HTMLElement {
             return;
         this.#previewMarketOpen = false;
         this.#previewMarketPopover.hidden = true;
-        this.#previewMarketButton.setAttribute("aria-expanded", "false");
-        if (restoreFocus && this.#previewMarketButton.isConnected)
-            this.#previewMarketButton.focus();
+        const returnFocus = this.#previewMarketReturnFocus;
+        this.#previewMarketReturnFocus = null;
+        if (restoreFocus) {
+            if (returnFocus?.isConnected && !this.#previewMarketPopover.contains(returnFocus)) returnFocus.focus();
+            else this.#treeShell.focus();
+        }
     }
     #togglePreviewer(previewer: PreviewerDefinition): void {
         const wasEnabled = this.#enabledPreviewers.has(previewer.id);
@@ -3785,6 +3788,13 @@ export class CodeCodexElement extends HTMLElement {
         }, 220);
     }
     #renderStatus(): void {
+        // Launcher bootstrap identifies the attached Codex package, not this fork/upstream build.
+        const hostVersion = (this.#nativeReconnectMarker ?? getBootstrapConfig()).codexVersion;
+        const knownVersion = typeof hostVersion === "string" && /^\d+(?:\.\d+){2,3}$/.test(hostVersion);
+        this.#codexVersion.textContent = knownVersion ? `Codex v${hostVersion}` : "Codex version unavailable";
+        this.#codexVersion.title = knownVersion
+            ? "Attached Codex host package version reported by the launcher; may differ from Codex’s About version"
+            : "The launcher did not report a recognizable Codex host package version";
         const versionVisible = this.#state === "ready" || this.#state === "empty" || this.#state === "no-project";
         this.#statusCode.textContent = versionVisible ? (this.#versionFeedback.text ?? `Upstream v${__CODE_CODEX_VERSION__}`) : this.#state.toUpperCase().slice(0, 8);
         this.#versionFeedback.sync(versionVisible);

@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Explorer footer identifies the attached Codex host package separately from OpsWolf and upstream Code-Codex, with an explicit unavailable state. Preview Market is accessed through the top application menu instead of a duplicate footer button.
+
 - Code Rain pauses animation and blends while its window is inactive by default, with a Save-controlled opt-out. Returning focus preserves manual Pause; older saved settings default to this behavior.
 
 - Optional Nova Fox Companion restore-logo button in the explorer header, visible by default for fresh preferences; existing saved/legacy preferences and explicit disable remain respected. It opens only Nova’s fixed registered app link after confirmation; Nova remains a separate optional application. The control is integrated in the current host; Nova's separate restore-link failure remains documented in its known issues.
@@ -69,6 +71,11 @@ This initial record was reconstructed from the fork's commits and checked implem
 - The native Codex sidebar waits for your first chat selection before collapsing once per launch. Startup, project browsing and automatic chat restoration leave its native state alone. Manually toggling it opts out of further automatic collapse; the explorer has independent controls. ([initial sidebar behavior](https://github.com/ThornsOfire/OpsWolf/commit/52eeb34))
 
 ### Fixed
+
+- Appearance discovery skips individual host functions that cannot be inspected, and invokes callable RPC methods through the intrinsic without looking up their synthesized `.call`/`.apply` properties. A whole-explorer regression covers persisted Rain selection, a prior theme lease, normal market clicks and repeated theme restoration. Alpha.2 failed owner testing on these host edge cases; replacement source remains subject to new live acceptance.
+
+- Appearance discovery also recognizes the preloaded host shared module, so Rain and other dark backgrounds can find the existing RPC capability when the host omits separate appearance modules from preload/resource lists. Discovery validates same-origin role URLs, rejects ambiguity, avoids unrelated property getters and uses bounded startup retries. This is capability-based compatibility, not a guarantee for future Codex versions.
+- Disable now deselects a saved background that failed to start instead of retrying activation. Rain distinguishes Running from Selected · Not running; a failed theme restoration retains its error and owned lease for a safe retry. Renderer/plugin pins and updater policy remain unchanged.
 
 - Read-only text previews show a red warning in place of unavailable Preview/Edit controls, explaining mixed line endings, size limits or an unverified version. Hover or keyboard focus explains how to proceed; existing workspace save restrictions remain enforced.
 

@@ -2,7 +2,7 @@
 
 Keep changes understandable, keep the tests useful, and tell people what actually changed. We don't need a mountain of release machinery to do that ;3
 
-Use the editor branch named in [README.md](README.md). Read the [project rules](AGENTS.md) and [development guide](docs/editor/development.md) for architecture, synthetic test fixtures, build/install differences and focused checks. Contributors should send proposed source changes to `feature/right-editor-pane` while it remains the implementation branch.
+Use the editor branch named in [README.md](README.md). Read the [project rules](AGENTS.md) and [development guide](docs/editor/development.md) for architecture, synthetic test fixtures, build/install differences and focused checks. Contributors should target `candidate/planned-development` for this alpha checkpoint; `feature/right-editor-pane` is the historical baseline.
 
 ## Keeping the changelog useful
 

@@ -1,5 +1,7 @@
 # Code Rain integration candidate
 
+**Current host acceptance, 2026-10-30:** Alpha.3 is activated; the owner confirms Rain startup, Enable/Disable, saved current settings and previous-theme restoration on Codex package 26.1027.3384.0. BUG-017 is resolved for this tested setup. Later restart retention remains a follow-up. Blend-option persistence is not implemented (F29), and blend performance/cross-theme opacity remain separate. The earlier source-only and pending-live statements below are historical for their named checkpoints. No renderer/plugin pin or updater-policy change was part of this repair.
+
 ## Current local state — OpsWolf dev.9 baseline / Rain plugin 0.1.2
 
 The owner-used dev.9 baseline retains reviewed renderer commit `c976189e3ec78d0f902a27e5aacf33470c38ebd8`. Plugin 0.1.2 is independently named and pinned: 10,580 bytes, SHA-256 `8e2909de7967c0d1a8432833c45c71320d08a9f3220d0c29a42f2bd84977cdae`. Its fixed 30 FPS deadlines correct the reproduced 20–23 FPS cadence slip without changing appearance, resource caps, persistence or opt-ins. The matching native/UI build passed normal offline import of all 27 locked packages; the other 26 lock entries were unchanged. Source/public plugin releases remain unapproved. Drawing the intended extra frames can increase work; this is a smoothness fix, not a GPU-saving claim.
@@ -11,6 +13,22 @@ The owner reports generally smoother Rain, with remaining frame drops during pre
 The integration history below describes the prior 0.1.1 package and its original source pin. Preserve the previous working host/plugin set for rollback. An integrate-only component never activates itself. Current per-repository instructions must work without a maintainer's private workspace layout.
 
 Inactive-window playback and the default-on pause preference are described in [window focus behavior](code-rain-focus.md).
+
+## Host update resilience — source repair, live acceptance pending
+
+The owner reported Rain missing after the host changed from Windows package `26.1023.6621.0` to `26.1027.3384.0`. The appearance modules were loaded but absent from the preload/resource entries the original detector searched. A saved enabled selection also survived the failed start, so Disable incorrectly retried activation. The standalone renderer was not identified as the cause.
+
+The local source repair adds the already preloaded `app-shared` role to existing initial/split-dispatcher discovery. It imports only same-origin, query/fragment/credential-free role URLs, accepts at most one module per role and requires a unique matching host RPC capability across deduplicated exports. Inspection skips unrelated accessor exports and object-method getters while preserving the observed callable RPC-proxy shape. It does not use hash constants, private framework stores, source crawling or a production debugger connection. This is an adapter for observed host capabilities, not a documented guarantee that those capabilities will remain stable.
+
+Discovery has four finite startup attempts and a bounded import wait. Rejected discovery is not permanently cached. Native ES-module evaluation cannot be cancelled once started; a late import result does not authorize an appearance action after our wait fails. Each module and the combined unique-export inspection have an 8,192-export limit; an oversized or ambiguous host fails explicitly instead of guessing. A missing interface retains the compatibility error and leaves unrelated editor work usable.
+
+Rain now labels actual runtime state separately: **Running**, **Selected · Not running**, or **Disabled**. Disable deselects a failed, inactive selection without attempting activation. With no owned theme lease, this requires no appearance read/write. If an acquired lease cannot be restored, cleanup retains an explicit error and ownership for retry rather than silently claiming restoration. Renderer/plugin pins, persisted Rain configurations and update policy are unchanged.
+
+Alpha.2 was activated and failed owner testing on two additional host details: one unrelated callable export throws during function-string inspection, and RPC methods synthesize `.call`/`.apply` properties. Replacement source guards each inspection and uses `Reflect.apply` for invocation while preserving the namespace receiver. A read-only query against the real host confirms the intrinsic invocation returns its actual mode. It does not alter the running bundle.
+
+The replacement source passes 48 appearance/native-Rain/card checks and 9 full production-explorer checks. The latter reproduce the exact alpha.2 failure in a preserved bundle, then verify startup through the shared callable proxy, persisted selection/owned lease, normal package-market button clicks, repeated Enable/Disable, system-theme restoration and retained unsent drafts with repaired source. Earlier 28 Rain runtime, 18 coordinator/isolation, 20 particle-lifecycle and 20 Rain-layout checks remain in the combined qualification. These are synthetic behavior checks plus a read-only real-host capability observation; a replacement build still needs live acceptance.
+
+The local rollout distinguishes the currently selected test build from the confirmed recovery build and explicit settings donor. Failed alpha.2 is not automatically promoted to known-good rollback. See the coordinator deployment standard where available. Planned manual update holds and their visible status are a separate roadmap item, not part of this repair.
 
 ## Historical initial integration and verification
 

@@ -96,22 +96,36 @@ try{
  browser=await launchFixture(`http://127.0.0.1:${server.address().port}/`);
  for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}
  assert.ok(result,'fixture completed');
- const versions=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot;return {fork:s.querySelector('.fork-version')?.textContent,upstream:s.querySelector('.status-code')?.textContent};})()`);
+ const versions=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot;return {fork:s.querySelector('.fork-version')?.textContent,upstream:s.querySelector('.status-code')?.textContent,codex:s.querySelector('.codex-version')?.textContent};})()`);
  assert.equal(versions.fork,'OpsWolf v'+forkVersion,'fork identity comes from manifest');
  assert.equal(versions.upstream,'Upstream v0.5.40','upstream identity stays separate');
+ assert.equal(versions.codex,'Codex v26.928.2636.0','host identity comes from launcher bootstrap, not fork/upstream');
+ assert.equal(await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.preview-market-button')===null`),true,'duplicate footer market control removed');
+ await browser.evaluate(`window.marketOrigin=document.createElement('button');marketOrigin.textContent='Market menu trigger';document.body.append(marketOrigin);marketOrigin.focus();document.querySelector('${tag}').openPreviewMarket()`);
+ await delay(50);
+ assert.equal(await browser.evaluate(`!document.querySelector('${tag}').shadowRoot.querySelector('.preview-market-popover').hidden`),true,'menu capability still opens market');
+ await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.preview-market-close').click()`);
+ assert.equal(await browser.evaluate(`document.activeElement===marketOrigin`),true,'closing market returns focus to its current opener');
  await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.status-code').click()`);
  await delay(150);
  assert.equal(await browser.evaluate(`calls.filter(m=>m==='explorer.update.check').length`),1,'upstream button still uses normal check action');
  assert.equal(await browser.evaluate(`calls.includes('explorer.update.install')`),false,'checking does not install');
- for(const width of [220,390]){
+ for(const width of [180,220,390]){
   await browser.evaluate(`(()=>{const e=document.querySelector('${tag}');for(const p of ['width','min-width','max-width'])e.style.setProperty(p,'${width}px','important');})()`);
   await delay(80);
-  const fits=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot,f=s.querySelector('.statusbar'),r=f.getBoundingClientRect();return f.scrollWidth<=f.clientWidth+1&&[s.querySelector('.fork-version'),s.querySelector('.status-code')].every(e=>{const b=e.getBoundingClientRect();return b.left>=r.left-1&&b.right<=r.right+1&&b.top>=r.top-1&&b.bottom<=r.bottom+1;});})()`);
-  assert.equal(fits,true,'both version labels fit footer at '+width+'px');
+  const fits=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot,f=s.querySelector('.statusbar'),r=f.getBoundingClientRect();return f.scrollWidth<=f.clientWidth+1&&[s.querySelector('.fork-version'),s.querySelector('.status-code'),s.querySelector('.codex-version')].every(e=>{const b=e.getBoundingClientRect();return b.left>=r.left-1&&b.right<=r.right+1&&b.top>=r.top-1&&b.bottom<=r.bottom+1;});})()`);
+  assert.equal(fits,true,'all three version labels fit footer at '+width+'px');
  }
- result.versionFooter={fork:versions.fork,upstream:versions.upstream,upstreamCheckPreserved:true,installNotCalled:true,widths:[220,390]};
+ result.versionFooter={fork:versions.fork,upstream:versions.upstream,upstreamCheckPreserved:true,installNotCalled:true,codex:versions.codex,marketMenuPreserved:true,widths:[180,220,390]};
  writeFileSync(join(root,'artifacts/current-ui-result.json'),JSON.stringify(result,null,2));
  const shot=await browser.command('Page.captureScreenshot');writeFileSync(join(root,'artifacts/current-ui.png'),Buffer.from(shot.data,'base64'));
+ for(const [metadata,expected] of [[{codexVersion:'26.1027.3384.0'},'Codex v26.1027.3384.0'],[{},'Codex version unavailable'],[{codexVersion:'unknown',version:'0.5.40'},'Codex version unavailable'],[{codexVersion:'<img src=x onerror=alert(1)>'},'Codex version unavailable']]){
+  await browser.evaluate(`document.querySelector('${tag}').reconnectNative(${JSON.stringify(metadata)},true)`);
+  await delay(40);
+  assert.equal(await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.codex-version').textContent`),expected,'reconnect refreshes host identity without fallback or markup');
+ }
+ result.versionFooter.reconnectAndUnavailable=true;
+ writeFileSync(join(root,'artifacts/current-ui-result.json'),JSON.stringify(result,null,2));
 }finally{await browser?.close();await new Promise(r=>server.close(r));}
 console.log({...result,calls:result.calls.length});
 assert.equal(result.error,undefined);for(const key of ['moduleBootstrapRetained','readyBeforeWatch','rootResynced','positions','titleTracksRename','replacementTitleTracked','dockedTitleVisible','ambiguousTitleSafe','expandedTitleRetained','cachedTitleScoped','maskClear','fileTransparent','clickable','switchInline'])assert.equal(result[key],true,key);assert.equal(result.label,'Current title');assert.deepEqual(result.errors,[]);

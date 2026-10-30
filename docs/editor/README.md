@@ -2,11 +2,11 @@
 
 This is the longer version of the [main README](../../README.md): what the buttons do, what stays saved, and where the edges are.
 
-This describes the first alpha source checkpoint. [Known issues](known-issues.md) distinguish the owner-accepted dev.9 app, source changes and pending work. A feature description is not blanket native-version acceptance.
+This describes the editor workflow; [known issues](known-issues.md) distinguish the accepted alpha.3 Rain repair and remaining work. A feature description is not blanket native-version acceptance.
 
 ## Getting around
 
-The **OpsWolf** top menu's **Open GitHub Repository** link targets [our renamed fork](https://github.com/ThornsOfire/OpsWolf). Alpha source uses the canonical URL; older installed builds can use GitHub's redirect from the previous repository name. The OpsWolf labels and header/menu alignment are present in the owner-accepted dev.9 app. Custom identity profiles can retain their own labels.
+The **OpsWolf** top menu's **Open GitHub Repository** link targets [our renamed fork](https://github.com/ThornsOfire/OpsWolf). Alpha source uses the canonical URL; older installed builds can use GitHub's redirect from the previous repository name. The OpsWolf labels and header/menu alignment accepted in dev.9 are retained in alpha.3. Custom identity profiles can retain their own labels.
 
 The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Hiding it exits fullscreen, so the next E opens it beside chat at its saved width. Open files and the current draft stay in the running session; hiding doesn't save to disk. Selecting the editor's chat tab or using Escape to return to chat also resets fullscreen after the switch is accepted. Cancelling a dirty-file switch leaves the layout intact.
 
@@ -30,7 +30,7 @@ If an editor draft is dirty or saving, the automatic root switch waits. Save or 
 
 The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native pages, with one page visible at a time. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
 
-The explorer footer shows the OpsWolf fork version beside the inherited upstream version. The upstream button still checks upstream releases; the fork label is separate. See [versioning](versioning.md) before staging a replacement build or publishing a release.
+The explorer footer shows the OpsWolf fork, upstream Code-Codex and attached Codex host package versions. Open Preview Market from the top application menu; the duplicate footer link is removed. The upstream button still checks upstream releases; the fork label is separate. See [versioning](versioning.md) before staging a replacement build or publishing a release.
 
 Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width.
 

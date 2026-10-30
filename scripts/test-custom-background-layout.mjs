@@ -22,7 +22,7 @@ try{
  await ev(`history.replaceState(null,'','/');window.__codeCodexInject();`);
  await wait(`host.dataset.state==='ready'&&calls.filter(v=>v==='explorer.context').length>beforeContext`);
  await check('Returning from login reinitializes the same tree and native context',`document.querySelector('[data-code-codex-owned]')===host&&!host.hasAttribute('inert')`);
- await ev(`s.querySelector('.preview-market-button').click()`);
+ await ev(`host.openPreviewMarket()`);
  await check('Preview Market still opens after account boundary',`q('.preview-market-popover').hidden===false`);
  await ev(`q('.custom-background-settings').click()`);await wait(`!!q('.custom-background-file')&&!q('.custom-background-panel').hidden`);
  await ev(`Promise.all([q('.preview-market-popover'),q('.custom-background-panel')].flatMap(el=>el.getAnimations()).map(a=>a.finished.catch(()=>{})))`);
@@ -49,7 +49,7 @@ try{
  await browser.command('Emulation.setDeviceMetricsOverride',{width:1500,height:1000,deviceScaleFactor:1,mobile:false});await delay(200);
  await ev(`document.body.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true,composed:true}));`);
  await check('Outside pointer closes both the settings and market',`q('.custom-background-panel').hidden&&q('.preview-market-popover').hidden`);
- await ev(`q('.preview-market-button').click();q('.custom-background-settings').click();`);
+ await ev(`host.openPreviewMarket();q('.custom-background-settings').click();`);
  await wait(`q('.custom-background-panel').matches(':popover-open')`);
  await ev(`(async()=>{const canvas=document.createElement('canvas');canvas.width=160;canvas.height=90;const ctx=canvas.getContext('2d');ctx.fillStyle='#bf583e';ctx.fillRect(0,0,160,90);ctx.fillStyle='#efe6d5';ctx.fillRect(25,15,110,60);const image=await new Promise(r=>canvas.toBlob(r,'image/png'));const stream=canvas.captureStream(12),chunks=[];const recorder=new MediaRecorder(stream,{mimeType:'video/webm'});const done=new Promise(r=>{recorder.ondataavailable=e=>chunks.push(e.data);recorder.onstop=r;});recorder.start();const draw=setInterval(()=>{ctx.fillStyle='#457785';ctx.fillRect(50,25,60,40);},65);await new Promise(r=>setTimeout(r,1400));clearInterval(draw);recorder.stop();await done;stream.getTracks().forEach(t=>t.stop());const dt=new DataTransfer();dt.items.add(new File([image],'Image.png',{type:'image/png'}));dt.items.add(new File(chunks,'Video.webm',{type:'video/webm'}));q('.custom-background-file').files=dt.files;q('.custom-background-file').dispatchEvent(new Event('change',{bubbles:true}));})()`);
  await wait(`q('.custom-background-panel .particle-source-count').textContent==='2 / 32'`);

@@ -93,7 +93,9 @@ export class BackgroundActions implements BackgroundCommands {
       if (!current() || !await p.ready(operation) || !current()) return;
       before = new Set(p.enabled);
       captured = true;
-      if (entry.runtime.enabled && p.enabled.has(id)) {
+      // A saved selection may have failed to start on this host. Its toggle is
+      // still Disable: run ownership-aware cleanup, never another activation.
+      if (p.enabled.has(id)) {
         await entry.runtime.disable();
         if (!current()) return;
         p.enabled.delete(id);

@@ -17,7 +17,26 @@ function appearanceModuleCandidates(): readonly string[] {
     ...Array.from(document.querySelectorAll<HTMLScriptElement>("script[type=module][src]"),(script) => script.src),
     ...performance.getEntriesByType("resource").map((entry) => entry.name),
   ];
-  return [...new Set(candidates)];
+  return [...new Set(candidates)].filter(candidate=>{
+    try {
+      const url=new URL(candidate,location.href);
+      return url.protocol===location.protocol&&url.host===location.host
+        && !url.username&&!url.password&&!url.search&&!url.hash;
+    } catch { return false; }
+  });
+}
+
+/** Qualified host role modules only; no filename hashes or module-cache access.
+ * New hosts expose their official RPC namespace from a preloaded shared module,
+ * even when the app-initial/split-dispatcher timing entries have disappeared. */
+export function findCodexAppearanceModules():readonly string[] {
+  const candidates=appearanceModuleCandidates(),result:string[]=[];
+  for(const role of ['app-initial','app-shared','run-app-action-in-primary-window']) {
+    const matches=candidates.filter(candidate=>new RegExp('/'+role+'-[^/]+\\.js$').test(new URL(candidate,location.href).pathname));
+    if(matches.length>1)throw Error('CC-APPEARANCE-ADAPTER-002: Multiple official Appearance role modules matched; no setting was changed.');
+    if(matches[0])result.push(matches[0]);
+  }
+  return result;
 }
 
 export function findCodexAppInitialModule(): string|undefined {

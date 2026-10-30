@@ -1,105 +1,112 @@
 # OpsWolf
 
-Formerly **Cursadex**. An experimental Codex Desktop editor fork with a file explorer, editing beside chat, source citations, and native diff review. ;3
+OpsWolf adds a file explorer, an editor and a place to review changes beside your Codex chat. Keep the conversation going while you read, edit and check the actual files.
 
-**Developer alpha — `0.1.0-alpha.1` (build from source).** There is no ready-to-run OpsWolf installer or portable ZIP yet. Setup requires the official Codex desktop app plus the development tools listed in [Getting it running](#getting-it-running). Fresh-machine installation has not been validated yet; a clean Windows VM test is planned. Known limitations and the tested local baseline are documented below.
+Built on [Code-Codex](https://github.com/Rice-dog/code-codex), maintained independently. This is an unofficial community project, with no affiliation to OpenAI.
 
-I wanted a file tree on the left, chat in the middle, and an editor on the right where I could actually work on files. Then I wanted tabs, pins, word wrap, and somewhere useful to look at everything the agent changed.
+## From a human to a human
+
+I wanted a file tree on the left, chat in the middle, and somewhere on the right where I could actually work on files. Then came tabs, pins, word wrap, citations and a better way to see what the agent had changed.
 
 So yeah, that escalated pretty quickly lol.
 
-Want to see how we got here? The [changelog](CHANGELOG.md) tracks the notable changes, and [contributing guide](CONTRIBUTING.md) explains how we keep it up to date.
+**This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
-This is an experimental fork of [Rice-dog/code-codex](https://github.com/Rice-dog/code-codex). The original devs built the launcher, workspace bridge, file explorer, and plugin system that made this possible. We've been building an editor workflow on top of that foundation.
+### Read it, then work on it
 
-**Alpha source branch: [`candidate/planned-development`](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development).** Use that branch for this checkpoint. The older [`feature/right-editor-pane`](https://github.com/ThornsOfire/OpsWolf/tree/feature/right-editor-pane) branch is a historical baseline; `main` carries the homepage overview. Source publication, local deployment and a downloadable release are separate steps.
+Open a file from the explorer and it appears beside chat. **Preview** is for reading; **Edit** lets you change supported text files. **Save**, or **Ctrl+S**, writes the file. Markdown Preview can show headings, links and tables; Edit shows the source that makes them.
 
-This is an unofficial community project, independent of OpenAI and the original maintainers. It's a basic source editor inside Codex; language servers, autocomplete, and a debugger aren't part of it.
+![Rendered Markdown and its table beside the conversation](docs/images/editor-preview-demo.png)
 
-## Take a look
+*Preview: the real explorer, editor and Markdown plugin with a disposable sample file. The surrounding chat is a demo, not a native Codex conversation.*
 
-![OpsWolf explorer, sample conversation and editable Markdown source beside each other](docs/images/editor-demo.png)
+![The same Markdown sample in Edit with word wrap and source line numbers](docs/images/editor-edit-demo.png)
 
-*OpsWolf dev.9 production explorer/editor components in the repository's synthetic browser demo. The sample draft and conversation are disposable; this is not a native Codex screenshot. [Capture details](docs/images/README.md).*
+*Edit: the same file as source text, with word wrap and line numbers. No personal files or chats are loaded in this demo.*
 
-![OpsWolf default settings with the wolf logo and shared preferences](docs/images/settings-demo.png)
+The **E** button opens or hides the editor. Drag its left edge to resize it, or use its fullscreen button when you want more room. Hiding a fullscreen editor resets it, so the next E puts it beside chat again.
 
-*The real settings panel with disposable default preferences. Personal profiles keep their own names and artwork.*
+Tabs can scroll with your mouse wheel, move by dragging, and appear in an open-files dropdown. Pin files to reopen them for that project. **Close all** leaves pins alone, and unsaved edits get a save/discard/cancel choice. Pins remember files, not unsaved drafts.
 
-## What we've added so far
+### See what changed without losing the conversation
 
-The local development candidate also includes an optional Code Rain background with its own motion, color, preset and transition controls. It uses the normal verified plugin system; no published Rain download is available yet. See the [integration guide and verification limits](docs/editor/code-rain-integration.md).
+Click Codex's live **files changed** bubble and its comparison viewer opens in the editor's **Changes** tab. You keep Codex's review controls, with the comparison beside your chat. Clicking a file in the bubble's hover list takes you to that file's change.
 
-The footer identifies the OpsWolf development version separately from the upstream version. Our [versioning guide](docs/editor/versioning.md) explains build handoffs and release rules. This is still an unreleased development fork. Live testing confirms activity following and scroll-to-pause; automatic activity expansion currently has a known compatibility failure. See [reading/activity coverage](docs/editor/chat-reading.md).
+![The native Codex Changes viewer hosted inside an OpsWolf editor tab](docs/images/changes-native.png)
 
-The current owner-used baseline is **OpsWolf 0.1.0-dev.9**, alongside upstream **0.5.40**, with Rain plugin **0.1.2**. Header spacing, product-menu alignment and explicit read-only text warnings passed the owner's checklist. Rain generally looks smoother, but preset blending can still drop frames, and cross-theme transparency remains open. See [current limitations](docs/editor/known-issues.md). No downloadable OpsWolf release is implied.
+*The actual native Changes viewer in OpsWolf alpha.3, showing public screenshot-tool changes. Captured from the live app and cropped to the editor area so chats and the project list stay out of the image.*
 
-Dev.7 includes the **OpsWolf** visible rebrand alongside the earlier empty-editor Rain repair and corrected repository link. The repository URL, technical filenames and compatibility keys retain their existing names; changing the product label does not migrate your settings or replace personal profiles. Dev.8 addresses the reported header overlap and stacked logo with owner acceptance for those cases. The synthetic README screenshots were refreshed after dev.9 acceptance; their capture setup and limits are documented.
+There's also a persistent **Native changes** panel above the message box. It stays available after the live bubble has gone. Expand the file list, then open just the changes you want to read. **Open file** takes you from the recorded diff to the current file, where you can edit it.
 
-### Shared settings
+![The persistent Native changes panel above chat, with a recorded diff open on the right](docs/images/native-changes-demo.png)
 
-Open **OpsWolf → OpsWolf settings…** for typing speed, source wrap, minimap, first-chat sidebar collapse and the optional Nova restore button. Personal identity profiles customize our owned menu/settings name, PNG logo and badge colors for the next launch; Windows and Discord identity are still separate work. See [settings](docs/editor/settings.md) and [identity limits](docs/editor/identity.md).
+*Production review controls with a sample patch and demo conversation. The panel above the message box and the recorded diff are separate from the native Changes viewer shown above.*
 
-### An editor that lives beside the chat
+This uses Codex's recorded patches. It can include ordinary project files outside Git, but it won't catch every shell command or manual edit. It's a way to review work, not a backup or a complete activity log.
 
-- Files open in a resizable right editor pane, so you can keep talking to the agent while looking at your work.
-- Plain local-file links in chat open there too, including Codex's file-reference buttons. Files must be inside the current project; normal save/cancel protection still applies.
-- **E** in the chat header opens or hides the editor. Hiding exits fullscreen, so reopening puts it beside chat at your saved width. Your files and session draft stay available. There's a separate fullscreen button when you want the extra room.
-- The chat, native tab, editor tab, and file-control headers are more compact. They were taking up way too much vertical real estate haha.
-- The native Codex sidebar waits until you choose your first chat before collapsing once per launch. Browse projects first, then get the space back. Manually reopening it stays respected. The file explorer has its own controls.
+### The other little things that help
 
-### Actual file editing
+- **Point at the actual lines.** Select text and right-click to cite it in chat, copy a citation, or collect several ranges. Clicking a reference opens and highlights its source. It works across supported text formats.
+- **Keep your reading position.** Scroll up to read without the feed constantly pulling you away. Sending your next message resumes following the conversation.
+- **Find the right file.** File links in chat open in the editor when they're inside the current project. Dragging a file from the explorer into chat supplies its full location.
+- **Make it comfortable.** Settings include source wrap, a minimap, an optional typing-speed counter and first-chat sidebar collapse. Our menu/settings name and logo can use your own saved identity profile; Windows identity aisn't changed by that (yet).
+- **Add some atmosphere.** Optional preview plugins and backgrounds live in Preview Market. [Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) adds configurable rain; [Nova Fox](https://github.com/ThornsOfire/nova-fox-companion) is a separate companion with optional OpsWolf integration.
 
-- **Preview / Edit / Save**, plus **Ctrl+S**, for supported text files.
-- Complete text-file loading up to **10 MiB**. No silently cutting your document off halfway through a table.
-- Above **512 KiB**, files start in a virtual plain-text reader. Large Markdown files get a **Render Markdown** button if you want the whole formatted document, tables included.
-- Editing currently supports files up to **512 KiB**. Markdown editing shows the source; the optional Markdown preview renders the formatting and tables.
-- Word wrap keeps your draft and selection, with line numbers for the original source lines.
-- Save-and-close, save-and-switch, discard, and cancel prompts. If saving fails, your draft stays available.
-- Drag a file from the explorer into chat and it supplies the full local path, so the agent can find the thing you're talking about.
-- Markdown Preview links open project files in the editor or ask before an external website/app handoff. Hover for the destination and action; remembered choices are scoped and resettable. See [link navigation and warnings](docs/editor/links.md).
+Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf → Preview Market** for preview plugins and backgrounds. If you've chosen your own app label, look under that menu name instead.
 
-### Pointing chat at the actual lines
+![OpsWolf settings with the default wolf logo and shared preferences](docs/images/settings-demo.png)
 
-- Select source text, right-click, and **Cite in chat**, **Copy citation**, or **Add to citation group**. This works across supported text formats, not just Markdown.
-- Combine up to **32 ranges** within or across files. Links from you or the agent reopen the source in the editor with line highlights.
-- References include bounded quotes so unique matching text can be relocated when lines move. Missing or ambiguous matches are reported; unsaved-draft references are labelled.
-- The core has been tested both ways in the live app. The composer still shows the raw Markdown/encoded URL before sending, and hover tooltips can expose that URL. Compact chips and readable tooltips are still on the polish list haha. See [citation status and remaining work](docs/editor/citations.md).
+*The production settings panel with disposable default preferences. This is a synthetic capture; your personal profiles keep their own name and artwork. [Screenshot details](docs/images/README.md).*
 
-### Tabs, pins, and all the little things
+### A few rough edges, because alpha means alpha
 
-- Mouse-wheel scrolling through crowded tabs, drag-and-drop ordering, and a dropdown listing every open file.
-- Up to **64 open tabs** and **32 pinned files per project**.
-- Pins reopen files when you return to that project. They save relative paths, not copies of the files or unsaved drafts.
-- **Close all** leaves pinned tabs alone. Closing a pinned tab with its own X asks first and keeps the pin for next time.
+- Text reading goes up to **10 MiB**; editing currently stops at **512 KiB**. Bigger Markdown starts as plain text with an explicit full-render option. Files we can't edit show a red explanation. Mixed Windows/Unix line endings are one reason a file stays read-only.
+- Citations work, but their long encoded links can still show in the message box and hover tooltip. The compact presentation is unfinished.
+- Automatic expansion of the agent's activity details still fails in a reported native layout. Following the latest activity and pausing to read are separate features.
+- Rain blending can drop frames, its blend options don't persist yet, and editor transparency isn't consistent across other themes. Saved Rain settings and previous-theme restoration work in the tested alpha.3 host setup.
+- This is a basic source editor. Language servers, autocomplete, a debugger, a trustworthy context meter and broader editing support are future work.
+- Codex updates can change the layout or integrations we depend on. Updates are **not frozen**. The inherited updater follows upstream Code-Codex; it does not maintain this fork. Keep a working build before applying updates.
 
-### Seeing what the agent actually changed
+See [known issues](docs/editor/known-issues.md) and the [user guide](docs/editor/README.md) for the details. No claim that every Codex version, theme or monitor setup works perfectly.
 
-There's a persistent **Native changes** panel just above the chat box. It keeps the latest useful review around, including while you're just chatting.
+<a id="getting-it-running"></a>
 
-- Files start collapsed, with their own dropdowns. Skim the list, then expand what you want to read.
-- Click a filename to open its recorded diff in the editor.
-- Want to work on it? **Open file** takes you to the current source with its available Preview / Edit / Save controls. The recorded diff stays in its own tab.
-- The native live **files changed** bubble opens Codex's actual comparison viewer in an editor **Changes** tab. Click a filename in its hover list and it selects that file in the same comparison.
-- Native comparison controls still work. The extension positions the existing viewer without moving or cloning its React nodes.
-- **Undo / Reapply** uses the matching native chat control when it's available.
+### Getting started today
 
-The persistent panel reads native patch records, including eligible files outside Git repositories. It doesn't scan the workspace or keep extra on-disk before-and-after copies forever. Shell commands, manual edits, unavailable patches, and files outside the current project may be missing. It's a review aid, not a complete filesystem audit or backup.
+There is no click-only installation path yet. Existing upstream installers and files in `releases/` aren't releases of these editor additions.
 
-## Getting it running
+The current route is to build this fork's UI and matching native companion, close Codex after saving your work, then launch through that companion. Opening the normal Codex shortcut won't load the custom editor. The exact source commands are in the agent section below; you can give that section to your coding agent.
 
-This is a development build for now. The existing installers in `releases/` and the upstream downloads shouldn't be treated as releases of our editor additions.
+Your local folder can be anywhere sensible. It doesn't need our workspace layout or a particular project name. Preview plugins such as Markdown and PDF are separate packages. Enable the ones you want in Preview Market. A format having a preview doesn't mean it can be edited.
 
-Build the native companion and the UI from this branch together. Putting the new UI on an old upstream binary won't give you the complete reader and review backend.
+<a id="credit-and-contributing"></a>
 
-You'll need:
+### Credit, bugs and helping out
 
-- Windows x64 and the official Codex/ChatGPT desktop app. The inherited runtime baseline is Windows 10 build 19041 or later.
-- Node.js **20.19+** and npm.
-- Current stable Rust with the MSVC toolchain, and Visual Studio Build Tools with Desktop C++ support.
-- Git. MSI packaging also needs the .NET SDK.
+Big credit to [Rice-dog and the Code-Codex contributors](https://github.com/Rice-dog/code-codex). They built the launcher, workspace bridge, explorer and plugin foundation that made this possible.
 
-Build this alpha from its source branch:
+If something breaks in our additions, report it to this fork with your versions, what you clicked, what happened and what you expected. A small sample helps a ton. Keep private documents, keys and chats out of public reports.
+
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT license](LICENSE) · [Third-party notices](THIRD_PARTY_NOTICES_EN.md)
+
+## For agents, from an agent
+
+<details>
+<summary>Source, setup, interfaces and validation</summary>
+
+### Identity and scope
+
+| Item | Contract |
+| --- | --- |
+| Implementation | `candidate/planned-development`; [source branch](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development). `main` is a documentation landing page; `feature/right-editor-pane` is the historical baseline. |
+| Versions | Fork: `cursadex-version.json`, source checkpoint `0.1.0-alpha.3`. Upstream package/protocol `0.5.40`; Rain plugin `0.1.2`. Source, local handoff, activation and public release are separate identities. |
+| Host qualification | Alpha.3 appearance repair passed owner startup, Enable/Disable, retained saved settings and previous-theme restoration on Windows Codex package `26.1027.3384.0`. Later restart retention is a follow-up; do not generalize to all hosts/themes. |
+| Legacy naming | Formerly Cursadex. Preserve `cursadex-*` metadata, event/storage keys, CSS hooks and technical launch names. Branding changes do not authorize migrations or identifier refactors. |
+| Portability | No maintainer Desktop layout, app-state paths, personal identity artwork or external workspace scripts required by a clone. No public installer/fresh-machine certification yet. |
+
+### Build and launch
+
+Requirements: Windows x64 (inherited baseline Windows 10 build 19041+), official Codex desktop host, Git, Node.js **20.19+**/npm, stable Rust MSVC and Visual Studio Desktop C++ Build Tools. Cargo declares Rust 1.85 minimum; use a compatible installed toolchain. MSI packaging additionally requires .NET SDK. Install/download prerequisites only with environment authorization.
 
 ```powershell
 git clone --branch candidate/planned-development https://github.com/ThornsOfire/OpsWolf.git
@@ -107,61 +114,46 @@ Set-Location OpsWolf
 .\scripts\build.ps1 -Configuration Release
 ```
 
-That installs the locked UI dependencies, builds the UI, and compiles the Rust workspace. Executables go into `target/release/`; the UI bundle goes into `packages/explorer-ui/dist/explorer.js`.
+`build.ps1`: installer/protocol generation and checks → `npm ci` + UI build → locked Cargo workspace build → local installer payload assembly. Native outputs: `target/release/`; bundle: `packages/explorer-ui/dist/explorer.js`. Upstream packaging assets are not published OpsWolf installers.
 
-Save your work, let any active Codex tasks finish, and exit Codex. Then launch the custom build:
+After saving work, completing active agents and closing Codex normally:
 
 ```powershell
 $uiBundle = (Resolve-Path .\packages\explorer-ui\dist\explorer.js).Path
 .\target\release\code-codex-launcher.exe run --ui-bundle $uiBundle
 ```
 
-Use that companion to launch this fork. The normal Codex shortcut won't load the custom bundle. I learned that one by opening the old shortcut and wondering why nothing changed lol.
+Pair UI/backend versions. This command uses mutable build outputs, not an immutable reviewed deployment. Do not kill the live host, relocate profiles or register hooks as a setup side effect.
 
-OpsWolf is the product name now; you still don't need my Desktop layout, a folder named OpsWolf, or any particular project name. Those are local choices, not requirements baked into the source. The GitHub repository has also been renamed to `ThornsOfire/OpsWolf`; the clone commands above use its canonical URL and default clone directory. Choosing another local directory is fine.
+### Runtime contracts
 
-### Optional previews and appearance
+- Modules: UI `packages/explorer-ui/src/`; native workspace/transport/context under `crates/`. [Architecture](docs/architecture.md), [editor ownership/data flow](docs/editor/architecture.md), [development/check matrix](docs/editor/development.md).
+- File I/O: authenticated workspace bridge, current-project path/type/sensitive-file policy, complete content, loaded-version conflict checks. Inline/edit limit 512 KiB; complete read limit 10 MiB; larger text virtualized; large Markdown rendering explicit. Preserve dirty drafts/caret through view changes and save failure/cancel.
+- Tabs: 64 open, 32 project pins; pins store normalized-root-relative paths/order, never draft contents. Recorded diffs read-only; **Open file** resolves current source through normal reader policy.
+- Review: native patch history, not filesystem snapshots; no permanent duplicate diff archive. Native comparison remains owned by Codex, positioned through qualified adapters without cloning/reparenting React nodes. Unknown layouts retain native behavior; English/observed-layout limits apply.
+- Citations: supported text, up to 32 grouped ranges, bounded quotes and explicit draft markers. [Routing/presentation limits](docs/editor/citations.md). No compact composer chips claimed.
+- Preferences/identity local to renderer storage. [Settings](docs/editor/settings.md), [identity/restart scope](docs/editor/identity.md), [link permissions/reset](docs/editor/links.md). No Windows/Discord identity claim; profiles, chat/auth and documents remain separate.
+- Rain: [integration/pins/provenance](docs/editor/code-rain-integration.md). Verified package cache/import; host controls enablement/settings/appearance lease, independent renderer controls work budgets. Guard uninspectable host exports, qualify unique same-origin capabilities, invoke RPC methods intrinsically. Missing capabilities fail explicitly; selected/off remains disableable. Blend-option persistence and manual updater controls are unimplemented.
+- Project relinking: [metadata refresh](docs/editor/workspace-root-refresh.md); follows reported chat cwd, defers dirty drafts, explicit workspace override wins. Does not rename folders or refactor absolute source paths.
 
-The inherited **Preview Market** has optional Markdown, PDF, image, audio, video, CSV, diagram, notebook, Office, 3D, appearance, and Git History plugins. Install and enable the packages for the previews you want.
+<a id="checking-a-change"></a>
 
-The update and plugin distribution endpoints currently still point upstream. The built-in updater follows upstream releases; it doesn't maintain this editor branch. Keep a copy of your fork build before applying an upstream update. A separate update workflow for the fork is still future work.
-
-## Checking a change
-
-For the full walkthrough, see the [editor guide](docs/editor/README.md), [architecture and data lifecycle](docs/editor/architecture.md), [development guide](docs/editor/development.md), and [first-tracker cleanup audit](docs/editor/tracker-cleanup.md).
+### Validation and handoff
 
 ```powershell
-npm --prefix packages/explorer-ui ci
+node scripts/check-version.mjs
 npm --prefix packages/explorer-ui run typecheck
 npm --prefix packages/explorer-ui run build
-node scripts/test-editor-pane.mjs
-node scripts/test-native-sidebar.mjs
-node scripts/test-change-review.mjs
-node scripts/test-native-diff-host.mjs
-node scripts/test-diff-source.mjs
-cargo test -p workspace-service --locked -- --test-threads=1
-cargo test -p cdp-client --locked -- --test-threads=1
-cargo test -p context-resolver --locked -- --test-threads=1
+node scripts/check-architecture.mjs
+node scripts/check-changelog.mjs
 ```
 
-The browser checks use isolated Chrome fixtures with synthetic data. They expect Chrome in its default Windows installation location and don't need your real documents or live chats. The native comparison layout checks cover 1080p, 4K, zoom, fullscreen, resizing, and tab switching.
+Use installed locked dependencies; fresh dependency setup is `npm --prefix packages/explorer-ui ci`. Choose behavior checks from [development](docs/editor/development.md). Editor/review boundaries: `test-editor-pane`, `test-change-review`, `test-native-diff-host`, `test-diff-source` (`node scripts/<name>.mjs`). Appearance repair: `test-appearance-adapter`, `test-rain-host-recovery`, `test-code-rain-runtime`. Browser fixtures use installed Chrome, disposable profiles and synthetic data; fixture passes are not native certification. Historical counts are evidence for their exact source, not checks rerun by a docs edit.
 
-## A few things to know
+Native boundaries: `cargo test -p workspace-service --locked -- --test-threads=1`; repeat for `cdp-client` / `context-resolver` when relevant. [Versioning](docs/editor/versioning.md), [tracker removal audit](docs/editor/tracker-cleanup.md).
 
-This hooks into the native desktop layout, so Codex updates can break parts of the integration. Some adapters target the inspected English UI. If the comparison layout isn't recognized, its viewer stays in the native location.
+Follow [AGENTS.md](AGENTS.md) / [CONTRIBUTING.md](CONTRIBUTING.md). Scoped change → relevant checks → exact commit/snapshot → immutable SHA-256/size inventory + runtime/dependency evidence → coordinator review → owner activation → live acceptance/rollback. Never rewrite a sealed/running build. Keep profiles, keys, chats, client data and probes out of commits. Documentation editing does not authorize downloads, activation, publication or upstream-update changes.
 
-Project pins and UI preferences stay local. Native chat history is the source of recorded patches; we don't add a separate permanent diff archive. **Open file** loads the current file, which might have changed since that patch was recorded. Deleted-file and combined comparisons don't get a source-file button.
+Upstream [Chinese README](README.zh-CN.md) and [English translation](README.upstream.en.md) describe the inherited project, not guarantees about this fork. Preserve upstream copyright and third-party licenses.
 
-The context meter, compact citation chips/readable hover tooltips, broader editable-format support, richer Markdown table editing, Windows/Discord identity customization, direct active-theme settings in the explorer header, and a fork-specific update workflow remain future work. Source-text citation routing and owned identity profiles exist; their deeper integrations are separate. We'll document preview, editing, and saving support separately for additional formats.
-
-## Credit and contributing
-
-Big credit to [Rice-dog and the Code-Codex contributors](https://github.com/Rice-dog/code-codex). They built the foundation here. This fork is our take on the editing workflow, maintained independently.
-
-The [inherited Chinese overview](README.zh-CN.md) and its [English translation](README.upstream.en.md) are preserved for reference. Those describe upstream behavior and downloads; this README describes the fork.
-
-If something breaks in our additions, bring it to this fork's maintainer with your Codex version, what you clicked, what happened, and what you expected. A small example helps a ton. Leave private client documents, credentials, and chat contents out of the report.
-
-Contributions are welcome. Keep paths portable, explain the behavior you're changing, and include how you checked it. If we offer anything upstream, we'll discuss the bigger design with the original maintainers and keep the proposed changes manageable.
-
-Licensed under [MIT](LICENSE). Original copyright notices and third-party notices are retained. See [third-party notices](THIRD_PARTY_NOTICES_EN.md) for dependency attribution.
+</details>

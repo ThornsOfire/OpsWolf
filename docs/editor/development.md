@@ -1,6 +1,6 @@
 # Developing the editor fork
 
-The [main README](../../README.md#getting-it-running) has the fresh-clone commands. Use `feature/right-editor-pane`: `main` currently carries the homepage documentation rather than the editor implementation.
+The [main README](../../README.md#getting-it-running) has the fresh-clone commands. Use `candidate/planned-development`: `main` carries the homepage documentation; `feature/right-editor-pane` is the historical baseline.
 
 ## Source, builds, installation
 
@@ -81,7 +81,7 @@ Browser checks launch their own headless Chrome with a temporary profile and loo
 
 `test-complete-text.mjs` optionally accepts `CODE_CODEX_COMPLETE_TEXT_FIXTURE` for a local document. Its normal fixture is synthetic; use that by default so the check is reproducible and doesn't depend on private files.
 
-The [custom editor workflow](https://github.com/ThornsOfire/OpsWolf/blob/feature/right-editor-pane/.github/workflows/editor-build.yml) runs the three native test packages and builds the native reader/launcher when matching native paths change on the editor branch. Its artifacts are temporary and aren't permanent fork releases. A documentation or UI-only push doesn't trigger that native rebuild under the current path filter.
+The [custom editor workflow](https://github.com/ThornsOfire/OpsWolf/blob/feature/right-editor-pane/.github/workflows/editor-build.yml) defines the three native test packages and native reader/launcher build. Its configured branch/path filters determine when it runs; do not infer candidate-branch CI success from a historical workflow link. Its artifacts are temporary and aren't permanent fork releases. A documentation or UI-only push doesn't trigger that native rebuild under the current path filter.
 
 ## Checking the real host
 

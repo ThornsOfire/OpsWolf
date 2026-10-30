@@ -25,45 +25,7 @@ export const style4 = String.raw`  .statusbar {
     margin-left: auto;
     min-width: 0;
   }
-  .fork-version { font-variant-numeric: tabular-nums; white-space: nowrap; }
-  .preview-market-button {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    min-width: 0;
-    min-height: 24px;
-    margin: 0 0 0 -6px;
-    padding: 2px 6px;
-    overflow: hidden;
-    color: var(--cle-muted);
-    background: transparent;
-    border: 0;
-    border-radius: 5px;
-    cursor: pointer;
-    text-align: left;
-  }
-  .preview-market-button span {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .preview-market-button svg {
-    flex: 0 0 auto;
-    width: 13px;
-    height: 13px;
-    fill: none;
-    stroke: currentColor;
-    stroke-width: 1.25;
-  }
-  .preview-market-button:hover,
-  .preview-market-button[aria-expanded="true"] {
-    color: var(--cle-ink);
-    background: var(--cle-hover);
-  }
-  .preview-market-button:focus-visible {
-    outline: 2px solid var(--cle-focus);
-    outline-offset: 0;
-  }
+  .fork-version, .codex-version { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
   .update-popover {
     position: absolute;

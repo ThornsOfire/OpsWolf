@@ -1,0 +1,48 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
+import {resolve} from 'node:path';
+import {createServer} from 'node:http';
+import {installedBackgroundFixture} from './background-package-fixture.mjs';
+import {launchFixture,delay} from './browser-fixture.mjs';
+
+const root=resolve(import.meta.dirname,'..');
+const bundle=resolve(root,process.env.CODE_CODEX_TEST_BUNDLE??'packages/explorer-ui/dist/explorer.js');
+const out=resolve(root,process.env.CODE_CODEX_TEST_OUTPUT??'artifacts/rain-host-recovery');mkdirSync(out,{recursive:true});
+const tag='code-codex-v'+JSON.parse(readFileSync(resolve(root,'packages/explorer-ui/package.json'),'utf8')).version.replaceAll('.','-');
+const selection='code-codex:appearance-plugins:v1',lease='code-codex:particle-theme-lease:v1',rain='code-codex.code-rain-background';
+const shared=`const method=new Proxy(function(request){if(this!==appActions)throw Error('RPC receiver lost');return window.appearance(request);},{get(target,key,receiver){if(key==='call'||key==='apply')return()=>{throw Error('Synthesized RPC property must not be invoked')};return Reflect.get(target,key,receiver);}});const appActions=new Proxy(function(){},{get(_target,key){if(key==='runInPrimaryWindow')return method;}});const clientCoordination=new Proxy(function(){},{get(_target,key){if(key==='invalidateQueryCache')return async()=>({});}});export const namespace={appActions,clientCoordination};export const unrelated=window.uninspectableFunction;`;
+const page=scenario=>`<!doctype html><html data-theme="dark"><head><meta charset="utf-8"><link rel="modulepreload" href="/assets/app-shared-fixture.js"><style>*{box-sizing:border-box}html,body{height:100%;margin:0}body{display:flex;font:13px system-ui}nav{width:50px;flex:none}[data-app-shell-workspace-row]{display:flex;flex:1;min-width:0}aside{width:180px;flex:none}.workspace{display:contents}.clip{display:flex;flex:1;min-width:0}main{position:relative;flex:1;min-width:0;display:flex;flex-direction:column}header{height:42px;flex:none}[data-app-shell-workspace-layout]{flex:1;display:flex;flex-direction:column;min-height:0}article{flex:1}textarea{height:80px;width:80%}</style></head><body><nav data-app-navigation-rail><button data-sidebar-destination="builtin:home" aria-current="page">Home</button></nav><button hidden data-app-shell-sidebar-trigger></button><div data-app-shell-workspace-row data-app-shell-page-surface><aside class="app-shell-left-panel"><button data-app-action-sidebar-thread-active="true" data-app-action-sidebar-thread-host-id="local" data-app-action-sidebar-thread-kind="local" data-app-action-sidebar-thread-id="local:fixture-rain">Fixture</button></aside><div data-app-shell-active-page="true" style="display:contents"><div class="workspace" data-app-shell-page-surface><div class="clip"><main data-app-shell-main-surface="default"><header data-app-shell-titlebar><span data-app-shell-titlebar-content>Rain recovery fixture</span></header><div data-app-shell-workspace-layout="split"><article data-response-annotation-conversation="fixture-rain">Synthetic workspace</article><div data-thread-scroll-footer><div data-above-composer-conversation-id="fixture-rain"><textarea>Preserved unsent fixture draft</textarea></div></div></div></main></div></div></div></div><script>
+localStorage.clear();localStorage.setItem('${selection}',JSON.stringify(['${rain}']));localStorage.setItem('${lease}',JSON.stringify({owner:'${rain}',previousPreference:'system',forcedPreference:'dark'}));
+window.mode='dark';window.rejectGet=${scenario==='failed'};window.actions=[];window.errors=[];window.uninspectableFunction=function unrelatedHostExport(){};const original=Function.prototype.toString;Function.prototype.toString=function(){if(this===uninspectableFunction)throw TypeError("Function.prototype.toString requires that 'this' be a Function");return Reflect.apply(original,this,[]);};
+window.appearance=async({action})=>{actions.push(action);if(action.type==='app.appearance.get'){if(rejectGet)throw Error('Synthetic host unavailable');return{mode};}if(action.type!=='app.appearance.set_mode'||!['dark','light','system'].includes(action.mode))throw Error('Unexpected action');mode=action.mode;document.documentElement.dataset.theme=mode==='system'?'light':mode;return{mode};};
+window.__CODE_CODEX_BOOTSTRAP__={token:'fixture',codexVersion:'26.1027.3384.0',supported:true};window.__codeCodex={request:async({method,params})=>{if(method==='explorer.settings.get'||method==='explorer.settings.set')return{collapsed:false,panelWidth:260};if(method==='explorer.context')return{threadId:params.threadId,projectName:'Fixture',rootName:'Fixture',compatible:true};if(method==='explorer.list')return{entries:[{name:'README.md',relativePath:'README.md',kind:'file'}]};if(method==='explorer.window.transparency.set')return{enabled:params.enabled,background:'transparent'};if(method==='explorer.watch.start')return{watching:true};return{};}};
+addEventListener('error',e=>errors.push(e.message));addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
+</script><script>${installedBackgroundFixture(root)}</script><script src="/explorer.js"></script></body></html>`;
+const server=createServer((req,res)=>{const u=new URL(req.url,'http://fixture');if(u.pathname==='/explorer.js'){res.setHeader('Content-Type','text/javascript');res.end(readFileSync(bundle));}else if(u.pathname==='/assets/app-shared-fixture.js'){res.setHeader('Content-Type','text/javascript');res.end(shared);}else{res.setHeader('Content-Type','text/html;charset=utf-8');res.end(page(u.searchParams.get('scenario')??'ready'));}});
+await new Promise(r=>server.listen(0,'127.0.0.1',r));const report={checks:[],bundle,limits:['Full production explorer in a synthetic host; no real account/theme/settings changes.']};let browser;
+try{
+ for(const scenario of ['ready','failed']){
+  browser=await launchFixture(`http://127.0.0.1:${server.address().port}/?scenario=${scenario}`);
+  const ev=x=>browser.evaluate(x),wait=async(x,label)=>{for(let i=0;i<180;i++){if(await ev(x))return;await delay(50);}throw Error(scenario+': '+label);};
+  const check=async(name,x)=>{assert.equal(await ev(x),true,name);report.checks.push(scenario+': '+name);};
+  await wait(`document.querySelector('${tag}')?.dataset.state==='ready'`,'explorer ready');
+  await ev(`window.host=document.querySelector('${tag}');window.s=host.shadowRoot;window.q=selector=>s.querySelector(selector);window.runtime=window[Symbol.for('cursadex:code-rain-runtime:v1')];`);
+  await wait(scenario==='ready'?`runtime?.enabled&&!runtime.pending`:`!!runtime?.error&&!runtime.pending`,'Rain startup settles');
+  await ev('host.openPreviewMarket()');await delay(80);
+  if(scenario==='ready')await check('persisted selection starts through shared RPC proxy with uninspectable export',`runtime.enabled&&q('.code-rain-status').textContent==='Running'&&document.querySelectorAll('[data-code-codex-rain-layer] canvas').length===1`);
+  else{
+   await check('failed selected start has honest actionable status',`!runtime.enabled&&q('.code-rain-status').textContent==='Selected · Not running'&&!q('.code-rain-enable').disabled&&q('.code-rain-enable').textContent==='Disable'`);
+   await ev('rejectGet=false');
+  }
+  await ev(`window.beforeClick=actions.length;q('.code-rain-enable').click()`);
+  await wait(`q('.code-rain-enable').textContent==='Enable'&&!runtime.pending`,'real card Disable completes');
+  await check('normal package-captured button restores previous system theme and clears selection',`!runtime.enabled&&!runtime.error&&mode==='system'&&!localStorage.getItem('${lease}')&&!JSON.parse(localStorage.getItem('${selection}')).includes('${rain}')&&!document.querySelector('[data-code-codex-rain-layer]')`);
+  if(scenario==='failed')await check('failed-start Disable does not retry activation',`actions.slice(beforeClick).length===2&&actions[beforeClick].type==='app.appearance.get'&&actions[beforeClick+1].type==='app.appearance.set_mode'&&actions[beforeClick+1].mode==='system'`);
+  await ev(`q('.code-rain-enable').click()`);await wait('runtime.enabled&&!runtime.pending','normal card Enable');
+  await check('normal card Enable acquires dark and mounts renderer',`mode==='dark'&&q('.code-rain-status').textContent==='Running'&&document.querySelectorAll('[data-code-codex-rain-layer] canvas').length===1`);
+  await ev(`q('.code-rain-enable').click()`);await wait('!runtime.enabled&&!runtime.pending','second card Disable');
+  await check('repeated stop preserves draft, package controls and theme lease cleanup',`mode==='system'&&!runtime.error&&!localStorage.getItem('${lease}')&&document.querySelector('textarea').value==='Preserved unsent fixture draft'&&q('.code-rain-enable').textContent==='Enable'&&!q('.code-rain-enable').disabled&&errors.length===0`);
+  await browser.close();browser=undefined;
+ }
+ report.passed=true;console.log('Whole-host Rain recovery: '+report.checks.length+' checks passed');
+}catch(error){report.passed=false;report.error=String(error);if(browser)report.state=await browser.evaluate(`(()=>{const e=document.querySelector('${tag}'),s=e?.shadowRoot,r=window[Symbol.for('cursadex:code-rain-runtime:v1')];return{state:e?.dataset.state,status:s?.querySelector('.code-rain-status')?.textContent,button:s?.querySelector('.code-rain-enable')?.textContent,disabled:s?.querySelector('.code-rain-enable')?.disabled,runtime:r?{enabled:r.enabled,pending:r.pending,error:r.error}:null,actions:window.actions,errors:window.errors};})()`).catch(()=>null);throw error;}finally{writeFileSync(resolve(out,'result.json'),JSON.stringify(report,null,2)+'\n');await browser?.close();await new Promise(r=>server.close(r));}

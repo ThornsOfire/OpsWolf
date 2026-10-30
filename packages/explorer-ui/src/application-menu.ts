@@ -411,7 +411,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
     }
   },{signal});
   treeItem.addEventListener("click", () => { close(); actions.toggleExplorer(); }, { signal });
-  marketItem.addEventListener("click", () => { close(); actions.openPreviewMarket(); }, { signal });
+  marketItem.addEventListener("click", () => { close(true); actions.openPreviewMarket(); }, { signal });
   runtimeItem.addEventListener("click", () => { close(); actions.openRuntimeInformation(); }, { signal });
   preferencesItem.addEventListener('click', () => { close(true); actions.openPreferences?.(); }, {signal});
   installationItem.addEventListener("click", () => { close(); actions.openInstallationFolder(); }, { signal });
