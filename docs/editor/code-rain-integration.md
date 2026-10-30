@@ -1,12 +1,12 @@
 # Code Rain integration candidate
 
-The standalone [OpsWolf Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) renderer is integrated into the local candidate as an independent API 1 background package. Its catalog entry, application/runtime bindings and settings are implemented. The built UI has passed browser integration checks, and the matching native companion imported the exact package into an isolated candidate cache. **The everyday installation has not been replaced, and live Codex presentation remains unverified.**
+The standalone [OpsWolf Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) renderer is integrated as an independent API 1 background package. Its catalog entry, runtime bindings and settings are implemented. The owner has activated the matching test UI/native pair with Rain imported through normal verification. **Live effect interaction, document readability and restart persistence remain unverified.** The original host installation remains preserved; no source or plugin release has been published.
 
 ## Source and package identity
 
 `packages/explorer-ui/vendor/opswolf-code-rain/` contains the exact renderer, state module and MIT license from source commit `4d68d1fcdddd458d08be1523497b4f2a7af57f55`. `provenance.json` records the source repository, commit, byte lengths and SHA-256 values. Git preserves these bytes without line-ending conversion. The build verifies them before compiling; it performs no fetch, install or dependency download. A future renderer update must deliberately replace the reviewed source, provenance and independent package identity when the compiled bytes change.
 
-The package builder exports `CodeRain`, its settings normalization, preset/constants and rendering budget through the existing background-module registry. Registration creates no canvas and writes no preferences. `startup(target)` creates a renderer owned by that target; callers must dispose it. The host will own enablement, persistence, configuration controls and surface styles. The standalone app's controls/storage are not bundled.
+The package builder exports `CodeRain`, its settings normalization, preset/constants and rendering budget through the existing background-module registry. Registration creates no canvas and writes no preferences. `startup(target)` creates a renderer owned by that target; callers must dispose it. The host owns enablement, persistence, configuration controls and surface styles. The standalone app's controls/storage are not bundled.
 
 The candidate catalog builds version `0.1.1` with the dated candidate release tag `plugin-assets-2026-10-29`. That tag is not a published release or a promise that a download exists. Normal Download would require an authorized publication; local candidate testing uses the existing native offline importer, without changing download endpoints or bypassing verification.
 
@@ -46,6 +46,8 @@ Activation uses Dark appearance. Disabling restores a prior Light/System prefere
 
 ## Build and verification
 
+Run `node scripts/check-version.mjs` first for host/fork identity validation. This does not change standalone Rain's package version or the pinned plugin identity.
+
 Run the normal candidate build with `node packages/explorer-ui/scripts/build.mjs`. For a deliberate source/package update, use `--rebuild-plugins=all` and review `dist/plugin-rebuild-report.json` plus the distribution lock. Shared builder input changes require an explicit audit even when asset bytes are unchanged. This integration preserved the exact identities of all 25 unchanged packages. The startup player changed to candidate `1.1.28` because its source list now includes Rain; Rain itself is `0.1.1`.
 
 Two build-portability issues were discovered and corrected: the verbatim ASCII shader must retain LF checkout endings, and esbuild must preserve dependency symlink paths so a worktree's local `node_modules` junction produces checkout-relative input provenance. The existing distribution path/hash checks remain intact. Generated metafiles stay local; the lock records reviewed input hashes.
@@ -60,4 +62,4 @@ The production UI fixture passes 33 checks, including 19 Rain checks for normal 
 
 The matching native release built with `cargo build --offline --locked --release -p code-codex --bin code-codex`. Its ordinary `plugins --import-dir <package-directory>` command imported Rain into a unique fixture folder containing the executable and a schema-1 Code-Codex storage marker. `plugins` then reported only Rain installed, and the cache's 10,422 bytes matched SHA-256 `751c10db39c69748738c36cc8fce3e7cc8afaf1ab8e2dfe6cae08a26861af639`. Evidence remains under ignored `artifacts/code-rain-package/` and `artifacts/code-rain-native-*`.
 
-Remaining: live integrated presentation, real interaction/readability with documents and startup on the owner's actual host. Installation and publication wait for owner review. The working app and launcher remain unchanged; only this candidate's catalog and distribution lock have changed.
+Remaining: live integrated presentation, real interaction/readability with documents and startup on the owner's actual host. The owner has activated the test host and its imported plugin cache; full effect acceptance is still pending. Publication remains subject to review. Standalone 0.1.0, host plugin 0.1.1 and the later Cursadex fork display 0.1.0-dev.1 identify different artifacts. The public Rain remote remains unpushed; no version tag or downloadable package release is implied by local import.
