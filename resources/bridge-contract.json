@@ -219,6 +219,26 @@
     {
       "name": "explorer.installation.uninstall",
       "effect": "external-ui"
+    },
+    {
+      "name": "explorer.accounts.request",
+      "effect": "mode-dependent"
+    },
+    {
+      "name": "explorer.installation.restart",
+      "effect": "external-ui"
+    },
+    {
+      "name": "explorer.host.updates.status",
+      "effect": "read"
+    },
+    {
+      "name": "explorer.host.updates.open",
+      "effect": "external-ui"
+    },
+    {
+      "name": "explorer.host.updates.retry",
+      "effect": "diagnostic-write"
     }
   ]
 }

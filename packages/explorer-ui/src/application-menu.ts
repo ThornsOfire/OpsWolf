@@ -1,5 +1,6 @@
 import { getLocale, selectLanguage, subscribeLanguage, translate, t } from './i18n';
 import { icons } from './icons';
+import {nativeMenuCheckSvg} from './components/menu-check';
 import type { LoginStartupActions } from './contracts/login-startup';
 import { LoginStartupController } from './features/startup/login-startup';
 import {identityProfiles} from './core/configuration/identity-profiles';
@@ -13,6 +14,10 @@ interface ApplicationMenuActions extends LoginStartupActions {
   openRuntimeInformation(): void;
   openPreferences?(): void;
   openInstallationFolder(): void;
+  hostUpdateStatus?(): Promise<{latest?:{type?:string;counts?:{pluginDependency?:number;needsReview?:number}};scan?:{status?:string}}> ;
+  retryHostUpdates?(): Promise<{scheduled:boolean}>;
+  openHostUpdates?(): Promise<{opened:boolean}>;
+  restartCodeCodex(): Promise<{ scheduled: boolean }>;
   openUninstaller(): Promise<{ opened: boolean }>;
 }
 
@@ -111,9 +116,12 @@ ${MENU_POPUP_SELECTOR} > [data-code-codex-login-startup] {
   justify-content: space-between;
   gap: 16px;
 }
-[data-code-codex-menu-check] { margin-inline-start: auto; font: inherit; }
+[data-code-codex-menu-check] { display:inline-flex; align-items:center; flex:none; width:17px; height:17px; margin-inline-start:auto; }
+[data-code-codex-application-menu-popup] > button[role="menuitemradio"] { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 [data-code-codex-menu-check][hidden] { display: none; }
 ${MENU_POPUP_SELECTOR} > button:disabled { opacity: .6; cursor: default; }
+/* A fresh read blocks writes without flashing the normal menu foreground. */
+${MENU_POPUP_SELECTOR} > button:disabled[data-code-codex-startup-read="true"] { opacity: 1; }
 [data-code-codex-submenu-chevron] {
   display: flex;
   flex: 0 0 16px;
@@ -220,11 +228,16 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   updateItem.setAttribute("role", "menuitem");
   updateItem.tabIndex = -1;
   updateItem.textContent = "Check for Updates…";
+  const hostUpdatesItem=document.createElement('button');hostUpdatesItem.type='button';hostUpdatesItem.tabIndex=-1;hostUpdatesItem.setAttribute('role','menuitem');hostUpdatesItem.dataset.codeCodexHostUpdates='true';
+  const retryUpdatesItem=document.createElement('button');retryUpdatesItem.type='button';retryUpdatesItem.tabIndex=-1;retryUpdatesItem.setAttribute('role','menuitem');retryUpdatesItem.dataset.codeCodexHostUpdatesRetry='true';
   const installationItem = document.createElement("button");
   installationItem.type = "button";
   installationItem.setAttribute("role", "menuitem");
   installationItem.tabIndex = -1;
   installationItem.textContent = "Open Installation Folder";
+  const restartItem = document.createElement('button');
+  restartItem.type = 'button'; restartItem.tabIndex = -1;
+  restartItem.setAttribute('role','menuitem'); restartItem.dataset.codeCodexRestart='true';
   const loginStartupItem = document.createElement('button');
   loginStartupItem.type = 'button';
   loginStartupItem.tabIndex = -1;
@@ -271,7 +284,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   uninstallItem.type = 'button'; uninstallItem.tabIndex = -1;
   uninstallItem.setAttribute('role', 'menuitem');
   uninstallItem.dataset.codeCodexUninstall = 'true';
-  popup.append(treeItem, preferencesItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, separator, updateItem, repositoryItem, uninstallSeparator, uninstallItem);
+  popup.append(treeItem, preferencesItem, marketItem, runtimeItem, installationItem, hostUpdatesItem, retryUpdatesItem, languageItem, separator, updateItem, repositoryItem, uninstallSeparator, loginStartupItem, restartItem, uninstallItem);
 
   // Keep this sibling separate from Codex's React-owned Radix menubar. It
   // shares the visual row without joining Radix's private keyboard collection.
@@ -279,15 +292,15 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   document.body.append(popup);
   document.body.append(languagePopup);
 
-  const items: HTMLElement[] = [treeItem, preferencesItem, marketItem, runtimeItem, installationItem, loginStartupItem, languageItem, updateItem, repositoryItem, uninstallItem];
+  const items: HTMLElement[] = [treeItem, preferencesItem, marketItem, runtimeItem, installationItem, hostUpdatesItem, retryUpdatesItem, languageItem, updateItem, repositoryItem, loginStartupItem, restartItem, uninstallItem];
   const updateText=()=>{
     loginStartup.render();
     preferencesItem.textContent = identity.name + (getLocale() === 'zh-CN' ? ' 设置…' : ' settings…');
     treeItem.textContent=t(actions.isExplorerVisible()?'menu.hideTree':'menu.showTree');
-    for(const [item,key] of [[marketItem,'menu.market'],[runtimeItem,'menu.runtime'],[installationItem,'menu.installation'],[updateItem,'menu.updates'],[repositoryItem,'menu.repository'],[uninstallItem,'menu.uninstall']] as const)item.textContent=t(key);
+    for(const [item,key] of [[marketItem,'menu.market'],[runtimeItem,'menu.runtime'],[hostUpdatesItem,'menu.hostUpdates'],[retryUpdatesItem,'menu.hostUpdatesRetry'],[installationItem,'menu.installation'],[restartItem,'menu.restart'],[updateItem,'menu.updates'],[repositoryItem,'menu.repository'],[uninstallItem,'menu.uninstall']] as const)item.textContent=t(key);
     languageLabel.textContent=t('menu.language');
     languagePopup.setAttribute('aria-label',t('menu.language'));
-    for(const button of languageOptions){const checked=button.dataset.locale===getLocale();button.setAttribute('aria-checked',String(checked));button.textContent=(checked?'✓  ':'　 ')+button.dataset.languageLabel;}
+    for(const button of languageOptions){const checked=button.dataset.locale===getLocale();button.setAttribute('aria-checked',String(checked));const label=document.createElement('span');label.textContent=button.dataset.languageLabel!;const check=document.createElement('span');check.dataset.codeCodexMenuCheck='true';check.setAttribute('aria-hidden','true');check.innerHTML=nativeMenuCheckSvg;check.style.visibility=checked?'visible':'hidden';button.replaceChildren(label,check);}
   };
   const unsubscribe=subscribeLanguage(()=>{updateText();position();});
   const closeSub=()=>{languagePopup.hidden=true;languageItem.setAttribute('aria-expanded','false');};
@@ -320,6 +333,7 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
     void loginStartup.refresh();
     updateText();
     popup.hidden = false;
+    void actions.hostUpdateStatus?.().then(value=>{if(signal.aborted||popup.hidden)return;const counts=value.latest?.counts;const priority=(counts?.pluginDependency??0)+(counts?.needsReview??0);hostUpdatesItem.dataset.reportStatus=value.scan?.status??'pending';if(value.latest?.type==='update'&&priority>0)hostUpdatesItem.textContent=t('menu.hostUpdates')+` (${priority})`;hostUpdatesItem.title=value.scan?.status==='partial'||value.scan?.status==='unavailable'||value.scan?.status==='failed'||value.scan?.status==='retry_required'?'HOST_UPDATE_INCOMPLETE: Inventory is incomplete; no no-impact conclusion was made.':'';}).catch(()=>{if(!signal.aborted)hostUpdatesItem.title='HOST_UPDATE_REPORT: Update status is unavailable.';});
     trigger.setAttribute("aria-expanded", "true");
     trigger.dataset.state = 'open';
     position();
@@ -415,6 +429,15 @@ function createMenu(mount: MenuMount, actions: ApplicationMenuActions): MenuStat
   runtimeItem.addEventListener("click", () => { close(); actions.openRuntimeInformation(); }, { signal });
   preferencesItem.addEventListener('click', () => { close(true); actions.openPreferences?.(); }, {signal});
   installationItem.addEventListener("click", () => { close(); actions.openInstallationFolder(); }, { signal });
+  retryUpdatesItem.addEventListener('click',()=>{if(retryUpdatesItem.disabled)return;close();retryUpdatesItem.disabled=true;void actions.retryHostUpdates?.().catch(error=>window.alert(`Starting the official update scan failed.\n${String(error)}`)).finally(()=>{retryUpdatesItem.disabled=false;});},{signal});
+  hostUpdatesItem.addEventListener('click',()=>{if(hostUpdatesItem.disabled)return;close();hostUpdatesItem.disabled=true;void actions.openHostUpdates?.().catch(error=>window.alert(`Opening the official update report failed.\n${String(error)}`)).finally(()=>{hostUpdatesItem.disabled=false;});},{signal});
+  restartItem.addEventListener('click', () => {
+    if(restartItem.disabled)return;
+    close(); restartItem.disabled=true;
+    void actions.restartCodeCodex().then(result=>{if(result?.scheduled!==true)throw Error('Restart was not scheduled.');}).catch(error=>{
+      window.alert(`Restarting Code-Codex failed.\n${String(error)}`);
+    }).finally(()=>{restartItem.disabled=false;});
+  }, {signal});
   loginStartupItem.addEventListener('click', () => { close(); void loginStartup.toggle(); }, { signal });
   updateItem.addEventListener("click", () => { close(); actions.checkForUpdates(); }, { signal });
   repositoryItem.addEventListener("click", () => close(), { signal });

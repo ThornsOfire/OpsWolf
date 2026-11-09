@@ -2,7 +2,7 @@
 
 The useful stuff we've added, changed, fixed, or retired in this editor fork. The full implementation history is in [Git](https://github.com/ThornsOfire/OpsWolf/commits/candidate/planned-development); this file groups that work into changes you can actually skim.
 
-We follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Everything below is **Unreleased**: development builds have been used locally, but we haven't published a versioned editor-fork release. The inherited 0.5.40 application version identifies the upstream baseline, not a release of these additions.
+We follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Everything below is **Unreleased**: development builds have been used locally, but we haven't published a versioned editor-fork release. The upstream application version identifies the inherited base, not a release of these additions.
 
 This initial record was reconstructed from the fork's commits and checked implementation through **2026-10-28**. Original project release notes remain in [releases/README.md](releases/README.md). Maintenance instructions are in [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -67,6 +67,10 @@ This initial record was reconstructed from the fork's commits and checked implem
 - This curated changelog, repository workflow rules, contributor guidance, and a read-only changelog check for future changes.
 
 ### Changed
+
+- A different renderer build now waits for a fresh app session, preserving the existing document owner and unsaved drafts. Same-build reconnect remains supported. In-app Restart and its hidden worker entry are held until they can preserve the selected OpsWolf launcher and profile; use the reviewed launcher after closing normally.
+
+- The alpha.14 source candidate integrates corrected upstream Code-Codex 0.6.0 while retaining the OpsWolf editor, native changes, citations, settings and Code Rain. Source, plugin and live-host qualification remain separate; see the [integration notes](docs/editor/upstream-integration.md). Upstream installer execution remains blocked in the fork.
 
 - The first alpha source checkpoint is `0.1.0-alpha.1`, explicitly selected for publication preparation. Canonical repository links now use `ThornsOfire/OpsWolf`; compatibility keys and existing local installations retain their identities. Source publication is separate from an alpha installer, tag or deployment.
 

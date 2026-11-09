@@ -14,7 +14,7 @@ There are three separate things to keep straight:
 
 Code Rain's separate package preparation and integration gates are documented in [Code Rain integration](code-rain-integration.md). Its focused check is `node scripts/test-code-rain-package.mjs`; passing it does not certify a native installation or activation.
 
-Changing the checkout doesn't replace a running renderer. A UI-only change needs a rebuilt UI bundle and a launcher that loads it. A backend change needs a matching rebuilt native companion too. The inherited application version remains 0.5.40, so that number by itself doesn't identify the editor-fork revision. Record the source commit and installed asset hashes when diagnosing a mismatch.
+Changing the checkout doesn't replace a running renderer. A UI-only change needs a rebuilt UI bundle and a launcher that loads it. A backend change needs a matching rebuilt native companion too. The upstream application version and fork version are separate; neither alone identifies the exact integrated renderer. The current source integration is described in [upstream integration](upstream-integration.md). Record the source commit and installed asset hashes when diagnosing a mismatch.
 
 Personal launcher paths, relocated app state, test captures, rollback builds and client workspaces aren't prerequisites for cloning this repository. Avoid putting any of those into public documentation or hard-coded defaults.
 

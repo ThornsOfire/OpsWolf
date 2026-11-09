@@ -3,6 +3,7 @@ import { type BootstrapConfig, type BridgeErrorData, type BridgeMessage, type Br
 const MESSAGE_EVENT = "code-codex:message";
 import { connectRuntimeInformation } from "./runtime-information";
 import { runtimeEvent } from "./runtime-events";
+import { mayInitializeRendererServices } from "./core/document-renderer";
 import { runtimeErrorDetails } from "./runtime-operations";
 import { reconnectRendererStorage } from './renderer-storage';
 import { applyLanguage, connectLanguage } from './i18n';
@@ -56,7 +57,7 @@ function consumeBootstrap(): Readonly<BootstrapConfig> {
 }
 
 const bootstrap = consumeBootstrap();
-if (bootstrap.language) applyLanguage(bootstrap.language);
+if (bootstrap.language && mayInitializeRendererServices()) applyLanguage(bootstrap.language);
 
 export function getBootstrapConfig(): Readonly<BootstrapConfig> {
   return bootstrap;
@@ -129,6 +130,7 @@ export class ExplorerBridge extends EventTarget {
     bindingName = bootstrap.binding,
     receiverName = bootstrap.receiver,
     timeoutMs = 12_000,
+    connectServices = true,
   ) {
     super();
     this.#capabilityToken = capabilityToken;
@@ -156,6 +158,10 @@ export class ExplorerBridge extends EventTarget {
       const unsubscribe = binding.subscribe(this.#receive);
       if (typeof unsubscribe === "function") this.#unsubscribeObjectBridge = unsubscribe;
     }
+    if (connectServices) this.connectServices();
+  }
+
+  connectServices(): void {
     connectRuntimeInformation(this.request.bind(this));
     if (bootstrap.language) connectLanguage(this.request.bind(this));
     if (bootstrap.centralizedStorage) reconnectRendererStorage(this.request.bind(this));

@@ -1,3 +1,4 @@
+import {builtExplorerTag,registeredExplorerIdentity} from './ui-build-identity.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {resolve} from 'node:path';
@@ -6,6 +7,7 @@ import {build,stop} from '../packages/explorer-ui/node_modules/esbuild/lib/main.
 import {launchFixture,delay} from './browser-fixture.mjs';
 const root=resolve(import.meta.dirname,'..'),ui=resolve(root,'packages/explorer-ui'),out=resolve(root,'artifacts/update-policy');mkdirSync(out,{recursive:true});
 const version=JSON.parse(readFileSync(resolve(ui,'package.json'),'utf8')).version;
+const tag=builtExplorerTag(root);
 const offer={currentVersion:version,latestVersion:'999.0.0',status:'updateAvailable',tagName:'v999.0.0',releaseUrl:'https://github.com/Rice-dog/code-codex/releases/tag/v999.0.0',checkedAtUnixMs:1793400000000,installPolicy:'blockedInFork',installer:{name:'CodeCodex-999.0.0-x64-setup.exe',url:'https://github.com/Rice-dog/code-codex/releases/download/v999.0.0/CodeCodex-999.0.0-x64-setup.exe',size:300000,sha256:'a'.repeat(64)}};
 const unit=await build({bundle:true,write:false,format:'iife',stdin:{contents:`import {UpdatesController} from './features/workspace/updates';import {normalizeUpdateCheckResult,normalizeUpdateInstallResult} from './features/updates/responses';window.fixtureTypes={UpdatesController,normalizeUpdateCheckResult,normalizeUpdateInstallResult};`,resolveDir:resolve(ui,'src'),loader:'ts'},define:{__CODE_CODEX_VERSION__:JSON.stringify(version)}});
 const unitHtml=`<!doctype html><meta charset="utf-8"><div id="host"></div><script src="/unit.js"></script><script>
@@ -52,7 +54,9 @@ try{
  await check('Replacement companion plus failed check cannot inherit block authority',`q('message').textContent.includes('Historical result')&&!q('message').textContent.includes('companion blocks upstream installer RPCs')`);
  await check('All controller requests were metadata-only',`calls.every(x=>['explorer.update.startup','explorer.update.check'].includes(x.method))`);
  await browser.command('Page.navigate',{url:url+'/production'});
- const tag='code-codex-v'+version.replaceAll('.','-');await wait(`document.querySelector('${tag}')?.shadowRoot.querySelector('.update-indicator')?.textContent==='Update available'`,'production update indicator');
+ await wait("location.pathname==='/production'&&document.readyState==='complete'",'production fixture document');
+ await registeredExplorerIdentity(browser,{tag});
+ await wait(`document.querySelector('${tag}')?.shadowRoot.querySelector('.update-indicator')?.textContent==='Update available'`,'production update indicator');
  await ev(`window.root=document.querySelector('${tag}').shadowRoot;window.q=selector=>root.querySelector(selector);q('.update-indicator').focus()`);
  await browser.command('Input.dispatchKeyEvent',{type:'keyDown',key:'Enter',code:'Enter',windowsVirtualKeyCode:13,text:'\r',unmodifiedText:'\r'});await browser.command('Input.dispatchKeyEvent',{type:'keyUp',key:'Enter',code:'Enter',windowsVirtualKeyCode:13});
  await wait(`!q('.update-popover').hidden`,'keyboard review');

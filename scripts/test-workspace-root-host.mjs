@@ -1,3 +1,4 @@
+import {builtExplorerTag,registeredExplorerIdentity} from './ui-build-identity.mjs';
 import { installedBackgroundFixture } from './background-package-fixture.mjs';
 import {writeFileSync, readFileSync, mkdirSync} from 'node:fs';
 import {createServer} from 'node:http';
@@ -5,7 +6,7 @@ import {launchFixture,delay} from './browser-fixture.mjs';
 import assert from 'node:assert/strict';
 import {join, resolve} from 'node:path';
 const root=resolve(import.meta.dirname,'..');
-const tag='code-codex-v'+JSON.parse(readFileSync(join(root,'packages/explorer-ui/package.json'),'utf8')).version.replaceAll('.', '-');
+const tag=builtExplorerTag(root);
 const page=(active,id,title)=>`<div data-app-shell-active-page="${active}" style="display:${active?'contents':'none'}"><div class="_Workspace_new" data-app-shell-page-surface="true"><header data-app-shell-titlebar="true"><span data-app-shell-titlebar-content>${title}</span></header><div class="_MainContentClip_new"><main data-app-shell-main-surface="default"><div class="_WorkspaceContent_new"><div data-app-shell-workspace-layout="split"><div data-app-shell-main-content-top-fade="visible"><div class="_MainContentTopFade_new"></div></div><article data-response-annotation-conversation="${id}">Conversation</article><div data-thread-scroll-footer="true"><div class="pointer-events-none bg-surface"></div><div data-above-composer-conversation-id="${id}"><textarea>Preserved draft</textarea></div></div></div></div></main></div></div></div>`;
 const script=`
 const calls=[];let watchFinished=false;let nativeThread='thread_current_001';
@@ -90,6 +91,6 @@ writeFileSync(fixture,html);
 const server=createServer((req,res)=>{if(req.url==='/explorer.js'){res.setHeader('Content-Type','text/javascript');res.end(readFileSync(join(root,'packages/explorer-ui/dist/explorer.js')));return;}if(req.url==='/app-initial-current-ui.js'){res.setHeader('Content-Type','text/javascript');res.end(`export const adapter={appActions:{runInPrimaryWindow:async({action})=>({mode:action.mode??'dark'})},clientCoordination:{invalidateQueryCache:async()=>({})}};`);return;}res.setHeader('Content-Type','text/html; charset=utf-8');res.end(html);});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
 let browser,result;
-try{browser=await launchFixture(`http://127.0.0.1:${server.address().port}/`);for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}assert.ok(result,'fixture completed');writeFileSync(join(root,'artifacts/workspace-root-host-result.json'),JSON.stringify(result,null,2));const shot=await browser.command('Page.captureScreenshot');writeFileSync(join(root,'artifacts/workspace-root-host.png'),Buffer.from(shot.data,'base64'));}finally{await browser?.close();await new Promise(r=>server.close(r));}
+try{browser=await launchFixture(`http://127.0.0.1:${server.address().port}/`);await registeredExplorerIdentity(browser,{tag});for(let i=0;i<300;i++){result=await browser.evaluate('window.fixtureResult');if(result)break;await delay(40);}assert.ok(result,'fixture completed');writeFileSync(join(root,'artifacts/workspace-root-host-result.json'),JSON.stringify(result,null,2));const shot=await browser.command('Page.captureScreenshot');writeFileSync(join(root,'artifacts/workspace-root-host.png'),Buffer.from(shot.data,'base64'));}finally{await browser?.close();await new Promise(r=>server.close(r));}
 console.log({...result,calls:result.calls.length});
 assert.equal(result.error,undefined);for(const key of ['moduleBootstrapRetained','readyBeforeWatch','rootResynced','positions','maskClear','fileTransparent','clickable','dirtyRootDeferred','movedEmptyRoot','otherRoot','returnedRoot','switchInline'])assert.equal(result[key],true,key);assert.deepEqual(result.errors,[]);

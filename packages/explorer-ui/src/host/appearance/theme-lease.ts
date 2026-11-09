@@ -1,7 +1,9 @@
+import {loadHostNamespace} from '../../../../../resources/account-host-capabilities.js';
 // controllers responsibility; original state keys, defaults and lifecycle retained.
 import { AURORA_IONOSPHERE_BACKGROUND_PLUGIN_ID,BLACK_HOLE_BACKGROUND_PLUGIN_ID,BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,GLOW_HORIZON_BACKGROUND_PLUGIN_ID,HEAVENLY_CLOUD_BACKGROUND_PLUGIN_ID,MILKY_WAY_BACKGROUND_PLUGIN_ID,MOUNTAIN_BACKGROUND_PLUGIN_ID,PARTICLE_BACKGROUND_PLUGIN_ID,PARTICLE_BACKGROUND_THEME_LEASE_KEY,PIXEL_SCULPT_BACKGROUND_PLUGIN_ID } from "../../core/configuration/explorer";
 import { type DarkBackgroundPluginId } from "../../contracts/explorer-model";
-import { findCodexAppearanceModules,isCodexRpcNamespace } from "./theme-probe";
+import { inspectCodexAppearanceModules,isCodexRpcNamespace } from "./theme-probe";
+import { runtimeEvent } from "../../runtime-events";
 import { recordCaughtRuntimeError } from "../../runtime-operations";
 import {
   isObjectRecord
@@ -90,31 +92,54 @@ export function selectCodexAppearanceAdapter(moduleExports: Record<string,unknow
 export class CodexAppearanceUnavailableError extends Error {}
 
 export async function discoverCodexAppearanceAdapter(): Promise<CodexAppearanceAdapter> {
-  // Four finite attempts share one promise; no observer or permanent retry loop.
-  // Once resolved, the adapter remains cached. A rejection is cleared below.
+  // Finite retries allow late preload hints without dispatching an action.
   const deadline=performance.now()+4000;
+  const timeout=()=>Error('CC-APPEARANCE-ADAPTER-001: Official Appearance discovery timed out; no setting was changed.');
+  const details={accountRuntimeRequired:false,independentHints:false,malformedHints:false,namedCandidates:0,numberedCandidates:0,importsFailed:0,unmatchedExports:0};
+  runtimeEvent("appearance","adapter discovery","started",{stage:"module-discovery",accountRuntimeRequired:false});
+
   for(const wait of [0,100,250,500]) {
     if(wait)await new Promise<void>(resolve=>window.setTimeout(resolve,wait));
-    const modules=findCodexAppearanceModules();
-    const values:unknown[]=[];
-    for(const url of modules){
+    if(performance.now()>=deadline)throw timeout();
+    const {named,numbered,malformed,independentHints}=inspectCodexAppearanceModules();
+    details.independentHints=independentHints;
+    details.malformedHints ||= malformed;
+    details.namedCandidates=named.length;
+    details.numberedCandidates=numbered.length;
+    if(numbered.length>1)throw Error("CC-APPEARANCE-ADAPTER-002: Multiple official runtimes matched; no setting was changed.");
+
+    const values=new Set<unknown>();
+    const sources=[
+      ...numbered.map(path=>()=>loadHostNamespace(path+'#cc-host=appearance')),
+      ...named.map(path=>()=>import(path) as Promise<Record<string,unknown>>),
+    ];
+    for(const load of sources) {
       const remaining=deadline-performance.now();
-      if(remaining<=0)throw Error('CC-APPEARANCE-ADAPTER-001: Official Appearance discovery timed out; no setting was changed.');
+      if(remaining<=0)throw timeout();
       let timer=0;
-      // ESM fetch/evaluation cannot be cancelled. A late import is ignored and
-      // never dispatches an appearance action after this bounded wait rejects.
+      // A late import may finish evaluating, but cannot resume discovery or dispatch.
       const exports=await Promise.race([
-        import(url) as Promise<Record<string,unknown>>,
-        new Promise<never>((_,reject)=>{timer=window.setTimeout(()=>reject(Error('CC-APPEARANCE-ADAPTER-001: Official Appearance discovery timed out; no setting was changed.')),remaining);}),
+        load().catch(()=>{details.importsFailed++;return undefined;}),
+        new Promise<never>((_,reject)=>{timer=window.setTimeout(()=>reject(timeout()),remaining);}),
       ]).finally(()=>window.clearTimeout(timer));
+      if(!exports)continue;
       const descriptors=Object.getOwnPropertyDescriptors(exports);
       if(Object.keys(descriptors).length>8192)throw Error('CC-APPEARANCE-ADAPTER-001: Appearance export inspection exceeded its bound; no setting was changed.');
-      for(const descriptor of Object.values(descriptors))if('value' in descriptor)values.push(descriptor.value);
+      for(const descriptor of Object.values(descriptors))if('value' in descriptor)values.add(descriptor.value);
+      if(values.size>8192)throw Error('CC-APPEARANCE-ADAPTER-001: Appearance export inspection exceeded its bound; no setting was changed.');
     }
-    const adapter=selectCodexAppearanceAdapter(Object.fromEntries([...new Set(values)].map((value,index)=>[String(index),value])));
-    if(adapter)return adapter;
+    const adapter=selectCodexAppearanceAdapter(Object.fromEntries([...values].map((value,index)=>[String(index),value])));
+    if(adapter) {
+      runtimeEvent("appearance","adapter discovery","confirmed",{stage:"export-contract",...details});
+      return adapter;
+    }
+    if(values.size)details.unmatchedExports++;
   }
-  throw new CodexAppearanceUnavailableError("CC-APPEARANCE-ADAPTER-001: No supported official Appearance interface was found in the loaded modules. Background activation was cancelled without changing the theme.");
+  const stage=details.importsFailed?"module-import":details.malformedHints?"malformed-hints":details.unmatchedExports?"export-contract":"module-discovery";
+  runtimeEvent("appearance","adapter discovery","failed",{stage,...details});
+  const message='CC-APPEARANCE-ADAPTER-001: No supported official Appearance interface was found. stage='+stage+'; background activation was cancelled without changing the theme.';
+  if(details.importsFailed||details.malformedHints)throw Error(message);
+  throw new CodexAppearanceUnavailableError(message);
 }
 
 
@@ -191,6 +216,7 @@ export function readParticleThemeLease(): ParticleThemeLease|undefined {
         ||lease.owner===MILKY_WAY_BACKGROUND_PLUGIN_ID
         ||lease.owner==="code-codex.ascii-tiles-background"
         ||lease.owner==="code-codex.code-rain-background"
+        ||lease.owner==="code-codex.shallow-ocean-background"
         ||lease.owner===BLINKING_SQUARES_BACKGROUND_PLUGIN_ID
         ||lease.owner===MOUNTAIN_BACKGROUND_PLUGIN_ID
         ||lease.owner===PIXEL_SCULPT_BACKGROUND_PLUGIN_ID

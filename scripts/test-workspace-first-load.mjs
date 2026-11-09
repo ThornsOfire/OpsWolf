@@ -1,3 +1,4 @@
+import {expectedBundleTag,registeredExplorerIdentity} from './ui-build-identity.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createServer} from 'node:http';
@@ -6,10 +7,9 @@ import {launchFixture, delay} from './browser-fixture.mjs';
 
 // Full explorer composition with a synthetic public host and authenticated bridge responses.
 // A canonical thread can appear before the native workspace metadata becomes available.
-const ui = resolve(import.meta.dirname, '../packages/explorer-ui');
-const {version} = JSON.parse(readFileSync(resolve(ui, 'package.json'), 'utf8'));
-const tag = 'code-codex-v' + version.replaceAll('.', '-');
-const bundlePath = process.argv[2] ?? resolve(ui, 'dist/explorer.js');
+const repo = resolve(import.meta.dirname, '..');
+const bundlePath = resolve(process.argv[2] ?? resolve(repo, 'packages/explorer-ui/dist/explorer.js'));
+const expectedTag = expectedBundleTag(repo, bundlePath);
 const application = readFileSync(bundlePath, 'utf8');
 
 const html = `<!doctype html><meta charset="utf-8">
@@ -122,13 +122,13 @@ const html = `<!doctype html><meta charset="utf-8">
   }};
   addEventListener('error', event => errors.push(event.message));
   addEventListener('unhandledrejection', event => errors.push(String(event.reason)));
-  const explorer = () => document.querySelector('${tag}');
+  const explorer = () => document.querySelector(window.fixtureExplorer.tag);
   const state = () => explorer()?.dataset.state;
   const root = () => explorer()?.shadowRoot.querySelector('.project-name')?.textContent;
   const loaded = name => state() === 'ready' && root() === name &&
     !!explorer().shadowRoot.querySelector('[data-path="' + name + '.md"]');
   const attempts = id => calls.filter(call => call.threadId === id).length;
-  const viewer = () => document.querySelector('code-codex-main-preview-v${version.replaceAll('.', '-')}');
+  const viewer = () => document.querySelector(window.fixtureExplorer.previewTag);
   const mode = text => [...(viewer()?.shadowRoot.querySelectorAll('.preview-mode-button') ?? [])]
     .find(button => button.textContent === text);
   const editor = () => viewer()?.shadowRoot.querySelector('.code-editor');
@@ -149,6 +149,9 @@ const checks = [];
 try {
   browser = await launchFixture(`http://127.0.0.1:${server.address().port}/`);
   const evaluate = expression => browser.evaluate(expression);
+  const {version, tag} = await registeredExplorerIdentity(browser, {tag: expectedTag});
+  const previewTag = 'code-codex-main-preview-v' + version.replaceAll('.', '-');
+  await evaluate(`window.fixtureExplorer = Object.freeze(${JSON.stringify({tag, previewTag})});`);
   const waitFor = async (condition, budget = 4000) => {
     const until = Date.now() + budget;
     do {

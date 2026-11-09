@@ -46,6 +46,22 @@ fn installed_root() -> io::Result<PathBuf> {
 }
 
 impl NativeBridge {
+    pub(super) async fn installation_restart(
+        &self,
+        params: Value,
+        epoch: u64,
+    ) -> Result<Value, BridgeError> {
+        if !params.as_object().is_some_and(serde_json::Map::is_empty) {
+            return Err(BridgeError::invalid_request());
+        }
+        self.ensure_epoch(epoch)?;
+        // The upstream helper has no verified OpsWolf launch profile to replay.
+        Err(BridgeError::new(
+            "RESTART_BLOCKED",
+            "Close OpsWolf normally, then open the reviewed OpsWolf launcher. In-app restart cannot preserve the selected build.",
+        ))
+    }
+
     pub(super) async fn installation_uninstall(&self, params: Value, epoch: u64) -> Result<Value, BridgeError> {
         if !params.as_object().is_some_and(serde_json::Map::is_empty) {
             return Err(BridgeError::invalid_request());

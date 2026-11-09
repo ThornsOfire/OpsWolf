@@ -511,7 +511,7 @@ pub fn launched_process_state(pid: u32) -> String {
 }
 
 #[cfg(windows)]
-fn process_handle_exit_code(handle: &OwnedHandle) -> io::Result<Option<u32>> {
+pub(crate) fn process_handle_exit_code(handle: &OwnedHandle) -> io::Result<Option<u32>> {
     match unsafe { WaitForSingleObject(handle.as_raw_handle().cast(), 0) } {
         WAIT_TIMEOUT => Ok(None),
         WAIT_OBJECT_0 => {
@@ -1378,7 +1378,7 @@ pub(crate) fn verify_process_identity_native(
 }
 
 #[cfg(windows)]
-fn retain_native_identity(
+pub(crate) fn retain_native_identity(
     pid: u32,
     launched_after: SystemTime,
     official_executable: &Path,
@@ -1836,6 +1836,7 @@ impl AttachedProcess {
     }
 
     pub(crate) fn pid(&self) -> u32 { self.pid }
+    pub(crate) fn created_ms(&self)->u64 { self.created_at.duration_since(UNIX_EPOCH).expect("verified creation time").as_millis() as u64 }
 
     pub(crate) fn verify_listener(&self, port: u16) -> Result<(), ProcessGuardError> {
         self.running()?;

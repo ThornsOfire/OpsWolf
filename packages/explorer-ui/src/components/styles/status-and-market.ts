@@ -211,6 +211,7 @@ export const style4 = String.raw`  .statusbar {
     min-width: 0;
   }
   .preview-market-section[hidden] { display: none; }
+  .preview-extension[hidden] { display: none; }
   .preview-market-categories {
     display: grid;
     width: fit-content;

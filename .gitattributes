@@ -10,3 +10,9 @@ packages/explorer-ui/vendor/opswolf-code-rain/** -text
 
 # Shader text is embedded verbatim; checkout line endings must not change bundles.
 packages/explorer-ui/src/effects/**/*.frag text eol=lf
+
+# Frozen per-package legal banners are embedded verbatim into pinned assets.
+resources/plugin-banners/** -text -whitespace
+
+# Preserve the supplied scene's intentional source formatting.
+packages/explorer-ui/plugins/appearance/shallow-ocean/source/reef-ecosystem.js -whitespace

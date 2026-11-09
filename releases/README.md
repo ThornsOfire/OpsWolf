@@ -1,53 +1,29 @@
-# Code-Codex v0.5.40
+# Code-Codex v0.6.0
 
-本次软件更新覆盖上一公开软件版本 **v0.5.21 → v0.5.40** 的全部保留变更，包括 PR66、PR67 及其后续修正。期间本地测试版本不另算公开软件更新。
-
-本版替代已撤回公开发布的 v0.5.39，并合入官方外观接口兼容修复；累计更新范围仍为 v0.5.21 → v0.5.40。
+本次软件更新覆盖上一公开软件版本 **v0.5.89 → v0.6.0** 的保留改动；中间的本地候选版本不单独计为公开更新。[完整源码比较](https://github.com/Rice-dog/code-codex/compare/v0.5.89...v0.6.0)。
 
 ## 简体中文
 
-- **背景直接启用与主题兼容**：适配官方将外观操作拆到独立模块后的结构；兼容原组合接口，按唯一受支持接口自动读取/切换主题。无需先手动设置深色，停用恢复原偏好。多候选或未知接口保持拒绝并保留具体原因，移除无效的通用重启建议；插件资源身份不变。
-- **原版已运行时的恢复**：继续使用同一个启动诊断窗口，直接显示完整的“关闭并重新启动 / 取消”操作。默认取消，确认后窗口立即隐藏；按保留的进程身份请求正常退出，再检查后继进程、页面及 Bridge 就绪。可记住自动重启选择，也可撤销；开启开机自启不会自动授予关闭会话的权限。
-- **慢启动与动画等待**：正常较慢启动不再被独立的 90 秒恢复计时器误报。首次主页面尚未挂载时，超过 120 秒观察门槛继续等待，不再仅因时间流逝关闭客户端。过长的启动动画让出原生界面；它不会伪造就绪、修改网络设置或自动重试关闭操作。真正的身份、安全和启动失败仍保留诊断。
-- **进程检错与诊断**：改进既有进程查询、退出收尾及过期快照竞争的处理，保留同代句柄、完整快照和总预算约束；明确区分尚未就绪、实际退出、查询失败和页面资格失败。技术原因、错误码与原始日志保留英文，普通操作说明随界面语言显示。
-- **安装与桌面入口**：始终创建独立的 Code-Codex 桌面快捷方式；找到原生 Codex 快捷方式时继续支持接管及卸载恢复。没有原生桌面图标也能使用独立入口，有效受管记录中的入口丢失可修复。
-- **顶部菜单与开机自启**：菜单选中高亮、已展开时悬停切换更接近原生行为；开机自启使用右侧标准勾选和居中的简洁中英确认框。菜单 Bridge 独立于文件树生命周期，隐藏文件树后仍可操作自启和卸载入口。
-- **卸载流程**：顶部 Code-Codex 菜单可直接打开现有卸载向导。修正从运行中的菜单启动卸载时的进程链处理，保护暂存向导、worker 和完成页 UI，按用户选择保留或删除设置、插件和素材。
-- **插件显示与图片轮换**：26 款插件名称随全局中英文显示；避免旧语言服务在热升级后覆盖新目录。修复 Particle Image 自动图片轮换与外观操作共享忙碌状态的问题，启用、导入或删除后的轮换能够恢复。
-- **升级与缓存**：26 个插件的独立版本、固定资源地址及资源字节保持不变；校验匹配的下载缓存可复用。EXE 更新沿用原安装目录，并保留设置、用户素材和匹配插件，无需先卸载；MSI 所有权安装继续走 Windows Installer 路径。
+- **新版官方客户端兼容**：完善原生工作区、活动页面、输入框和模型按钮识别，适配新版文件树挂载结构；保留旧接口适配，按实际能力与响应合同判断兼容性。
+- **启动与连接恢复**：补齐启动冲突、Bridge派发、响应截止和官方后台传输诊断，保留具体阶段与证据，继续保护活动任务和已有登录状态。
+- **官方更新变更台账**：启动时按官方版本转换触发分析并记录已处理转换，避免重复扫描；按插件依赖标注可能受影响的部分，保存报告与基线。静态影响信号不替代功能实测，也不保证自动修复未来破坏性接口变化。
+- **顶部菜单**：新增通过Code-Codex启动链重启应用的入口，将开机自启、重启、卸载集中排列，改善自启状态读取时的显示稳定性，普通界面继续跟随中英文设置。
+- **透明度与主题**：完善新版官方页面、上下渐变遮罩和设置底板适配，恢复时只处理本插件拥有的状态，复用现有主题与原生能力。
+- **插件资源下载**：补齐目录锁定的两项独立运行资源后再发布软件，沿用原tag、文件名、大小和SHA256校验，保留其他插件的独立版本与缓存身份。
+- **安装与交接**：完善安装、卸载和运行期交接的阶段信息，保留设置、素材及校验匹配的插件缓存；活动任务继续受保护，热接管可能等到任务空闲后完成。
 
-### 安装与验证范围
-
-优先下载 `CodeCodex-0.5.40-x64-setup.exe`；另提供 MSI、ZIP、独立卸载程序、插件目录和 SHA256 清单。插件实际代码及媒体继续按目录中锁定的既有资源 tag 下载，不随软件版本统一改地址。
-
-维护基线已执行原生 CDP/恢复、菜单、语言升级、安装器与卸载生命周期等回归；此前 627 项本机 Rust 测试通过、5 项按条件忽略，来自串行工作区执行及解除窗口遮挡后的单项补测，不冒称本次重新执行一次全量工作区测试。CI 与真实宿主安装/热激活分别核对，安装包和下载附件核验大小、SHA、版本字段及内嵌内容。测试替身不代表所有真实客户端和系统环境均已验证。
-
-实际 Windows 登录自启且未开代理的冷启动、所有历史版本逐一原地升级、完整 MSI 升级事务及其他 GPU/Windows 环境尚未全面实测。此前官方页面迟迟未挂载的具体网络原因仍未证明；本次改进等待和诊断机制，不承诺解决所有网络或官方客户端初始化问题。
-
-本次外观修复另外通过 24 项适配回归；真实官方客户端从浅色直接点击启用“闪烁方块”和“像素雕塑”，自动切换深色、显示背景，停用恢复原主题，重复启用通过。网络下载超时和另一条间歇 Bridge 超时不属于这项主题修复，不据此声称已解决。
+本轮按要求**未运行CLI自动化测试或CI**。发布操作包括编译打包、公开资源与匿名下载完整性核对、本机安装及运行界面核对；此前测试记录不作为本轮重新测试结果。真实模型调用、登录授权、额度兑换及所有官方客户端/系统组合未在本轮重新验收。
 
 ## English
 
-This software release includes all retained changes from the previous public software release, **v0.5.21 to v0.5.40**, including PR66, PR67 and the subsequent maintainer corrections. Intermediate local test builds are not separate public software releases.
+This release includes the retained changes since the previous public software release, **v0.5.89 → v0.6.0**. Intermediate local candidates are not separate public updates. [Full source comparison](https://github.com/Rice-dog/code-codex/compare/v0.5.89...v0.6.0).
 
-This release replaces the withdrawn public v0.5.39 and incorporates the official Appearance compatibility fix; the cumulative baseline remains v0.5.21.
+- **Current official-client compatibility**: Improved qualification of native workspaces, active pages, composers and model controls, plus updated file-tree placement. Legacy adapters remain available, with compatibility decided by observed capabilities and response contracts.
+- **Startup and connection recovery**: Added stage-specific diagnostics for startup conflicts, Bridge dispatch, response deadlines and official backend transport, while preserving active tasks and existing sign-in state.
+- **Official-update change ledger**: Startup analysis follows official version transitions and records processed transitions to avoid duplicate scans. Reports and baselines identify potentially affected plugin dependencies. Static signals do not replace functional validation or guarantee automatic repair of future breaking interfaces.
+- **Application menu**: Added restart through the managed Code-Codex launch chain. Login startup, restart and uninstall are grouped together, with more stable startup-state presentation and existing Chinese/English localization.
+- **Opacity and themes**: Improved current official-page, gradient-mask and settings-surface adaptation. Restoration is limited to owned state and reuses existing theme and native capabilities.
+- **Plugin downloads**: Published the two exact missing runtime assets before the software release. Pinned tags, filenames, sizes and SHA256 checks remain intact, along with other plugins' independent versions and cache identities.
+- **Installation and handoff**: Improved installation, removal and runtime-handoff diagnostics while retaining settings, media and verified caches. Active tasks stay protected; hot activation may wait until they are idle.
 
-- **Direct background activation and theme compatibility:** Adapts to the official Appearance action moving into a separate module while retaining the older combined interface. A unique supported adapter reads/applies the required theme automatically; users need not select Dark first, and Disable restores the original preference. Ambiguous/unknown interfaces remain rejected with their cause retained. Removes ineffective generic restart advice without changing plugin asset identities.
-- **Recovery when stock Codex is already running:** The shared diagnostic initially presents the complete Close and restart / Cancel controls. Cancellation is the default; an explicit restart immediately hides the window, requests graceful exit using the retained process identity, then checks the successor, renderer and Bridge readiness. Remembered restart consent is revocable and independent of login startup.
-- **Slow startup and animation waiting:** The independent 90-second recovery timer no longer reports healthy delayed startup as failure. An owned launch keeps waiting for an initially unmounted native page beyond its 120-second observation threshold without terminating Codex merely because time elapsed. A prolonged animation yields to the native interface without inferring readiness, changing network settings or automatically repeating a close request. Genuine identity, security and launch failures remain diagnosable.
-- **Process inspection and diagnostics:** Improves existing-instance inspection, teardown and stale-snapshot races while retaining same-generation handles, complete snapshots and total budgets. Separates pending readiness, actual exit, query failures and renderer qualification. Technical reasons, support codes and raw logs remain English; ordinary guidance follows the selected UI language.
-- **Installation and desktop entry:** Always creates an independent Code-Codex desktop shortcut, alongside takeover/restoration of an available original shortcut. A stock desktop icon is no longer required for the independent entry, and missing managed entries can be repaired.
-- **Top menu and login startup:** Adds native-style selection highlighting and hover switching, a standard right-aligned check and a centered concise bilingual confirmation. The menu Bridge survives file-tree dismissal, preserving login-startup and uninstall actions.
-- **Uninstall lifecycle:** The top menu opens the existing uninstall wizard. Corrects process-chain selection when uninstall starts from a running session, protecting the staged wizard, worker and completion UI while respecting the user's data-retention choice.
-- **Plugin labels and image rotation:** Localizes all 26 plugin display names with the global language and prevents an old injected language service from replacing the upgraded catalog. Fixes Particle Image auto-rotation sharing the appearance busy state, including resumption after enable, import and deletion.
-- **Upgrade and cache reuse:** Retains all 26 independent plugin versions, pinned asset addresses and resource bytes. Matching verified caches remain reusable. EXE updates reuse the installation root and preserve settings, user media and matching plugins; MSI-owned installations retain the Windows Installer path.
-
-### Installation and verification scope
-
-Prefer `CodeCodex-0.5.40-x64-setup.exe`; MSI, ZIP, a standalone uninstaller, plugin catalog and SHA256 manifest are also provided. Plugin code/media continue using their existing exact catalog tags rather than being repointed to the software version.
-
-The maintenance baseline exercised native CDP/recovery, menus, localization, installer and uninstall lifecycle regressions. Its earlier 627 local Rust passes and 5 conditional ignores combine a serial workspace run with a follow-up of the previously occluded interactive test; they are not represented as a fresh complete workspace run for this publication. CI, actual host installation/hot activation and package/download integrity are verified separately. Fixtures are not evidence that every client/system configuration works.
-
-A real Windows-login startup with no proxy, every historical in-place upgrade, a full MSI upgrade transaction and other GPU/Windows environments have not all been exercised. The network cause of the earlier unmounted official page remains unproven; these changes improve waiting and diagnostics rather than guaranteeing all network or official-client initialization failures are resolved.
-
-The Appearance repair additionally passed 24 adapter regressions. In the actual official client, a single Enable click from Light activated Blinking Squares and Pixel Sculpt with automatic Dark application, and Disable restored the original preference; repeated enable passed. Download timeouts and an independent intermittent Bridge timeout are separate from this theme repair and are not claimed fixed.
+As requested, **no CLI automated tests or CI were run for this release**. Release operations cover compilation, packaging, public-resource integrity, anonymous downloads, local installation and runtime-interface observation. Earlier test records are not presented as newly executed release tests. Live model calls, authorization, quota redemption and every official-client/OS combination were not revalidated in this round.

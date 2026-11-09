@@ -41,15 +41,28 @@ export function qualifiedAppShellForMain(
   return null;
 }
 
-/** Codex 26.924 places the task rail and conversation workspace in one row. */
+export function isClippedMainSurface(main: Element): boolean {
+  return main.parentElement?.getAttribute("class")?.includes("MainContentClip") === true;
+}
+
+/** Resolve the bounded native flex owner, including shells with one explicit
+ * workspace container between the outer row and its rail/page children. */
 export function qualifiedWorkspaceRowForMain(
   main: Element,
   root: ParentNode = document,
 ): { row: Element; workspace: Element } | null {
   if (!root.querySelector("[data-app-shell-sidebar-trigger]")) return null;
-  const row = main.closest('[data-app-shell-workspace-row="true"]');
-  if (!row || main.closest('[data-app-shell-active-page="false"]') ||
-    activePageElements(row, MAIN_SURFACE_SELECTOR).length !== 1) return null;
+  const outerRow = main.closest('[data-app-shell-workspace-row="true"]');
+  if (!outerRow || main.closest('[data-app-shell-active-page="false"]') ||
+    activePageElements(outerRow, MAIN_SURFACE_SELECTOR).length !== 1 ||
+    outerRow.querySelectorAll("aside.app-shell-left-panel").length !== 1) return null;
+  let row = outerRow;
+  const outerChildren = [...outerRow.children];
+  if (!outerChildren.some((child) => child.matches("aside.app-shell-left-panel"))) {
+    const containers = outerChildren.filter((child) => child.matches('[data-app-shell-workspace="true"]'));
+    if (containers.length !== 1 || !containers[0]!.contains(main)) return null;
+    row = containers[0]!;
+  }
   const children = [...row.children];
   const rails = children.filter((child) => child.matches("aside.app-shell-left-panel"));
   // The Workspace can be nested inside a direct row child. Use the unique
@@ -59,7 +72,7 @@ export function qualifiedWorkspaceRowForMain(
   const workspace = workspaces[0]!;
   if (activePageElements(workspace, MAIN_SURFACE_SELECTOR).length !== 1 ||
     !workspace.contains(main) || children.indexOf(rails[0]!) >= children.indexOf(workspace)) return null;
-  if (!main.parentElement?.className.includes("MainContentClip")) return null;
+  if (!isClippedMainSurface(main)) return null;
   return { row, workspace };
 }
 

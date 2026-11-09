@@ -13,11 +13,13 @@ import { reconcileApplicationMenu } from "./application-menu";
 import { requestApplicationMenu } from './host/bridge/application-menu';
 import { openRuntimeInformation, observeCodexRuntime } from "./runtime-information";
 import { runtimeEvent } from "./runtime-events";
+import { EXPLORER_TAG, OWNED_EXPLORER_SELECTOR, rendererStartBlock, reportRendererStartBlock } from "./core/document-renderer";
 import { CodeCodexElement } from "./app/explorer-element";
 import { GLOW_HORIZON_BACKGROUND_ATTRIBUTE, GLOW_HORIZON_BACKGROUND_COLOR_PROPERTY, PARTICLE_BACKGROUND_ATTRIBUTE, PARTICLE_BACKGROUND_COLOR_PROPERTY, TRANSPARENT_BACKGROUND_ATTRIBUTE, TRANSPARENT_BACKGROUND_COLOR_PROPERTY } from "./core/configuration/explorer";
 import {
   codex26715Adapter,
   activePageElements,
+  isClippedMainSurface,
   isTemporaryLocalThreadAlias,
   MAIN_SURFACE_SELECTOR,
   plausibleThreadId,
@@ -27,6 +29,7 @@ import {
 import { usesClippedMainLayout } from "./adapters/codex-layout-version";
 import { isHomeWorkspaceView } from "./home-view";
 import { LOGIN_BACKGROUND_CSS, reconcileLoginBackground, isNativeLoginView } from "./native-login";
+import {nativeStructureChanged} from './native-structure-changes';
 import { SURFACE_OPACITY_NATIVE_CSS } from "./surface-opacity";
 import {
   clearExplorerDismissalForSession,
@@ -34,17 +37,14 @@ import {
   isExplorerDismissedForSession,
 } from "./session-state";
 
-declare const __CODE_CODEX_VERSION__: string;
-
 const UI_VERSION = __CODE_CODEX_VERSION__;
-export const EXPLORER_TAG = `code-codex-v${UI_VERSION.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+export { EXPLORER_TAG } from "./core/document-renderer";
 const DISMISS_EVENT = "code-codex:dismiss";
 const RESELECTION_LISTENER_STATE = Symbol.for("code-codex:reselection-listener:v1");
 const SHELL_LAYOUT_STYLE_SELECTOR = 'style[data-code-codex-shell-layout="codex-26.715"]';
 const PARTICLE_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-particle-background="v1"]';
 const GLOW_HORIZON_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-glow-horizon-background="v1"]';
 const TRANSPARENT_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-transparent-background="v1"]';
-const OWNED_EXPLORER_SELECTOR = '[data-code-codex-owned="true"]';
 // New page surfaces add a second translucent sidebar, opaque workspace
 // pseudo-surface and gradient fades. Keep one mask on each outer surface.
 const PAGE_SURFACE_BACKGROUND_CSS = `
@@ -82,7 +82,7 @@ ${CURRENT_LAYOUT_EXPLORER_SELECTOR} {
 /* Cached pages can mount while Chromium pauses their animation timeline.
  * Keep the inline tree at its flex position instead of leaving it at the
  * entrance animation's translated, transparent first frame. */
-[data-app-shell-workspace-row="true"]:has(> [data-app-shell-active-page]) > ${CURRENT_LAYOUT_EXPLORER_SELECTOR} {
+:is([data-app-shell-workspace-row="true"], [data-app-shell-workspace="true"]):has(> [data-app-shell-active-page]) > ${CURRENT_LAYOUT_EXPLORER_SELECTOR} {
   animation: none !important;
 }
 
@@ -309,40 +309,6 @@ let remountFrame: number | undefined;
 let remountEnabled = true;
 let dismissListenerInstalled = false;
 
-function versionParts(version: string): number[] {
-  return version.split(".").map((part) => {
-    const match = /^\d+/.exec(part);
-    return match ? Number.parseInt(match[0], 10) : 0;
-  });
-}
-
-function compareVersions(left: string, right: string): number {
-  const a = versionParts(left);
-  const b = versionParts(right);
-  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-    const difference = (a[index] ?? 0) - (b[index] ?? 0);
-    if (difference !== 0) return difference;
-  }
-  return 0;
-}
-
-function claimRuntimeOwnership(): boolean {
-  const current = window.__codeCodexRuntimeOwner;
-  if (current && compareVersions(current.version, UI_VERSION) > 0) return false;
-  window.__codeCodexRuntimeOwner = {
-    version: UI_VERSION,
-    tagName: EXPLORER_TAG,
-    inject: injectExplorer,
-  };
-  return true;
-}
-
-function removeSupersededExplorers(): void {
-  for (const explorer of document.querySelectorAll<HTMLElement>(OWNED_EXPLORER_SELECTOR)) {
-    if (explorer.localName !== EXPLORER_TAG) explorer.remove();
-  }
-}
-
 interface MountPoint {
   parent: Element;
   before: Element | null;
@@ -383,9 +349,8 @@ function stableInlineMount(mainSurface: HTMLElement | null, codexVersion: string
 
   const verifiedMain = mainSurface;
   if (verifiedMain) {
-    if (usesClippedMainLayout(codexVersion)) {
-      const current = qualifiedWorkspaceRowForMain(verifiedMain, document);
-      if (!current || !isVisibleMount(current.row) || !isVisibleMount(current.workspace)) return null;
+    const current = qualifiedWorkspaceRowForMain(verifiedMain, document);
+    if (current && isVisibleMount(current.row) && isVisibleMount(current.workspace)) {
       return {
         parent: current.row,
         before: current.workspace,
@@ -394,6 +359,13 @@ function stableInlineMount(mainSurface: HTMLElement | null, codexVersion: string
         mainSurface,
       };
     }
+  }
+  // A clipped shell requires the qualified outer row. Its main parent and
+  // generic conversation selectors can both be inside the overflow clip.
+  if (usesClippedMainLayout(codexVersion) ||
+      activePageElements(document, MAIN_SURFACE_SELECTOR).some(isClippedMainSurface)) return null;
+
+  if (verifiedMain) {
     const parent = verifiedMain.parentElement;
     const verifiedShell = qualifiedAppShellForMain(verifiedMain, document);
     if (parent && verifiedShell && isVisibleMount(parent)) {
@@ -535,6 +507,10 @@ const applicationMenuActions = {
   setLoginStartup: (enabled: boolean) => {
     return requestApplicationMenu<import('./contracts/login-startup').LoginStartupStatus>('explorer.login.startup.set', { enabled });
   },
+  retryHostUpdates: () => requestApplicationMenu<{scheduled:boolean}>('explorer.host.updates.retry'),
+  hostUpdateStatus: () => requestApplicationMenu<{latest?:{type?:string;counts?:{pluginDependency?:number;needsReview?:number}};scan?:{status?:string}}>('explorer.host.updates.status'),
+  openHostUpdates: () => requestApplicationMenu<{opened:boolean}>('explorer.host.updates.open'),
+  restartCodeCodex: () => requestApplicationMenu<{ scheduled: boolean }>('explorer.installation.restart'),
   openUninstaller: () => requestApplicationMenu<{ opened: boolean }>('explorer.installation.uninstall'),
   openRuntimeInformation: () => { void openRuntimeInformation(); },
   openInstallationFolder: () => {
@@ -574,6 +550,7 @@ const applicationMenuActions = {
 };
 
 export function injectExplorer(): CodeCodexElement | null {
+  if (rendererStartBlock()) return null;
   if (document.body) observeCodexRuntime();
   reconcileLoginBackground();
   reconcileApplicationMenu(applicationMenuActions);
@@ -713,12 +690,25 @@ function scheduleMountReconciliation(): void {
   });
 }
 
+function workspaceMountChanged(records: readonly MutationRecord[]): boolean {
+  const container = '[data-app-shell-workspace]';
+  return records.some(record => {
+    if (record.type === 'attributes') {
+      return record.attributeName === 'data-app-shell-workspace-row' || record.attributeName === 'data-app-shell-workspace';
+    }
+    return [...record.addedNodes, ...record.removedNodes].some(node =>
+      node instanceof Element && (node.matches(container) || node.querySelector(container)));
+  });
+}
+
 function installRemountObserver(): void {
   if (remountObserver || !document.documentElement || !remountEnabled) return;
-  remountObserver = new MutationObserver(() => scheduleMountReconciliation());
+  remountObserver = new MutationObserver(records => {
+    if (nativeStructureChanged(records) || workspaceMountChanged(records)) scheduleMountReconciliation();
+  });
   remountObserver.observe(document.documentElement, {
     childList: true, subtree: true, attributes: true,
-    attributeFilter: ["data-app-shell-active-page", "aria-current", "data-sidebar-destination"],
+    attributeFilter: ["data-app-shell-active-page", "data-app-shell-workspace-row", "data-app-shell-workspace", "aria-current", "data-sidebar-destination"],
   });
   if (!dismissListenerInstalled) {
     dismissListenerInstalled = true;
@@ -727,7 +717,12 @@ function installRemountObserver(): void {
 }
 
 export function installInjector(): void {
-  if (!claimRuntimeOwnership()) return;
+  const blocked = rendererStartBlock();
+  if (blocked) {
+    reportRendererStartBlock(blocked);
+    return;
+  }
+  window.__codeCodexRuntimeOwner = { version: UI_VERSION, tagName: EXPLORER_TAG, inject: injectExplorer };
   collapseNativeSidebarOnStartup();
   const startupSplashActive = getBootstrapConfig().startupSplashActive === true;
   prepareStartupTransitionHandoff(startupSplashActive);
@@ -740,7 +735,6 @@ export function installInjector(): void {
     installChatReading();
     installComposerTyping();
     const startupTransitionPromise = getEarlyStartupTransition();
-    removeSupersededExplorers();
     const existing = document.querySelector<CodeCodexElement>(EXPLORER_TAG);
     const explorer = injectExplorer();
     if (existing && explorer === existing && !sessionDismissed()) {

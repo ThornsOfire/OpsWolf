@@ -347,6 +347,7 @@ export interface ExternalDataTransferItem extends DataTransferItem {
 export type DarkBackgroundPluginId=
   |"code-codex.code-rain-background"
   |"code-codex.ascii-tiles-background"
+    | "code-codex.shallow-ocean-background"
   |typeof PARTICLE_BACKGROUND_PLUGIN_ID
   |typeof BLACK_HOLE_BACKGROUND_PLUGIN_ID
   |typeof GLOW_HORIZON_BACKGROUND_PLUGIN_ID

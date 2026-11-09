@@ -12,6 +12,8 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
+This source integration targets [upstream Code-Codex v0.6.0](releases/README.md). The combined OpsWolf candidate still needs build and live compatibility checks.
+
 ### Read it, then work on it
 
 Open a file from the explorer and it appears beside chat. **Preview** is for reading; **Edit** lets you change supported text files. **Save**, or **Ctrl+S**, writes the file. Markdown Preview can show headings, links and tables; Edit shows the source that makes them.
@@ -117,20 +119,20 @@ If something breaks in our additions, report it to this fork with your versions,
 | Item | Contract |
 | --- | --- |
 | Implementation | `candidate/planned-development`; [source branch](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development). `main` is a documentation landing page; `feature/right-editor-pane` is the historical baseline. |
-| Versions | Fork: `cursadex-version.json`, development candidate `0.1.0-alpha.4` (not activated or published). Upstream package/protocol `0.5.40`; Rain plugin `0.1.2`. Source, local handoff, activation and public release are separate identities. |
+| Versions | See [fork metadata](cursadex-version.json) for the display version and [Cargo.toml](Cargo.toml) for the inherited package version. This integration targets upstream Code-Codex v0.6.0. [Rain has its own plugin version](releases/plugins/appearance/code-rain/manifest.json). The source revision, package version, local handoff and running build each have their own identity. |
 | Host qualification | Alpha.3 appearance repair passed owner startup, Enable/Disable, retained saved settings and previous-theme restoration on Windows Codex package `26.1027.3384.0`. Later restart retention is a follow-up; do not generalize to all hosts/themes. |
 | Legacy naming | Formerly Cursadex. Preserve `cursadex-*` metadata, event/storage keys, CSS hooks and technical launch names. Branding changes do not authorize migrations or identifier refactors. |
 | Portability | No maintainer Desktop layout, app-state paths, personal identity artwork or external workspace scripts required by a clone. No public installer/fresh-machine certification yet. |
 
 ### Build and launch
 
-Dependency/setup references checked **2026-10-31** against repository source and the linked primary documentation. These are declared requirements and setup guidance, not a fresh-machine installation or blanket host-version certification.
+These setup requirements come from the source manifests, scripts and upstream guidance. The combined candidate still needs fresh-machine and native host verification.
 
 | Use | Dependencies / source of truth |
 | --- | --- |
 | Run | Windows x64 (inherited launcher baseline Windows 10 build 19041+), separately installed official Codex host, matching built companion/UI. Build tools and MCP servers are not general runtime requirements. |
 | Build UI | Git and a supported Node LTS with npm satisfying [`engines.node >=20.19`](packages/explorer-ui/package.json). The minimum is not a recommendation to install EOL Node 20; check the [official release status](https://nodejs.org/en/about/previous-releases). |
-| Build native | Windows MSVC Rust toolchain and Visual Studio Desktop C++ Build Tools/Windows SDK. [`Cargo.toml`](Cargo.toml) declares Rust 1.85 minimum; resolve the locked dependencies with a compatible installed stable toolchain. |
+| Build native | Upstream documents Windows 11 x64 for source builds. Use the Windows MSVC Rust toolchain and Visual Studio Desktop C++ Build Tools/Windows SDK. [`Cargo.toml`](Cargo.toml) declares Rust 1.85 minimum; resolve the locked dependencies with a compatible installed stable toolchain. |
 | Package MSI only | [WiX](https://docs.firegiant.com/wix/using-wix/) and [.NET SDK](https://dotnet.microsoft.com/en-us/download) for the documented .NET-tool route; a separately supplied WiX distribution still needs its own prerequisites checked. [`build-msi.ps1`](scripts/build-msi.ps1) pins WiX 5.0.2 and restores it with `dotnet tool install` only if `-WixPath` is omitted and its cached tool is missing. MSI's three-number version rule is separate from the alpha display version. Neither tool is needed for ordinary editor use or the UI/native build. |
 | Selected browser fixtures only | Installed Chrome at the path used by [`browser-fixture.mjs`](scripts/browser-fixture.mjs). Chrome is not an additional normal OpsWolf runtime requirement. |
 | Optional desktop automation | TaskKit prerequisites and MCP registration follow its linked quickstart; Python is not required by OpsWolf itself. The reviewed local TaskKit release source is 0.5.1, also reported by a prior `bridge_status` observation with its session stopped. Exact source-to-running-server hash identity was not established; don't infer it from the version label. |
@@ -186,6 +188,6 @@ Native boundaries: `cargo test -p workspace-service --locked -- --test-threads=1
 
 Follow [AGENTS.md](AGENTS.md) / [CONTRIBUTING.md](CONTRIBUTING.md). Scoped change → relevant checks → exact commit/snapshot → immutable SHA-256/size inventory + runtime/dependency evidence → coordinator review → owner activation → live acceptance/rollback. Never rewrite a sealed/running build. Keep profiles, keys, chats, client data and probes out of commits. Documentation editing does not authorize downloads, activation, publication or upstream-update changes.
 
-Upstream [Chinese README](README.zh-CN.md) and [English translation](README.upstream.en.md) describe the inherited project, not guarantees about this fork. Preserve upstream copyright and third-party licenses.
+See the [upstream v0.6.0 release notes](releases/README.md) for the upstream changes and their verification scope. The archived [Chinese README](README.zh-CN.md) and [English translation](README.upstream.en.md) document earlier upstream behavior. Preserve upstream copyright and third-party licenses.
 
 </details>

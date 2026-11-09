@@ -1,3 +1,4 @@
+import {registeredExplorerIdentity} from './ui-build-identity.mjs';
 import {createHash} from 'node:crypto';
 import {mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
@@ -13,7 +14,6 @@ if(!/^[a-z0-9-]+$/.test(label))throw Error('Use a simple result label');
 const out=resolve(root,'artifacts/overnight-2026-11-01/high/narrow-controls',label);
 mkdirSync(out,{recursive:true});
 const version=JSON.parse(readFileSync(resolve(root,'packages/explorer-ui/package.json'),'utf8')).version;
-const tag='code-codex-v'+version.replaceAll('.','-');
 const sourcePaths=['app/explorer-element.ts','components/styles/tokens-and-host.ts','inject.ts','home-view.ts'];
 const sourceHashes=Object.fromEntries(sourcePaths.map(path=>[path,createHash('sha256').update(readFileSync(resolve(src,path))).digest('hex')]));
 const bundle=await build({bundle:true,write:false,format:'iife',target:'chrome120',
@@ -70,6 +70,7 @@ const cases=[
 ];
 try{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await launchFixture('http://127.0.0.1:'+server.address().port);
+ const {tag}=await registeredExplorerIdentity(browser,{version});
  await until(`document.querySelector('${tag}')?.dataset.state==='ready'`);
  await ev(`window.explorer=document.querySelector('${tag}');explorer.collapse(true);arrow().addEventListener('click',()=>arrowClicks++);frames(12)`);
  await check('Actual application and native handler identities are qualified',`!!$('#rail[data-app-navigation-rail]')&&!!$('#home[data-sidebar-destination="builtin:home"]')&&explorer.shadowRoot.querySelectorAll('[role=treeitem]').length>0`);

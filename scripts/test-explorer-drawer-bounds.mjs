@@ -1,3 +1,4 @@
+import {registeredExplorerIdentity} from './ui-build-identity.mjs';
 import {createHash} from 'node:crypto';
 import {existsSync,mkdirSync,readFileSync,writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
@@ -17,7 +18,6 @@ const digest=bytes=>createHash('sha256').update(bytes).digest('hex');
 const fileRecord=path=>{const bytes=readFileSync(path);return {path:relative(root,path).replaceAll('\\','/'),bytes:bytes.length,sha256:digest(bytes)}};
 const fixtureBefore=fileRecord(import.meta.filename),existingBefore=fileRecord(resolve(root,'scripts/test-explorer-narrow-controls.mjs'));
 const version=JSON.parse(readFileSync(resolve(root,'packages/explorer-ui/package.json'),'utf8')).version;
-const tag='code-codex-v'+version.replaceAll('.','-');
 const checks=[],states=[];let browser,server,inputs=[],virtualInputs=[];
 const ev=expression=>browser.evaluate(expression);
 async function check(name,expression,classification='guard'){const actual=await ev(expression);checks.push({name,classification,passed:actual===true,actual})}
@@ -64,6 +64,7 @@ try{
  </script><script src="/application.js"></script></body></html>`;
  server=createServer((req,res)=>{res.setHeader('Content-Type',req.url.endsWith('.js')?'text/javascript':'text/html');res.end(req.url==='/application.js'?bundle.outputFiles[0].text:req.url==='/app-initial-fixture.js'?`export const adapter={appActions:{runInPrimaryWindow:async()=>({mode:'dark'})},clientCoordination:{invalidateQueryCache:async()=>({})}};`:html)});
  await new Promise(r=>server.listen(0,'127.0.0.1',r));browser=await launchFixture('http://127.0.0.1:'+server.address().port);
+ const {tag}=await registeredExplorerIdentity(browser,{version});
  await until(`document.querySelector('${tag}')?.dataset.state==='ready'`);await ev(`window.explorer=document.querySelector('${tag}');settle(14)`);
  await check('Setup: actual application loads a real synthetic tree and qualified main',`explorer.shadowRoot.querySelectorAll('[role=treeitem]').length>0&&!!$('#main[data-app-shell-main-surface="default"]')&&ownedNative()`,'setup');
  await model({width:1400,height:900});await ev('explorer.collapse(false);settle(12)');states.push({name:'wide-before',snapshot:await ev('snap()')});

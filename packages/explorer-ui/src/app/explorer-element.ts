@@ -10,8 +10,12 @@ import { attachTooltips } from "../components/tooltips";
 import { NativeDiffHost } from "../features/preview/native-diff-host";
 import { NativeMiddlePages } from "../features/preview/native-middle-pages";
 import { chooseEditorClose,requestDirtyEditorClose } from "../features/preview/close-dialog";
+import {ShallowOceanSettingsController,shallowOceanCardMarkup,shallowOceanPanelMarkup} from '../features/plugin-settings/shallow-ocean';
+import {getShallowOceanBackgroundController} from '../plugin-host/backgrounds/shallow-ocean';
+import {ID as SHALLOW_OCEAN_ID} from '../effects/shallow-ocean/model';
 import { applyPluginCardIcons } from '../components/plugin-icons';
 import {attachPluginPins} from '../components/plugin-pins';
+import {attachPluginShortcuts} from '../components/plugin-shortcuts';
 import {AsciiTilesSettingsController,asciiTilesCardMarkup,asciiTilesPanelMarkup} from '../features/plugin-settings/ascii-tiles';
 import {getAsciiTilesBackgroundController} from '../plugin-host/backgrounds/ascii-tiles';
 import {ASCII_TILES_BACKGROUND_PLUGIN_ID} from '../effects/ascii-tiles/model';
@@ -90,6 +94,7 @@ import { dismissExplorerForSession,isExplorerDismissedForSession } from "../sess
 import { AuroraIonosphereNumericControlDefinition,AuroraIonosphereNumericSettingKey,MILKY_WAY_NUMERIC_CONTROL_DEFINITIONS,MilkyWayNumericControlDefinition,MilkyWayNumericSettingKey,normalizeAuroraIonosphereSettings,normalizeBlackHoleSettings,normalizeGlowHorizonSettings,normalizeHeavenlyCloudSettings,normalizeMilkyWaySettings } from "../startup-background-renderers";
 import { readStartupTransitionSettings } from "../startup-transition-plugin";
 import { styles } from "../styles";
+import {MultiAccountPlugin,multiAccountCardMarkup,multiAccountPanelMarkup} from '../multi-account';
 import { SURFACE_OPACITY_TREE_CSS,SurfaceOpacityPlugin,surfaceOpacityCardMarkup,surfaceOpacityPanelMarkup } from "../surface-opacity";
 import { parentPath } from "../tree-model";
 import { applyTransparentPresentation,clearTransparentPresentation,transparentPresentation } from "../utility-plugin-facade";
@@ -190,6 +195,7 @@ export class CodeCodexElement extends HTMLElement {
     get #settingsPanels(): PanelCoordinator {
       if(!this.#settingsPanelsValue){
         const panels=new PanelCoordinator();
+        panels.register('shallow-ocean',focus=>this.#shallowOceanSettings.close(focus));
         panels.register('ascii-tiles',focus=>this.#asciiTilesSettings.close(focus));
         panels.register('code-rain',focus=>this.#codeRainSettings.close(focus));
         panels.register('particle',focus=>this.#particleSettings.closeParticleSettings(focus));
@@ -211,7 +217,7 @@ export class CodeCodexElement extends HTMLElement {
     get #backgroundActions(): BackgroundActions {
       if (!this.#backgroundActionsValue) {
         const owner=this;
-        const entries=[{id:CODE_RAIN_PLUGIN_ID,packageId:"code-rain",label:"Code Rain Background",runtime:this.#codeRainRuntime},{id:ASCII_TILES_BACKGROUND_PLUGIN_ID,packageId:"ascii-tiles",label:"ASCII Tiles Background",runtime:this.#asciiTilesRuntime},{id:PARTICLE_BACKGROUND_PLUGIN_ID,packageId:"particle-image",label:"Particle Image Background",runtime:this.#particleBackgroundController},{id:BLACK_HOLE_BACKGROUND_PLUGIN_ID,packageId:"black-hole",label:"Black Hole Background",runtime:this.#blackHoleBackgroundController},{id:GLOW_HORIZON_BACKGROUND_PLUGIN_ID,packageId:"glow-horizon",label:"Glow Horizon Background",runtime:this.#glowHorizonBackgroundController},{id:HEAVENLY_CLOUD_BACKGROUND_PLUGIN_ID,packageId:"heavenly-cloud",label:"Heavenly Cloud Background",runtime:this.#heavenlyCloudBackgroundController},{id:AURORA_IONOSPHERE_BACKGROUND_PLUGIN_ID,packageId:"aurora-ionosphere",label:"Aurora Ionosphere Background",runtime:this.#auroraIonosphereBackgroundController},{id:MILKY_WAY_BACKGROUND_PLUGIN_ID,packageId:"milky-way",label:"Milky Way Background",runtime:this.#milkyWayBackgroundController},{id:MOUNTAIN_BACKGROUND_PLUGIN_ID,packageId:"mountain",label:"Layered Mountain Background",runtime:this.#mountainController},{id:CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,packageId:"cloud-train",label:"Cloud Train Background",runtime:this.#cloudTrainController},{id:PIXEL_SCULPT_BACKGROUND_PLUGIN_ID,packageId:"pixel-sculpt",label:"Pixel Sculpt Background",runtime:this.#pixelSculptController},{id:BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,packageId:"blinking-squares",label:"Blinking Squares Background",runtime:this.#blinkingSquaresController}] as const;
+        const entries=[{id:SHALLOW_OCEAN_ID,packageId:"shallow-ocean",label:"Shallow Ocean Letters Background",runtime:this.#shallowOceanRuntime},{id:CODE_RAIN_PLUGIN_ID,packageId:"code-rain",label:"Code Rain Background",runtime:this.#codeRainRuntime},{id:ASCII_TILES_BACKGROUND_PLUGIN_ID,packageId:"ascii-tiles",label:"ASCII Tiles Background",runtime:this.#asciiTilesRuntime},{id:PARTICLE_BACKGROUND_PLUGIN_ID,packageId:"particle-image",label:"Particle Image Background",runtime:this.#particleBackgroundController},{id:BLACK_HOLE_BACKGROUND_PLUGIN_ID,packageId:"black-hole",label:"Black Hole Background",runtime:this.#blackHoleBackgroundController},{id:GLOW_HORIZON_BACKGROUND_PLUGIN_ID,packageId:"glow-horizon",label:"Glow Horizon Background",runtime:this.#glowHorizonBackgroundController},{id:HEAVENLY_CLOUD_BACKGROUND_PLUGIN_ID,packageId:"heavenly-cloud",label:"Heavenly Cloud Background",runtime:this.#heavenlyCloudBackgroundController},{id:AURORA_IONOSPHERE_BACKGROUND_PLUGIN_ID,packageId:"aurora-ionosphere",label:"Aurora Ionosphere Background",runtime:this.#auroraIonosphereBackgroundController},{id:MILKY_WAY_BACKGROUND_PLUGIN_ID,packageId:"milky-way",label:"Milky Way Background",runtime:this.#milkyWayBackgroundController},{id:MOUNTAIN_BACKGROUND_PLUGIN_ID,packageId:"mountain",label:"Layered Mountain Background",runtime:this.#mountainController},{id:CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,packageId:"cloud-train",label:"Cloud Train Background",runtime:this.#cloudTrainController},{id:PIXEL_SCULPT_BACKGROUND_PLUGIN_ID,packageId:"pixel-sculpt",label:"Pixel Sculpt Background",runtime:this.#pixelSculptController},{id:BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,packageId:"blinking-squares",label:"Blinking Squares Background",runtime:this.#blinkingSquaresController}] as const;
         this.#backgroundActionsValue=new BackgroundActions({
           coordinator:this.#appearanceCoordinator, entries:[...entries,{id:TRANSPARENT_BACKGROUND_PLUGIN_ID,label:'Transparent Background',runtime:this.#nativeWindowBackground,activationOrder:'before-exclusion',preserveThemeOnExclusion:false}], get enabled(){return owner.#enabledAppearancePlugins;},
           connected:()=>this.#connected&&!this.#dismissed,
@@ -363,10 +369,15 @@ export class CodeCodexElement extends HTMLElement {
     #codeRainMarketControls: RainMarketControls | undefined;
     #codeRainInitialization:Promise<void>|undefined;
     readonly #asciiTilesRuntime=getAsciiTilesBackgroundController();
+    readonly #shallowOceanRuntime=getShallowOceanBackgroundController();
     readonly #asciiTilesSettings:AsciiTilesSettingsController;
+    readonly #shallowOceanSettings:ShallowOceanSettingsController;
     #asciiTilesUnsubscribe:(()=>void)|undefined;
+    #shallowOceanUnsubscribe:(()=>void)|undefined;
     #asciiTilesInitialization:Promise<void>|undefined;
+    #shallowOceanInitialization:Promise<void>|undefined;
     readonly #surfaceOpacity: SurfaceOpacityPlugin;
+    #multiAccount: MultiAccountPlugin;
 
     readonly #tracker = new ActiveThreadTracker();
     readonly #changeTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -432,6 +443,7 @@ export class CodeCodexElement extends HTMLElement {
     #appearanceInitializationGeneration = 0;
     #appearanceRpcTail: Promise<void> = Promise.resolve();
     #previewMarketOpen = false;
+    #shortcutIntent = 0;
     #backgroundSettingsLanguage: BackgroundSettingsLanguage = "zh";
     #forcedColorsQuery: MediaQueryList | undefined;
     #reducedTransparencyQuery: MediaQueryList | undefined;
@@ -645,13 +657,13 @@ export class CodeCodexElement extends HTMLElement {
                 <button class="preview-market-category" type="button" role="tab" aria-selected="false" aria-controls="cle-developer-tools-section" data-preview-market-category="developer-tools">Tools</button>
               </div>
               <section class="preview-market-section" id="cle-appearance-section" role="tabpanel" data-preview-market-section="appearance">
-                <div class="preview-market-section-list"><article class="preview-extension appearance-extension" data-appearance-plugin="code-codex.custom-background-background"><span class="preview-extension-icon" aria-hidden="true">${icons.preview}</span><div class="preview-extension-copy"><div class="preview-extension-title-row"><h4 data-plugin-name>Custom Background</h4><span class="preview-extension-status custom-background-status">Disabled</span></div></div><div class="preview-extension-actions"><button type="button" class="preview-extension-action custom-background-enable" aria-pressed="false">Enable</button><button type="button" class="particle-settings-trigger custom-background-settings" aria-label="Configure Custom Background" aria-haspopup="dialog" aria-controls="cle-custom-background-settings" aria-expanded="false">${icons.sliders}</button></div></article>${codeRainCardMarkup()}${asciiTilesCardMarkup()}${surfaceOpacityCardMarkup()}${transparentBackgroundCardMarkup()}${particleBackgroundCardMarkup()}${blackHoleBackgroundCardMarkup()}${glowHorizonBackgroundCardMarkup()}${heavenlyCloudBackgroundCardMarkup()}${auroraIonosphereBackgroundCardMarkup()}${milkyWayBackgroundCardMarkup()}${mountainCardMarkup()}${cloudTrainCardMarkup()}${pixelSculptCardMarkup()}${blinkingSquaresCardMarkup()}${startupTransitionCardMarkup()}</div>
+                <div class="preview-market-section-list"><article class="preview-extension appearance-extension" data-appearance-plugin="code-codex.custom-background-background"><span class="preview-extension-icon" aria-hidden="true">${icons.preview}</span><div class="preview-extension-copy"><div class="preview-extension-title-row"><h4 data-plugin-name>Custom Background</h4><span class="preview-extension-status custom-background-status">Disabled</span></div></div><div class="preview-extension-actions"><button type="button" class="preview-extension-action custom-background-enable" aria-pressed="false">Enable</button><button type="button" class="particle-settings-trigger custom-background-settings" aria-label="Configure Custom Background" aria-haspopup="dialog" aria-controls="cle-custom-background-settings" aria-expanded="false">${icons.sliders}</button></div></article>${codeRainCardMarkup()}${shallowOceanCardMarkup()}${asciiTilesCardMarkup()}${surfaceOpacityCardMarkup()}${transparentBackgroundCardMarkup()}${particleBackgroundCardMarkup()}${blackHoleBackgroundCardMarkup()}${glowHorizonBackgroundCardMarkup()}${heavenlyCloudBackgroundCardMarkup()}${auroraIonosphereBackgroundCardMarkup()}${milkyWayBackgroundCardMarkup()}${mountainCardMarkup()}${cloudTrainCardMarkup()}${pixelSculptCardMarkup()}${blinkingSquaresCardMarkup()}${startupTransitionCardMarkup()}</div>
               </section>
               <section class="preview-market-section" id="cle-file-preview-section" role="tabpanel" data-preview-market-section="file-preview" hidden>
                 <div class="preview-market-section-list">${PREVIEWER_DEFINITIONS.map(previewerCardMarkup).join("")}</div>
               </section>
               <section class="preview-market-section" id="cle-developer-tools-section" role="tabpanel" data-preview-market-section="developer-tools" hidden>
-                <div class="preview-market-section-list">${gitHistoryCardMarkup()}</div>
+                <div class="preview-market-section-list">${gitHistoryCardMarkup()}${multiAccountCardMarkup()}</div>
               </section>
             </div>
           </div>
@@ -686,14 +698,18 @@ export class CodeCodexElement extends HTMLElement {
       ${pixelSculptPanelMarkup()}
       ${blinkingSquaresPanelMarkup()}
       ${startupTransitionPanelMarkup()}
-      ${codeRainPanelMarkup()}${asciiTilesPanelMarkup()}${surfaceOpacityPanelMarkup(bilingualLabelMarkup)}
+      ${codeRainPanelMarkup()}${shallowOceanPanelMarkup()}${asciiTilesPanelMarkup()}${surfaceOpacityPanelMarkup(bilingualLabelMarkup)}${multiAccountPanelMarkup()}
       <button class="collapsed-tab" type="button" data-tooltip="Open Code-Codex" aria-label="Open Code-Codex">${icons.collapse}</button>
       <div class="sr-only live-region" aria-live="polite" aria-atomic="true"></div>
     `;
         applyPluginCardIcons(this.#shadow);
         const ownerForAscii=this;
-        this.#asciiTilesSettings=new AsciiTilesSettingsController({shadow:this.#shadow,runtime:this.#asciiTilesRuntime,actions:{toggle:id=>this.#backgroundActions.toggle(id),deactivate:id=>this.#backgroundActions.deactivate(id),initialize:(id,generation)=>this.#backgroundActions.initialize(id,generation),get busy(){return ownerForAscii.#backgroundActions.busy;}},enabled:()=>this.#enabledAppearancePlugins.has(ASCII_TILES_BACKGROUND_PLUGIN_ID),closeOthers:()=>{this.#settingsPanels.closeOthers('ascii-tiles');this.#surfaceOpacity.close();},notice:message=>this.#showActionNotice(message,'error')});
-        this.#codeRainSettings=new CodeRainSettingsController({shadow:this.#shadow,runtime:this.#codeRainRuntime,actions:{toggle:id=>this.#backgroundActions.toggle(id),deactivate:id=>this.#backgroundActions.deactivate(id),initialize:(id,generation)=>this.#backgroundActions.initialize(id,generation),get busy(){return ownerForAscii.#backgroundActions.busy;}},enabled:()=>this.#enabledAppearancePlugins.has(CODE_RAIN_PLUGIN_ID),closeOthers:()=>{this.#settingsPanels.closeOthers('code-rain');this.#surfaceOpacity.close();},notice:message=>this.#showActionNotice(message,'error')});
+        this.#asciiTilesSettings=new AsciiTilesSettingsController({shadow:this.#shadow,runtime:this.#asciiTilesRuntime,actions:{toggle:id=>this.#backgroundActions.toggle(id),deactivate:id=>this.#backgroundActions.deactivate(id),initialize:(id,generation)=>this.#backgroundActions.initialize(id,generation),get busy(){return ownerForAscii.#backgroundActions.busy;}},enabled:()=>this.#enabledAppearancePlugins.has(ASCII_TILES_BACKGROUND_PLUGIN_ID),closeOthers:()=>{this.#settingsPanels.closeOthers('ascii-tiles');this.#surfaceOpacity.close();
+        this.#multiAccount.close();},notice:message=>this.#showActionNotice(message,'error')});
+        this.#shallowOceanSettings=new ShallowOceanSettingsController({shadow:this.#shadow,runtime:this.#shallowOceanRuntime,actions:{toggle:id=>this.#backgroundActions.toggle(id),deactivate:id=>this.#backgroundActions.deactivate(id),initialize:(id,generation)=>this.#backgroundActions.initialize(id,generation),get busy(){return ownerForAscii.#backgroundActions.busy;}},enabled:()=>this.#enabledAppearancePlugins.has(SHALLOW_OCEAN_ID),closeOthers:()=>{this.#settingsPanels.closeOthers('shallow-ocean');this.#surfaceOpacity.close();
+        this.#multiAccount.close();},notice:message=>this.#showActionNotice(message,'error')});
+        this.#multiAccount = new MultiAccountPlugin(this.#shadow,message=>this.#showActionNotice(message,"error"));
+        this.#codeRainSettings=new CodeRainSettingsController({shadow:this.#shadow,runtime:this.#codeRainRuntime,actions:{toggle:id=>this.#backgroundActions.toggle(id),deactivate:id=>this.#backgroundActions.deactivate(id),initialize:(id,generation)=>this.#backgroundActions.initialize(id,generation),get busy(){return ownerForAscii.#backgroundActions.busy;}},enabled:()=>this.#enabledAppearancePlugins.has(CODE_RAIN_PLUGIN_ID),closeOthers:()=>{this.#settingsPanels.closeOthers('code-rain');this.#surfaceOpacity.close();this.#multiAccount.close();},notice:message=>this.#showActionNotice(message,'error')});
         this.#surfaceOpacity = new SurfaceOpacityPlugin(this.#shadow, (zh, en) => this.#backgroundText(zh, en), message => this.#showActionNotice(message, "error"));
         this.#fileactionsSettings.frame = this.#required<HTMLElement>(".frame");
         this.#treeShell = this.#required<HTMLElement>(".tree-shell");
@@ -974,7 +990,8 @@ export class CodeCodexElement extends HTMLElement {
         this.#settings = this.#readLocalSettings();
         this.#backgroundSettingsLanguage = parameterLanguage();
         this.#languageCleanup = localizeOwnedUi(this.#shadow);
-        this.#pinCleanup = attachPluginPins(this.#shadow);
+        const unpin=attachPluginPins(this.#shadow),shortcuts=attachPluginShortcuts(this.#shadow,id=>this.#openPinnedPlugin(id));
+        this.#pinCleanup=()=>{shortcuts();unpin();};
         this.#tooltipCleanup = attachTooltips(this.#shadow);
         this.#languageSubscription = subscribeLanguage(() => this.#applyGlobalLanguage(parameterLanguage()));
         this.#syncBackgroundSettingsLanguagePresentation();
@@ -1217,14 +1234,19 @@ export class CodeCodexElement extends HTMLElement {
         this.#startupSettings.bindStartupTransition();
         this.#codeRainSettings.start();
         this.#asciiTilesSettings.start();
+        this.#shallowOceanSettings.start();
         this.#asciiTilesUnsubscribe?.();
+        this.#shallowOceanUnsubscribe?.();
         this.#asciiTilesUnsubscribe=this.#asciiTilesRuntime.subscribe(()=>{if(!this.#connected)return;if(this.#asciiTilesRuntime.stoppedForExternalThemeChange&&this.#enabledAppearancePlugins.delete(ASCII_TILES_BACKGROUND_PLUGIN_ID))this.#writeEnabledAppearancePlugins();this.#renderPreviewMarket();});
         this.#codeRainUnsubscribe?.();
         this.#codeRainMarketControls=undefined;
         this.#codeRainUnsubscribe=this.#codeRainRuntime.subscribe(()=>{if(!this.#connected)return;if(this.#codeRainRuntime.stoppedForExternalThemeChange&&this.#enabledAppearancePlugins.delete(CODE_RAIN_PLUGIN_ID))this.#writeEnabledAppearancePlugins();this.#refreshCodeRainMarket();});
+        this.#shallowOceanUnsubscribe=this.#shallowOceanRuntime.subscribe(()=>{if(!this.#connected)return;if(this.#shallowOceanRuntime.stoppedForExternalThemeChange&&this.#enabledAppearancePlugins.delete(SHALLOW_OCEAN_ID))this.#writeEnabledAppearancePlugins();this.#renderPreviewMarket();});
         this.#asciiTilesInitialization=this.#milkyWayBackgroundInitialization?.then(()=>this.#backgroundActions.initialize(ASCII_TILES_BACKGROUND_PLUGIN_ID,appearanceInitializationGeneration));
-        this.#codeRainInitialization=this.#asciiTilesInitialization?.then(()=>this.#backgroundActions.initialize(CODE_RAIN_PLUGIN_ID,appearanceInitializationGeneration));
+        this.#shallowOceanInitialization=this.#asciiTilesInitialization?.then(()=>this.#backgroundActions.initialize(SHALLOW_OCEAN_ID,appearanceInitializationGeneration));
+        this.#codeRainInitialization=this.#shallowOceanInitialization?.then(()=>this.#backgroundActions.initialize(CODE_RAIN_PLUGIN_ID,appearanceInitializationGeneration));
         this.#surfaceOpacity.start();
+        this.#multiAccount.start();
         this.#nativeWindowBackground.applied = undefined;
         this.#nativeWindowBackground.error = undefined;
         this.#renderPreviewMarket();
@@ -1298,9 +1320,13 @@ export class CodeCodexElement extends HTMLElement {
         this.#codeRainSettings.stop();
         this.#codeRainUnsubscribe?.();this.#codeRainUnsubscribe=undefined;this.#codeRainInitialization=undefined;this.#codeRainMarketControls=undefined;
         this.#asciiTilesSettings.stop();
+        this.#shallowOceanSettings.stop();
         this.#asciiTilesUnsubscribe?.();this.#asciiTilesUnsubscribe=undefined;
+        this.#shallowOceanUnsubscribe?.();this.#shallowOceanUnsubscribe=undefined;
         this.#asciiTilesInitialization=undefined;
+        this.#shallowOceanInitialization=undefined;
         this.#surfaceOpacity.stop();
+        this.#multiAccount.stop();
         this.#fileactionsSettings.closeContextMenu(false);
         this.#closePreviewMarket(false);
         this.#startupSettings.startupVideoGeneration += 1;
@@ -1463,6 +1489,7 @@ export class CodeCodexElement extends HTMLElement {
         await this.#codeRainRuntime.disable();
         this.#enabledAppearancePlugins.delete(ASCII_TILES_BACKGROUND_PLUGIN_ID);
         await this.#asciiTilesRuntime.disable();
+        await this.#shallowOceanRuntime.disable();
         window.dispatchEvent(new Event('code-codex:custom-background-stop'));
         this.#disableButton.disabled = true;
         this.#dismissed = true;
@@ -1740,8 +1767,11 @@ export class CodeCodexElement extends HTMLElement {
         return backgroundSettingsText(this.#backgroundSettingsLanguage, zh, en);
     }
     #syncBackgroundSettingsLanguagePresentation(): void {
-        this.#asciiTilesSettings.render();this.#codeRainSettings.render();
+        this.#asciiTilesSettings.render();
+        this.#shallowOceanSettings.render();
+        this.#codeRainSettings.render();
         this.#surfaceOpacity.render();
+        this.#multiAccount.render();
         const language = this.#backgroundSettingsLanguage;
         const english = language === "en";
         this.#customBackground?.setLanguage(language);
@@ -2274,10 +2304,15 @@ export class CodeCodexElement extends HTMLElement {
         if (event.composedPath().includes(this.#actionNotice))
             return;
         if (this.#asciiTilesSettings.containsEvent(event)||this.#codeRainSettings.containsEvent(event))return;
+        if (this.#shallowOceanSettings.containsEvent(event))return;
+        if(this.#multiAccount.containsEvent(event))return;
         if (this.#surfaceOpacity.containsEvent(event))
             return;
-        this.#asciiTilesSettings.close();this.#codeRainSettings.close();
+        this.#asciiTilesSettings.close();
+        this.#shallowOceanSettings.close();
+        this.#codeRainSettings.close();
         this.#surfaceOpacity.close();
+        this.#multiAccount.close();
         const path = event.composedPath();
         if (!path.includes(this.#required<HTMLElement>("#cle-startupTransition-settings")) && !path.includes(this.#required<HTMLElement>(".startupTransition-settings-trigger")))
             this.#startupSettings.closeStartupTransition();
@@ -2358,6 +2393,12 @@ export class CodeCodexElement extends HTMLElement {
     #onWindowKeyDown = (event: KeyboardEvent): void => {
         if (event.key !== "Escape")
             return;
+        if (this.#shallowOceanSettings.open) {
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            this.#shallowOceanSettings.close(true);
+            return;
+        }
         if (this.#shadow.querySelector(".custom-background-panel:popover-open")) {
             event.preventDefault();
             event.stopPropagation();
@@ -3328,6 +3369,7 @@ export class CodeCodexElement extends HTMLElement {
         await this.#pixelSculptInitialization;
         await this.#blinkingSquaresInitialization;
         await this.#asciiTilesInitialization;
+        await this.#shallowOceanInitialization;
         await this.#codeRainInitialization;
         return this.#isCurrentBackgroundInitialization(generation) && operation === this.#appearanceCoordinator.operation;
     }
@@ -3591,6 +3633,22 @@ export class CodeCodexElement extends HTMLElement {
                 this.#previewMarketCloseButton.focus();
         });
     }
+    #openPinnedPlugin(id:string):void {
+        const card=[...this.#shadow.querySelectorAll<HTMLElement>('.preview-extension')].find(c=>c.querySelector<HTMLElement>('[data-plugin-icon]')?.dataset.pluginIcon===id);
+        const category=card?.closest<HTMLElement>('[data-preview-market-section]')?.dataset.previewMarketSection as PreviewMarketCategory|undefined;
+        if(!card||card.hidden||!category)return;
+        const settings=card.querySelector<HTMLButtonElement>('.particle-settings-trigger');
+        if(this.#previewMarketOpen&&settings?.getAttribute('aria-expanded')==='true'){
+            const panel=this.#shadow.getElementById(settings.getAttribute('aria-controls')??'');
+            panel?.querySelector<HTMLElement>('button,input,select,[tabindex]')?.focus();return;
+        }
+        if(this.#previewMarketOpen)this.#closePreviewMarket(false);
+        this.#togglePreviewMarket();this.#selectPreviewMarketCategory(category,false);
+        const list=this.#previewMarketList;
+        list.scrollTop=Math.max(0,Math.min(list.scrollTop+card.getBoundingClientRect().top-list.getBoundingClientRect().top-8,list.scrollHeight-list.clientHeight));
+        const intent=++this.#shortcutIntent;
+        requestAnimationFrame(()=>{if(intent!==this.#shortcutIntent||!this.#previewMarketOpen||!card.isConnected||card.hidden||this.#previewMarketList.dataset.previewMarketCategory!==category)return;if(settings&&!settings.disabled){settings.click();}else{card.tabIndex=-1;card.focus({preventScroll:true});}});
+    }
     #selectPreviewMarketCategory(category: PreviewMarketCategory, focus = true): void {
         this.#previewMarketList.dataset.previewMarketCategory = category;
         for (const button of this.#previewMarketList.querySelectorAll<HTMLButtonElement>("button[data-preview-market-category]")) {
@@ -3605,7 +3663,9 @@ export class CodeCodexElement extends HTMLElement {
         }
         this.#previewMarketList.scrollTop = 0;
         if (category !== "appearance") {
-            this.#asciiTilesSettings.close();this.#codeRainSettings.close();
+            this.#asciiTilesSettings.close();
+            this.#shallowOceanSettings.close();
+            this.#codeRainSettings.close();
             this.#blinkingsquaresSettings.closeBlinkingSquares();
             this.#pixelsculptSettings.closePixelSculpt();
             this.#cloudtrainSettings.closeCloudTrain();
@@ -3638,9 +3698,13 @@ export class CodeCodexElement extends HTMLElement {
     }
     #closePreviewMarket(restoreFocus: boolean): void {
         this.#shadow.querySelector('.background-settings-shortcut')?.setAttribute('aria-expanded','false');
+        this.#shortcutIntent++;
         this.#customBackground?.close();
-        this.#asciiTilesSettings.close();this.#codeRainSettings.close();
+        this.#asciiTilesSettings.close();
+        this.#shallowOceanSettings.close();
+        this.#codeRainSettings.close();
         this.#surfaceOpacity.close();
+        this.#multiAccount.close();
         this.#startupSettings.closeStartupTransition();
         this.#blinkingsquaresSettings.closeBlinkingSquares();
         this.#pixelsculptSettings.closePixelSculpt();
@@ -3728,7 +3792,7 @@ export class CodeCodexElement extends HTMLElement {
                 if (!lease) throw new Error('Another background transition is in progress. Retry after it completes.');
                 try {
                 const transparentWasEnabled = this.#enabledAppearancePlugins.has(TRANSPARENT_BACKGROUND_PLUGIN_ID) || document.documentElement.hasAttribute(TRANSPARENT_BACKGROUND_ATTRIBUTE);
-                for (const controller of [this.#codeRainRuntime,this.#asciiTilesRuntime,this.#particleBackgroundController, this.#blackHoleBackgroundController, this.#glowHorizonBackgroundController, this.#heavenlyCloudBackgroundController, this.#auroraIonosphereBackgroundController, this.#milkyWayBackgroundController, this.#mountainController, this.#pixelSculptController, this.#blinkingSquaresController, this.#cloudTrainController])
+                for (const controller of [this.#shallowOceanRuntime,this.#codeRainRuntime,this.#asciiTilesRuntime,this.#particleBackgroundController, this.#blackHoleBackgroundController, this.#glowHorizonBackgroundController, this.#heavenlyCloudBackgroundController, this.#auroraIonosphereBackgroundController, this.#milkyWayBackgroundController, this.#mountainController, this.#pixelSculptController, this.#blinkingSquaresController, this.#cloudTrainController])
                     if (controller.enabled) {
                         await controller.disable(true);
                         lease.assertCurrent();
@@ -3792,8 +3856,11 @@ export class CodeCodexElement extends HTMLElement {
         }
     }
     #renderPreviewMarket(): void {
-        this.#asciiTilesSettings.render();this.#codeRainSettings.render();
+        this.#asciiTilesSettings.render();
+        this.#shallowOceanSettings.render();
+        this.#codeRainSettings.render();
         this.#surfaceOpacity.render();
+        this.#multiAccount.render();
         this.#startupSettings.renderStartupTransition();
         this.#blinkingsquaresSettings.renderBlinkingSquares();
         this.#pixelsculptSettings.renderPixelSculpt();
@@ -3853,6 +3920,7 @@ export class CodeCodexElement extends HTMLElement {
                 || this.#glowHorizonBackgroundController.pending
                 || this.#heavenlyCloudBackgroundController.pending
                 || this.#asciiTilesRuntime.pending
+                || this.#shallowOceanRuntime.pending
                 || this.#codeRainRuntime.pending
                 || this.#auroraIonosphereBackgroundController.pending
                 || this.#milkyWayBackgroundController.pending

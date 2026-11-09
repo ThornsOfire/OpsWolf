@@ -1,3 +1,4 @@
+import {registeredExplorerIdentity} from './ui-build-identity.mjs';
 import {createHash} from 'node:crypto';
 import {mkdirSync, readFileSync, writeFileSync} from 'node:fs';
 import {createServer} from 'node:http';
@@ -12,7 +13,6 @@ const label=process.argv[2]??'current';
 if(!/^[a-z0-9-]+$/.test(label))throw Error('Use a simple evidence label');
 const out=resolve(root,'artifacts/explorer-resize-work',label);mkdirSync(out,{recursive:true});
 const version=JSON.parse(readFileSync(resolve(root,'packages/explorer-ui/package.json'),'utf8')).version;
-const tag='code-codex-v'+version.replaceAll('.','-');
 const sources=Object.fromEntries(['app/explorer-element.ts','features/preview/native-browser-geometry.ts','features/workspace/tree-interaction.ts','inject.ts'].map(p=>[p,createHash('sha256').update(readFileSync(resolve(src,p))).digest('hex')]));
 const bundle=await build({bundle:true,write:false,format:'iife',target:'chrome120',stdin:{resolveDir:src,loader:'ts',contents:`
 import './index';
@@ -46,6 +46,7 @@ async function until(expression){for(let i=0;i<160;i++){if(await browser.evaluat
 try{
  await new Promise(r=>server.listen(0,'127.0.0.1',r));
  browser=await launchFixture('http://127.0.0.1:'+server.address().port);
+ const {tag}=await registeredExplorerIdentity(browser,{version});
  await until(`document.querySelector('${tag}')?.dataset.state==='ready'`);
  await browser.evaluate(`window.explorer=document.querySelector('${tag}');window.shell=explorer.shadowRoot.querySelector('.tree-shell');window.geometry=new Geometry();geometry.refresh(document.querySelector('main'));frames(12)`);
  await check('Actual explorer rows and synthetic draft are mounted',`explorer.shadowRoot.querySelectorAll('[role=treeitem]').length>0&&composer.value==='Unsent synthetic draft'`);
