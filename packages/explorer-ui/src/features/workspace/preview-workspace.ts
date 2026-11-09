@@ -17,7 +17,7 @@ import {citationRelativePath} from '../preview/citation-model';
 export interface PreviewWorkspaceControllerPorts {
  readonly element:HTMLElement;
  readonly collapse:(collapsed?:boolean)=>void;
- readonly reportEditingConflict:(message:string)=>void;
+ readonly reconcileEditingModification:(tab:PreviewTab)=>void;
   readonly state: ExplorerViewState;
   readonly context: ExplorerContext | undefined;
   readonly bridge: WorkspaceBridge | undefined;
@@ -179,7 +179,7 @@ export class PreviewWorkspaceController {
     const paths = this.pins.get(root), active = this.activePreviewPath;
     if (paths.length && !this.host.ensureMainPreview()) return;
     this.restoredProject = projectPinKey(root);
-    for (const path of paths) this.openPreviewPath(path, path.split(/[\\/]/).at(-1) ?? path);
+    for (const path of paths) this.openPreviewPath(path, path.split(/[\\/]/).at(-1) ?? path, false);
     if (paths.length) { this.activePreviewPath = active ?? paths[0]!; this.syncMainPreview(); }
   }
   private evictUnpinnedTab(): void {
@@ -226,7 +226,6 @@ openPreviewPath(relativePath: string, name: string, reveal=true): void {
         }
         const preview=this.host.ensureMainPreview();
         if (!preview) return;
-        if(reveal)preview.showEditor?.();
         let tab = this.previewTabs.find((candidate) => candidate.path === relativePath);
         if (!tab) {
             if (this.previewTabs.length >= MAX_PREVIEW_TABS) {
@@ -249,6 +248,8 @@ openPreviewPath(relativePath: string, name: string, reveal=true): void {
             this.schedulePreview(tab);
         else
             this.syncMainPreview();
+        // Publish destination identity/selection before recording explicit reveal.
+        if(reveal)preview.showEditor?.();
         this.host.renderVisible();
         if (this.host.element.dataset.placement === "drawer" && !this.host.settings.collapsed)
             this.host.collapse(true);
@@ -343,8 +344,7 @@ markPreviewModified(path: string): void {
         tab.revision += 1;
         tab.dirty = true;
         if (this.host.editingPath === path) {
-            this.host.reportEditingConflict("This file changed on disk. Reload it before saving.");
-            this.syncMainPreview();
+            this.host.reconcileEditingModification(tab);
             return;
         }
         tab.view = { kind: "loading", path: tab.path, name: tab.name };

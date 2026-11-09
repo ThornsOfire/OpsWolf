@@ -9,15 +9,17 @@ export function createChatActivityState(): ChatActivityState { return {turn: '',
 export class ChatActivity {
   constructor(private readonly ports: {
     readonly scroll: HTMLElement;
-    readonly composer: HTMLElement;
+    readonly composer: () => HTMLElement | undefined;
     readonly valid: () => boolean;
     readonly follow: () => void;
   }, private readonly state = createChatActivityState()) {}
 
   sync(): void {
-    const {scroll, composer} = this.ports;
+    const {scroll} = this.ports;
     const state = this.state;
     if (!this.ports.valid() || scroll.ownerDocument.hidden) return;
+    const composer = this.ports.composer();
+    if (!composer) return;
     // Stop is an observed native control, not a translated guess or a matching word in message text.
     const stops = composer.querySelectorAll<HTMLButtonElement>('button[aria-label="Stop"]');
     const working = stops.length === 1 && !stops[0]!.disabled && stops[0]!.getClientRects().length > 0 && !stops[0]!.closest('[hidden],[inert],[aria-hidden="true"]');

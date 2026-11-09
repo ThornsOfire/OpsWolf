@@ -1,3 +1,10 @@
+// Keep native resize delivery intact while letting owned listeners distinguish
+// a browser-view bounds notification from a real/unknown window resize.
+const browserGeometryResizes = new WeakSet<Event>();
+export function isNativeBrowserGeometryResize(event: Event): boolean {
+  return browserGeometryResizes.has(event);
+}
+
 /** Notify native browser surfaces through their existing window-resize listener.
  * ResizeObserver alone misses a surface that moves without changing size. */
 export class NativeBrowserGeometry {
@@ -53,7 +60,11 @@ export class NativeBrowserGeometry {
     }
     // No native source, framework state, or browser-host bridge calls: Codex's
     // own handler reads the current DOM bounds and updates its embedded view.
-    if (changed) view.dispatchEvent(new Event('resize'));
+    if (changed) {
+      const event = new Event('resize');
+      browserGeometryResizes.add(event);
+      view.dispatchEvent(event);
+    }
     if (!this.live) { this.bounds.clear(); this.observed.clear(); this.parent = null; }
   }
 

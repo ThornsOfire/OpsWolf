@@ -86,6 +86,9 @@ export function selectCodexAppearanceAdapter(moduleExports: Record<string,unknow
   return undefined;
 }
 
+/** Discovery completed without a supported interface. No RPC was dispatched. */
+export class CodexAppearanceUnavailableError extends Error {}
+
 export async function discoverCodexAppearanceAdapter(): Promise<CodexAppearanceAdapter> {
   // Four finite attempts share one promise; no observer or permanent retry loop.
   // Once resolved, the adapter remains cached. A rejection is cleared below.
@@ -111,7 +114,7 @@ export async function discoverCodexAppearanceAdapter(): Promise<CodexAppearanceA
     const adapter=selectCodexAppearanceAdapter(Object.fromEntries([...new Set(values)].map((value,index)=>[String(index),value])));
     if(adapter)return adapter;
   }
-  throw new Error("CC-APPEARANCE-ADAPTER-001: No supported official Appearance interface was found in the loaded modules. Background activation was cancelled without changing the theme.");
+  throw new CodexAppearanceUnavailableError("CC-APPEARANCE-ADAPTER-001: No supported official Appearance interface was found in the loaded modules. Background activation was cancelled without changing the theme.");
 }
 
 
@@ -132,17 +135,31 @@ export function getCodexAppearanceAdapter(): Promise<CodexAppearanceAdapter> {
 
 
 
-export async function runCodexAppearanceAction(action: CodexAppearanceAction): Promise<Record<string,unknown>> {
+export async function runCodexAppearanceAction(action: CodexAppearanceAction,readTimeoutMs?: number): Promise<Record<string,unknown>> {
   const adapter=await getCodexAppearanceAdapter();
-  const result=await adapter.runAction(action);
-  if(!isObjectRecord(result)) throw new Error("Codex returned an invalid Appearance response");
-  return result;
+  const pending=adapter.runAction(action);
+  let timer: number|undefined;
+  try {
+    // Time out only a dispatched read. The host may still return a late reply.
+    const result=await (action.type==="app.appearance.get"&&readTimeoutMs!==undefined
+      ? Promise.race([
+          pending,
+          new Promise<never>((_,reject)=>{
+            timer=window.setTimeout(()=>reject(new Error("CC-APPEARANCE-READ-TIMEOUT: Codex did not respond to the Appearance read. Try again.")),readTimeoutMs);
+          }),
+        ])
+      : pending);
+    if(!isObjectRecord(result)) throw new Error("Codex returned an invalid Appearance response");
+    return result;
+  } finally {
+    if(timer!==undefined)window.clearTimeout(timer);
+  }
 }
 
 
 
-export async function readCodexAppearanceTheme(): Promise<CodexAppearanceTheme> {
-  const result=await runCodexAppearanceAction({ type: "app.appearance.get" });
+export async function readCodexAppearanceTheme(timeoutMs?: number): Promise<CodexAppearanceTheme> {
+  const result=await runCodexAppearanceAction({ type: "app.appearance.get" },timeoutMs);
   if(!isCodexAppearanceTheme(result.mode)) {
     throw new Error("Codex returned an unsupported Appearance setting");
   }
@@ -221,6 +238,23 @@ export function transferParticleThemeLease(from: DarkBackgroundPluginId,to: Dark
 }
 
 
+
+/** Capture the lease before an asynchronous activation qualifies. */
+export function prepareParticleThemeTransfer(to: DarkBackgroundPluginId, outgoing: readonly string[]): () => void {
+  const expected = readParticleThemeLease();
+  return () => {
+    const current = readParticleThemeLease();
+    if (current?.owner !== expected?.owner ||
+        current?.previousPreference !== expected?.previousPreference ||
+        current?.forcedPreference !== expected?.forcedPreference) {
+      throw Error('The saved Appearance restoration changed while enabling the background. Try again.');
+    }
+    const from = expected?.owner;
+    if (!from || from === to) return;
+    if (!outgoing.includes(from)) throw Error('Another background owns the saved Appearance restoration.');
+    transferParticleThemeLease(from, to);
+  };
+}
 
 export function clearParticleThemeLease(owner?: DarkBackgroundPluginId): void {
   try {

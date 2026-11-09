@@ -13,9 +13,22 @@ const seam=installedBackgroundFixture(root,['blinking-squares','code-rain'])+bui
 // Same call signature as the official split module, including optional context.
 const dispatcher=`function dispatch(action,{sourceHostId,sourceThreadId}={}){const service=window.fixtureServices.appActions;return service.runInPrimaryWindow({action:action,sourceHostId,sourceThreadId});}`;
 const legacy=`export const namespace={appActions:window.fixtureServices.appActions,clientCoordination:{invalidateQueryCache:async()=>{}}};`;
+// Model an anonymous entry and a bundled action chunk without exposing a host adapter.
+const anonymousEntry='/assets/100001.abcdef1234.js';
+const anonymousChunk='/assets/async/200002.abcdef5678.js';
 const server=createServer((req,res)=>{
  const url=new URL(req.url,'http://fixture'),scenario=url.searchParams.get('case')||url.pathname.match(/\/(?:app-initial|app-shared)-(.+)\.js$/)?.[1]||'split';
  if(url.pathname==='/seam.js'){res.setHeader('Content-Type','text/javascript');res.end(seam);return;}
+ if(url.pathname===anonymousEntry){
+  res.setHeader('Content-Type','text/javascript');
+  res.end('import {chunkId} from '+JSON.stringify(anonymousChunk)+';window.fixtureAnonymousChunkLoaded=chunkId===200002;');
+  return;
+ }
+ if(url.pathname===anonymousChunk){
+  res.setHeader('Content-Type','text/javascript');
+  res.end('export const chunkId=200002;export const factories={123(module){window.fixtureAnonymousFactoryCalls++;module.exports=["app.appearance.get","app.appearance.set_mode"];}};');
+  return;
+ }
  if(url.pathname.endsWith('.js')){
   res.setHeader('Content-Type','text/javascript');
   if(scenario==='import-fail'){res.writeHead(404);res.end();return;}
@@ -33,11 +46,13 @@ const server=createServer((req,res)=>{
  }
  res.setHeader('Content-Type','text/html');
  const split=['split','no-initial','two-modules','reject-set','invalid-response','late'].includes(scenario);
+ const anonymous=scenario==='anonymous-layout';
  const cross=['cross-alias','cross-distinct'].includes(scenario);
  const shared=['shared','shared-hostile','changed-shared','two-shared','hanging','import-fail'].includes(scenario)||cross;
  const link=name=>`<link rel="modulepreload" href="/${name}.js">`;
- res.end(`<!doctype html><html data-theme="light"><head>${scenario==='no-initial'||(shared&&!cross)||scenario==='delayed-shared'?'':link('app-initial-'+scenario)}${shared?link('app-shared-'+scenario):''}${scenario==='two-shared'?link('app-shared-second'):''}${split&&scenario!=='late'?link('run-app-action-in-primary-window-fixture'):''}${scenario==='two-modules'?link('run-app-action-in-primary-window-second'):''}<style>html,body{margin:0;width:100%;height:100%}</style></head><body><script>
- window.mode='light';window.calls=[];window.accessorCalls=0;window.rejectRestore=false;window.fixtureServices={appActions:{runInPrimaryWindow:async({action})=>{calls.push(action);if(action.type==='app.appearance.set_mode'){if(${JSON.stringify(scenario)}==='reject-set'||(window.rejectRestore&&action.mode==='light'))throw Error('Official setting rejected');mode=action.mode;document.documentElement.dataset.theme=mode==='system'?'light':mode;}return {mode:${JSON.stringify(scenario)}==='invalid-response'?'unsupported':mode};}}};
+ const entry=anonymous?`<script type="module" src="${anonymousEntry}"></script>`:'';
+ res.end(`<!doctype html><html data-theme="light"><head>${entry}${anonymous||scenario==='no-initial'||(shared&&!cross)||scenario==='delayed-shared'?'':link('app-initial-'+scenario)}${shared?link('app-shared-'+scenario):''}${scenario==='two-shared'?link('app-shared-second'):''}${split&&scenario!=='late'?link('run-app-action-in-primary-window-fixture'):''}${scenario==='two-modules'?link('run-app-action-in-primary-window-second'):''}<style>html,body{margin:0;width:100%;height:100%}</style></head><body><script>
+ window.fixtureAnonymousFactoryCalls=0;window.mode='light';window.calls=[];window.accessorCalls=0;window.rejectRestore=false;window.fixtureServices={appActions:{runInPrimaryWindow:async({action})=>{calls.push(action);if(action.type==='app.appearance.set_mode'){if(${JSON.stringify(scenario)}==='reject-set'||(window.rejectRestore&&action.mode==='light'))throw Error('Official setting rejected');mode=action.mode;document.documentElement.dataset.theme=mode==='system'?'light':mode;}return {mode:${JSON.stringify(scenario)}==='invalid-response'?'unsupported':mode};}}};
  window.sharedNamespace={appActions:fixtureServices.appActions,clientCoordination:{invalidateQueryCache:async()=>{}}};
  </script><script src="/seam.js"></script></body></html>`);
 });
@@ -101,10 +116,381 @@ try{
  await page('missing');
  check('failed Enable leaves no theme lease or background and no restart advice',await ev(`(async()=>{fixture.connectBackgroundPackages(async()=>({loaded:true}));const controller=new fixture.BlinkingSquaresBackgroundController();let error;try{await controller.enable();}catch(e){error=e;}const ok=!!error&&!/Restart Codex/.test(error.message)&&error.cause?.message.includes('CC-APPEARANCE-ADAPTER-001')&&!controller.enabled&&!controller.pending&&!fixture.readParticleThemeLease()&&!document.querySelector('[data-code-codex-blinking-squares-layer]');controller.dispose();return ok;})()`));
  await page('missing');
- check('Failed selected Rain can Disable with zero activation or appearance actions and no lease',await ev(`(async()=>{fixture.connectBackgroundPackages(async()=>({loaded:true}));const runtime=fixture.getCodeRainBackgroundController();await runtime.enable().catch(()=>{});let activations=0;const enable=runtime.enable.bind(runtime);runtime.enable=()=>{activations++;return enable()};const enabled=new Set(['rain']);const actions=new fixture.BackgroundActions({entries:[{id:'rain',label:'Rain',runtime}],coordinator:new fixture.AppearanceCoordinator(),enabled,connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,leaveNativeTransparency:async()=>{throw Error('must not activate')},reconcileNative:async()=>{},transferTheme:()=>{},committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:()=>{},announce:()=>{}});await actions.toggle('rain');const ok=!enabled.has('rain')&&!runtime.enabled&&!runtime.pending&&!runtime.error&&calls.length===0&&activations===0&&!fixture.readParticleThemeLease()&&!document.querySelector('[data-code-codex-rain-layer]');await runtime.dispose(true);return ok})()`));
+ check('Failed selected Rain can Disable with zero activation or appearance actions and no lease',await ev(`(async()=>{fixture.connectBackgroundPackages(async()=>({loaded:true}));const runtime=fixture.getCodeRainBackgroundController();await runtime.enable().catch(()=>{});let activations=0;const enable=runtime.enable.bind(runtime);runtime.enable=()=>{activations++;return enable()};const enabled=new Set(['rain']);const actions=new fixture.BackgroundActions({entries:[{id:'rain',label:'Rain',runtime}],coordinator:new fixture.AppearanceCoordinator(),enabled,connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,leaveNativeTransparency:async()=>{throw Error('must not activate')},reconcileNative:async()=>{},transferTheme:()=>{},prepareThemeTransfer:()=>()=>{},committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:()=>{},announce:()=>{}});await actions.toggle('rain');const ok=!enabled.has('rain')&&!runtime.enabled&&!runtime.pending&&!runtime.error&&calls.length===0&&activations===0&&!fixture.readParticleThemeLease()&&!document.querySelector('[data-code-codex-rain-layer]');await runtime.dispose(true);return ok})()`));
  await page('shared');
- check('Rain restores its real owned lease after a failed Disable without silently dropping ownership',await ev(`(async()=>{fixture.connectBackgroundPackages(async()=>({loaded:true}));const runtime=fixture.getCodeRainBackgroundController();await runtime.enable();const acquired=runtime.enabled&&mode==='dark'&&fixture.readParticleThemeLease()?.previousPreference==='light';let activations=0;const enable=runtime.enable.bind(runtime);runtime.enable=()=>{activations++;return enable()};const enabled=new Set(['rain']);const actions=new fixture.BackgroundActions({entries:[{id:'rain',label:'Rain',runtime}],coordinator:new fixture.AppearanceCoordinator(),enabled,connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{},committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:()=>{},announce:()=>{}});rejectRestore=true;await actions.toggle('rain');const honest=acquired&&!runtime.enabled&&!runtime.pending&&!!runtime.error&&enabled.has('rain')&&!!fixture.readParticleThemeLease()&&mode==='dark'&&!document.querySelector('[data-code-codex-rain-layer]');rejectRestore=false;await actions.toggle('rain');const restored=mode==='light'&&!runtime.error&&!runtime.pending&&!enabled.has('rain')&&!fixture.readParticleThemeLease()&&activations===0;await runtime.dispose(true);return honest&&restored})()`));
+ check('Rain restores its real owned lease after a failed Disable without silently dropping ownership',await ev(`(async()=>{fixture.connectBackgroundPackages(async()=>({loaded:true}));const runtime=fixture.getCodeRainBackgroundController();await runtime.enable();const acquired=runtime.enabled&&mode==='dark'&&fixture.readParticleThemeLease()?.previousPreference==='light';let activations=0;const enable=runtime.enable.bind(runtime);runtime.enable=()=>{activations++;return enable()};const enabled=new Set(['rain']);const actions=new fixture.BackgroundActions({entries:[{id:'rain',label:'Rain',runtime}],coordinator:new fixture.AppearanceCoordinator(),enabled,connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{},prepareThemeTransfer:()=>()=>{},committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:()=>{},announce:()=>{}});rejectRestore=true;await actions.toggle('rain');const honest=acquired&&!runtime.enabled&&!runtime.pending&&!!runtime.error&&enabled.has('rain')&&!!fixture.readParticleThemeLease()&&mode==='dark'&&!document.querySelector('[data-code-codex-rain-layer]');rejectRestore=false;await actions.toggle('rain');const restored=mode==='light'&&!runtime.error&&!runtime.pending&&!enabled.has('rain')&&!fixture.readParticleThemeLease()&&activations===0;await runtime.dispose(true);return honest&&restored})()`));
  await page('shared');
  check('Rain card distinguishes selected/off, running and disabled without changing saved settings',await ev(`(async()=>{fixture.connectBackgroundPackages(async()=>({loaded:true}));const runtime=fixture.getCodeRainBackgroundController();await runtime.initialize();const host=document.createElement('div');document.body.append(host);const shadow=host.attachShadow({mode:'open'});shadow.innerHTML=fixture.codeRainCardMarkup()+fixture.codeRainPanelMarkup();let selected=true;const controller=new fixture.CodeRainSettingsController({shadow,runtime,actions:{busy:false,toggle:async()=>{}},enabled:()=>selected,closeOthers:()=>{},notice:()=>{}});controller.render();const status=shadow.querySelector('.code-rain-status');const off=status.textContent==='Selected · Not running'&&status.dataset.enabled==='false'&&shadow.querySelector('.code-rain-enable').textContent==='Disable';await runtime.enable();controller.render();const running=status.textContent==='Running'&&status.dataset.enabled==='true';await runtime.disable();selected=false;controller.render();const disabled=status.textContent==='Disabled'&&shadow.querySelector('.code-rain-enable').textContent==='Enable';controller.stop();await runtime.dispose(true);host.remove();return off&&running&&disabled})()`));
+ await page('shared');
+ await ev(`
+  window.rainRuntime=fixture.getCodeRainBackgroundController();
+  window.selectedRain=new Set();
+  window.failures=[];
+  window.rainActions=new fixture.BackgroundActions({
+    entries:[{id:'rain',label:'Rain',runtime:rainRuntime}],
+    coordinator:new fixture.AppearanceCoordinator(),
+    enabled:selectedRain,
+    connected:()=>true,initializationCurrent:()=>true,
+    prepare:async()=>{},ready:async()=>true,leaveNativeTransparency:async()=>{},
+    reconcileNative:async()=>{},transferTheme:()=>{},prepareThemeTransfer:()=>()=>{},committed:()=>{},
+    changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},announce:()=>{},
+    failed:(_operation,error)=>failures.push(error.message),
+  });
+  fixture.connectBackgroundPackages(async()=>({loaded:true}));
+  const run=fixtureServices.appActions.runInPrimaryWindow;
+  fixtureServices.appActions.runInPrimaryWindow=async request=>{
+    if(request.action.type==='app.appearance.get'&&!window.finishRead){
+      calls.push(request.action);
+      return new Promise(resolve=>{window.finishRead=resolve;});
+    }
+    return run(request);
+  };
+  window.rainActivation=rainActions.toggle('rain');
+  void 0;
+ `);
+ await wait('typeof finishRead==="function"','Rain dispatches the held appearance read');
+ check('A stalled appearance read reaches the native adapter and keeps activation pending initially',
+  await ev("rainActions.busy&&rainRuntime.pending&&calls.length===1&&calls[0].type==='app.appearance.get'"));
+ check('A stalled appearance read releases activation and the shared controls within a bounded wait',
+  await ev(`(async()=>{
+    let timer;
+    try{
+      const completed=await Promise.race([
+        rainActivation.then(()=>true),
+        new Promise(resolve=>{timer=setTimeout(()=>resolve(false),6500);}),
+      ]);
+      return completed&&!rainActions.busy&&!rainRuntime.pending&&
+        failures.length===1&&failures[0].includes('CC-APPEARANCE-READ-TIMEOUT');
+    }finally{clearTimeout(timer);}
+  })()`));
+ const unchanged= "mode==='light'&&!rainRuntime.enabled&&!selectedRain.size&&!fixture.readParticleThemeLease()&&!document.querySelector('[data-code-codex-rain-layer]')&&calls.length===1";
+ check('A stalled read leaves the native preference, lease and canvas untouched',await ev(unchanged));
+ await ev("finishRead({mode:'light'});");
+ await new Promise(resolve=>setTimeout(resolve,80));
+ check('A late appearance read cannot resume the failed activation',await ev(unchanged));
+ await ev("rainActions.toggle('rain')");
+ check('A fresh Enable can acquire appearance and mount Rain after a stalled read',await ev(`mode==='dark'&&rainRuntime.enabled&&selectedRain.has('rain')&&document.querySelectorAll('[data-code-codex-rain-layer] canvas').length===1`));
+ await ev("rainActions.toggle('rain')");
+ check('Disable after retry restores the previous appearance and releases the canvas and lease',await ev(`mode==='light'&&!rainRuntime.enabled&&!rainActions.busy&&!selectedRain.size&&!fixture.readParticleThemeLease()&&!document.querySelector('[data-code-codex-rain-layer]')`));
+ await ev('rainRuntime.dispose(true)');
+ await page('shared');
+ const delayedTheme=await ev(`(async()=>{
+  const run=fixtureServices.appActions.runInPrimaryWindow;
+  let darkWrites=0;
+  let darkMarkerTimer;
+  fixtureServices.appActions.runInPrimaryWindow=async request=>{
+    if(request.action.type==='app.appearance.set_mode'&&request.action.mode==='dark'){
+      calls.push(request.action);
+      if(++darkWrites>1)throw Error('Synthetic host rejected a second Dark request');
+      mode='dark';
+      darkMarkerTimer=setTimeout(()=>{document.documentElement.dataset.theme='dark';},120);
+      return {mode};
+    }
+    return run(request);
+  };
+  fixture.connectBackgroundPackages(async()=>({loaded:true}));
+  const rain=fixture.getCodeRainBackgroundController();
+  let error;
+  try{await rain.enable();}catch(failure){error=failure.message;}
+  const running=rain.enabled&&!rain.pending&&mode==='dark'&&document.documentElement.dataset.theme==='dark'&&
+    document.querySelectorAll('[data-code-codex-rain-layer] canvas').length===1;
+  clearTimeout(darkMarkerTimer);
+  await rain.disable();
+  const restored=mode==='light'&&!rain.enabled&&!rain.pending&&!fixture.readParticleThemeLease()&&
+    !document.querySelector('[data-code-codex-rain-layer]');
+  await rain.dispose();
+  return {darkWrites,running,restored,error};
+ })()`);
+ report.delayedTheme=delayedTheme;
+ check('Rain waits for the delayed Dark marker after one confirmed write',delayedTheme.darkWrites===1&&delayedTheme.running&&!delayedTheme.error);
+ check('Disabling Rain after a delayed Dark marker restores Light and releases the lease',delayedTheme.restored);
+ await page('anonymous-layout');
+ await wait('window.fixtureAnonymousChunkLoaded===true','Anonymous fixture chunk loaded');
+ const anonymousLayout=await ev(`(async()=>{
+  const eligibleRoles=fixture.findCodexAppearanceModules().length;
+  fixture.connectBackgroundPackages(async()=>({loaded:true}));
+  const rain=fixture.getCodeRainBackgroundController();
+  let error;
+  try{await rain.enable();}catch(failure){error=failure.message;}
+  const result={
+    eligibleRoles,
+    running:rain.enabled,
+    pending:rain.pending,
+    error,
+    mode:window.mode,
+    appearanceCalls:window.calls.length,
+    factoryCalls:window.fixtureAnonymousFactoryCalls,
+    leased:!!fixture.readParticleThemeLease(),
+    canvas:!!document.querySelector('[data-code-codex-rain-layer] canvas')
+  };
+  await rain.dispose(true);
+  return result;
+ })()`);
+ report.anonymousLayout=anonymousLayout;
+ check('Anonymous entry and action chunk reproduce missing supported Appearance capability',
+  anonymousLayout.eligibleRoles===0&&!anonymousLayout.running&&!anonymousLayout.pending&&
+  /CC-APPEARANCE-ADAPTER-001/.test(anonymousLayout.error));
+ check('Unsupported anonymous chunks leave appearance, lease and Rain surface untouched',
+  anonymousLayout.mode==='light'&&anonymousLayout.appearanceCalls===0&&anonymousLayout.factoryCalls===0&&
+  !anonymousLayout.leased&&!anonymousLayout.canvas);
+ await page('anonymous-layout');
+ await wait('window.fixtureAnonymousChunkLoaded===true','Anonymous Dark fixture chunk loaded');
+ const manualDark=await ev(`(async()=>{
+   window.mode='dark';
+   document.documentElement.dataset.theme='dark';
+   fixture.writeParticleThemeLease({owner:'code-codex.code-rain-background',previousPreference:'light',forcedPreference:'dark'});
+   const savedLease=JSON.stringify(fixture.readParticleThemeLease());
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const runtime=fixture.getCodeRainBackgroundController();
+   const selected=new Set();
+   let transfers=0;
+   const errors=[];
+   const actions=new fixture.BackgroundActions({
+     entries:[{id:'code-codex.code-rain-background',label:'Rain',runtime}],
+     coordinator:new fixture.AppearanceCoordinator(),enabled:selected,
+     connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,
+     leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{transfers++;},prepareThemeTransfer:()=>()=>{transfers++;},
+     committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},
+     failed:(_,error)=>{errors.push(error.message)},announce:()=>{}
+   });
+   await actions.toggle('code-codex.code-rain-background');
+   const running=runtime.enabled&&selected.has('code-codex.code-rain-background')&&!runtime.pending&&
+     document.querySelectorAll('[data-code-codex-rain-layer] canvas').length===1;
+   if(running)await actions.toggle('code-codex.code-rain-background');
+   const cleaned=!runtime.enabled&&!runtime.pending&&!selected.size&&!document.querySelector('[data-code-codex-rain-layer]');
+   const retained=JSON.stringify(fixture.readParticleThemeLease())===savedLease;
+   await runtime.dispose(true);
+   return {running,cleaned,retained,transfers,errors,appearanceCalls:calls.length,factoryCalls:fixtureAnonymousFactoryCalls,mode};
+ })()`);
+ report.manualDark=manualDark;
+ check('Existing native Dark runs one Rain canvas without Appearance calls or lease transfer',manualDark.running&&
+   manualDark.transfers===0&&manualDark.appearanceCalls===0&&manualDark.factoryCalls===0);
+ check('Renderer-only Rain disables cleanly and keeps the old restoration record and Dark appearance',
+   manualDark.cleaned&&manualDark.retained&&manualDark.mode==='dark'&&manualDark.errors.length===0);
+ await page('anonymous-layout');
+ await wait('window.fixtureAnonymousChunkLoaded===true','Anonymous policy fixture ready');
+ const manualPolicy=await ev(`(async()=>{
+   const id='code-codex.code-rain-background',foreign='code-codex.particle-image-background';
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const runtime=fixture.getCodeRainBackgroundController();
+   const selected=new Set([id]);
+   let transfers=0;
+   const actions=new fixture.BackgroundActions({
+     entries:[{id,label:'Rain',runtime}],coordinator:new fixture.AppearanceCoordinator(),enabled:selected,
+     connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,
+     leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{transfers++;},prepareThemeTransfer:()=>()=>{transfers++;},
+     committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:()=>{},announce:()=>{}
+   });
+   fixture.writeParticleThemeLease({owner:id,previousPreference:'light',forcedPreference:'dark'});
+   await actions.initialize(id,1);
+   const resumeRefused=selected.has(id)&&!runtime.enabled&&runtime.error?.includes('Choose Dark')&&calls.length===0;
+   await actions.toggle(id);
+   const legacyDisable=!selected.size&&!runtime.enabled&&runtime.retainedAppearanceLease&&fixture.readParticleThemeLease()?.owner===id;
+   window.mode='dark';document.documentElement.dataset.theme='dark';
+   fixture.writeParticleThemeLease({owner:foreign,previousPreference:'system',forcedPreference:'dark'});
+   await actions.toggle(id);
+   const foreignRefused=!runtime.enabled&&!selected.size&&runtime.error?.includes('Another background owns')&&fixture.readParticleThemeLease()?.owner===foreign;
+   fixture.clearParticleThemeLease();
+   await actions.toggle(id);
+   const host=document.createElement('div');document.body.append(host);const shadow=host.attachShadow({mode:'open'});
+   shadow.innerHTML=fixture.codeRainCardMarkup()+fixture.codeRainPanelMarkup();
+   const settings=new fixture.CodeRainSettingsController({shadow,runtime,actions,enabled:()=>selected.has(id),closeOthers:()=>{},notice:()=>{}});
+   settings.render();
+   const truthfulUI=shadow.querySelector('.code-rain-status').textContent==='Running'&&
+     shadow.querySelector('.code-rain-appearance-hint').textContent.includes('current Dark appearance')&&
+     shadow.querySelector('.code-rain-enable').textContent==='Disable';
+   const canvas=document.querySelector('[data-code-codex-rain-layer] canvas');
+   const draws=canvas instanceof HTMLCanvasElement&&canvas.width>0&&canvas.height>0;
+   window.mode='light';document.documentElement.dataset.theme='light';
+   await new Promise(resolve=>setTimeout(resolve,50));settings.render();
+   const stopped=!runtime.enabled&&!runtime.pending&&!document.querySelector('[data-code-codex-rain-layer]')&&
+     shadow.querySelector('.code-rain-status').textContent==='Selected · Not running';
+   await actions.toggle(id);
+   const released=!selected.size&&calls.length===0&&transfers===0&&mode==='light';
+   settings.stop();await runtime.dispose(true);
+   return {resumeRefused,legacyDisable,foreignRefused,truthfulUI,draws,stopped,released};
+ })()`);
+ report.manualPolicy=manualPolicy;
+ check('Saved Rain on unsupported Light can be deselected without touching its old restoration record',
+   manualPolicy.resumeRefused&&manualPolicy.legacyDisable);
+ check('Manual Dark never takes another background restoration record',manualPolicy.foreignRefused);
+ check('Manual Dark owns a real canvas and the card reports how it runs',manualPolicy.truthfulUI&&manualPolicy.draws);
+ check('Losing the native Dark marker stops the renderer and preserves the new native appearance',
+   manualPolicy.stopped&&manualPolicy.released);
+ await page('anonymous-layout');
+ await wait('window.fixtureAnonymousChunkLoaded===true','Anonymous accessibility fixture ready');
+ await cmd('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
+ const restricted=await ev(`(async()=>{
+   window.mode='dark';document.documentElement.dataset.theme='dark';
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   let error;
+   try{await rain.enable();}catch(failure){error=failure.message;}
+   const safe=matchMedia('(forced-colors: active)').matches&&!rain.enabled&&!rain.pending&&
+     error?.includes('forced colors')&&calls.length===0&&!document.querySelector('[data-code-codex-rain-layer]');
+   await rain.dispose(true);return safe;
+ })()`);
+ await cmd('Emulation.setEmulatedMedia',{features:[]});
+ check('Forced colors refuses manual Rain before any lease or canvas',restricted);
+ await page('ambiguous');
+ const unsafeAdapter=await ev(`(async()=>{
+   window.mode='dark';document.documentElement.dataset.theme='dark';
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   let error;
+   try{await rain.enable();}catch(failure){error=failure.message;}
+   const safe=error?.includes('CC-APPEARANCE-ADAPTER-002')&&!rain.enabled&&!rain.pending&&calls.length===0;
+   await rain.dispose(true);return safe;
+ })()`);
+ check('An ambiguous Appearance adapter does not grant manual fallback',unsafeAdapter);
+ await page('split');
+ const resumeManaged=await ev(`(async()=>{
+   window.mode='dark';document.documentElement.dataset.theme='light';
+   fixture.clearParticleThemeLease();
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   let grants=0;
+   const attempt=rain.enableWithAppearanceTransfer(usesLease=>{if(usesLease)grants++;},true);
+   const timer=setTimeout(()=>document.documentElement.dataset.theme='dark',100);
+   await attempt;
+   clearTimeout(timer);
+   const running=rain.enabled&&!!document.querySelector('[data-code-codex-rain-layer] canvas');
+   const readOnly=calls.length===1&&calls[0].type==='app.appearance.get'&&grants===1;
+   await rain.dispose(true);
+   return running&&readOnly&&mode==='dark';
+ })()`);
+ check('Saved managed Rain waits for the Dark marker without requesting a host change',resumeManaged);
+ await page('split');
+ const staleActivation=await ev(`(async()=>{
+   const id='code-codex.code-rain-background';
+   const coordinator=new fixture.AppearanceCoordinator();
+   const selected=new Set();
+   let transfers=0;
+   fixture.clearParticleThemeLease();
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   const run=fixtureServices.appActions.runInPrimaryWindow;
+   fixtureServices.appActions.runInPrimaryWindow=async request=>{
+     if(request.action.type==='app.appearance.get'){
+       const result=await run(request);
+       coordinator.operation++;
+       return result;
+     }
+     return run(request);
+   };
+   const actions=new fixture.BackgroundActions({
+     entries:[{id,label:'Rain',runtime:rain}],coordinator,enabled:selected,
+     connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,
+     leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{transfers++;},prepareThemeTransfer:()=>()=>{transfers++;},
+     committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:()=>{},announce:()=>{}
+   });
+   await actions.toggle(id);
+   const safe=transfers===0&&!rain.enabled&&!selected.size&&!rain.pending&&
+     calls.every(action=>action.type==='app.appearance.get')&&mode==='light'&&!fixture.readParticleThemeLease();
+   await rain.dispose(true);
+   return safe;
+ })()`);
+ check('A stale transition cannot transfer the lease or apply Dark after discovery',staleActivation);
+ await page('split');
+ const managedTransfer=await ev(`(async()=>{
+   const id='code-codex.code-rain-background';
+   const priorId='code-codex.particle-image-background';
+   const laterId='code-codex.blinking-squares-background';
+   window.mode='dark';document.documentElement.dataset.theme='dark';
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   const prior={enabled:true,pending:false,initialize:async()=>{},enable:async()=>{prior.enabled=true},disable:async()=>{prior.enabled=false}};
+   const selected=new Set([priorId]);
+   const errors=[];
+   const actions=new fixture.BackgroundActions({
+     entries:[{id,label:'Rain',runtime:rain},{id:priorId,label:'Prior',runtime:prior}],
+     coordinator:new fixture.AppearanceCoordinator(),enabled:selected,
+     connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,
+     leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{},
+     prepareThemeTransfer:fixture.prepareParticleThemeTransfer,
+     committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:(_,error)=>errors.push(error.message),announce:()=>{}
+   });
+   const run=fixtureServices.appActions.runInPrimaryWindow;
+   fixture.writeParticleThemeLease({owner:priorId,previousPreference:'light',forcedPreference:'dark'});
+   fixtureServices.appActions.runInPrimaryWindow=async request=>{
+     const result=await run(request);
+     if(request.action.type==='app.appearance.get')fixture.writeParticleThemeLease({owner:laterId,previousPreference:'system',forcedPreference:'dark'});
+     return result;
+   };
+   await actions.toggle(id);
+   const driftRejected=!rain.enabled&&prior.enabled&&selected.has(priorId)&&
+     fixture.readParticleThemeLease()?.owner===laterId&&errors.some(e=>e.includes('restoration changed'));
+   fixtureServices.appActions.runInPrimaryWindow=run;
+   fixture.writeParticleThemeLease({owner:priorId,previousPreference:'light',forcedPreference:'dark'});
+   await actions.toggle(id);
+   const validTransfer=rain.enabled&&!prior.enabled&&selected.has(id)&&fixture.readParticleThemeLease()?.owner===id&&
+     calls.every(action=>action.type==='app.appearance.get');
+   await rain.dispose(true);fixture.clearParticleThemeLease();
+   return {driftRejected,validTransfer};
+ })()`);
+ report.managedTransfer=managedTransfer;
+ check('Managed activation rejects a changed lease during read and accepts the verified outgoing owner',managedTransfer.driftRejected&&managedTransfer.validTransfer);
+ await page('anonymous-layout');
+ await wait('window.fixtureAnonymousChunkLoaded===true','Anonymous late-lease fixture ready');
+ const lateLease=await ev(`(async()=>{
+   const owner='code-codex.particle-image-background';
+   window.mode='dark';document.documentElement.dataset.theme='dark';
+   fixture.clearParticleThemeLease();
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   let armed=true, error;
+   try{
+     await rain.enableWithAppearanceTransfer(()=>{
+       if(!armed)return;armed=false;
+       queueMicrotask(()=>fixture.writeParticleThemeLease({owner,previousPreference:'light',forcedPreference:'dark'}));
+     },false);
+   }catch(failure){error=failure.message;}
+   const safe=error?.includes('Another background owns')&&fixture.readParticleThemeLease()?.owner===owner&&
+     calls.length===0&&!rain.enabled&&!rain.pending&&!document.querySelector('[data-code-codex-rain-layer]');
+   await rain.dispose(true);fixture.clearParticleThemeLease();
+   return safe;
+ })()`);
+ check('Manual Dark rechecks a late foreign lease before mounting',lateLease);
+ await page('split');
+ const knownLight=await ev(`(async()=>{
+   window.mode='light';document.documentElement.dataset.theme='dark';
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   let transfers=0,error;
+   try{await rain.enableWithAppearanceTransfer(usesLease=>{if(usesLease)transfers++;},true);}
+   catch(failure){error=failure.message;}
+   const safe=error?.includes('Choose Dark')&&!rain.enabled&&transfers===0&&calls.length===1&&calls[0].type==='app.appearance.get';
+   await rain.dispose(true);return safe;
+ })()`);
+ check('Saved Rain respects known native Light despite a stale Dark marker',knownLight);
+ await page('split');
+ const rollbackLease=await ev(`(async()=>{
+   const id='code-codex.code-rain-background', target='code-codex.particle-image-background';
+   window.mode='dark';document.documentElement.dataset.theme='dark';
+   fixture.clearParticleThemeLease();
+   fixture.connectBackgroundPackages(async()=>({loaded:true}));
+   const rain=fixture.getCodeRainBackgroundController();
+   await rain.enable();
+   const selected=new Set([id]);
+   const errors=[];
+   const foreign={enabled:false,pending:false,initialize:async()=>{},disable:async()=>{},enable:async()=>{
+     fixture.writeParticleThemeLease({owner:target,previousPreference:'light',forcedPreference:'dark'});
+     throw Error('fixture target failed before enabling');
+   }};
+   const actions=new fixture.BackgroundActions({
+     entries:[{id,label:'Rain',runtime:rain},{id:target,label:'Target',runtime:foreign}],
+     coordinator:new fixture.AppearanceCoordinator(),enabled:selected,
+     connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{},ready:async()=>true,
+     leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{},
+     prepareThemeTransfer:fixture.prepareParticleThemeTransfer,
+     committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:(_,error)=>errors.push(error.message),announce:()=>{}
+   });
+   await actions.toggle(target);
+   const preserved=selected.has(id)&&!rain.enabled&&fixture.readParticleThemeLease()?.owner===target&&
+     errors.some(message=>message.includes('Another background owns'))&&calls.every(action=>action.type==='app.appearance.get');
+   await rain.dispose(true);fixture.clearParticleThemeLease();
+   return preserved;
+ })()`);
+ check('Rollback cannot claim the lease of a target that never enabled',rollbackLease);
  console.log('Appearance adapter: '+report.checks.length+' checks passed');
 }catch(error){report.error=String(error);throw error;}finally{writeFileSync(join(directory,'results.json'),JSON.stringify(report,null,2));await browser?.close();server.close();}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "name": "Offline startup status reader",
+  "dependencies": [],
+  "checks": [
+    {
+      "id": "startup-status",
+      "required": true,
+      "args": ["scripts/test-startup-status.mjs"],
+      "prerequisites": ["scripts/startup-status.mjs", "scripts/test-startup-status.mjs"],
+      "timeoutMs": 30000,
+      "maxOutputBytes": 262144,
+      "evidenceFormat": "tap"
+    },
+    {
+      "id": "changelog-structure",
+      "required": true,
+      "args": ["scripts/check-changelog.mjs"],
+      "prerequisites": ["scripts/check-changelog.mjs", "CHANGELOG.md"],
+      "timeoutMs": 30000,
+      "maxOutputBytes": 131072,
+      "evidenceFormat": "command"
+    }
+  ]
+}

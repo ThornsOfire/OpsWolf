@@ -15,18 +15,19 @@ const panelStyle=String.raw`<style>
 @keyframes cle-rain-settings-in{from{opacity:0}to{opacity:1}}
 .code-rain-panel :is(select,input[type="number"],input[type="text"],button[data-rain-action]){box-sizing:border-box;min-width:0;max-width:100%;padding:6px;border:1px solid var(--cle-rule-strong);border-radius:5px;color:var(--cle-ink);background:var(--cle-paper-raised);font:inherit}
 .code-rain-panel :is(select,input[type="number"]){display:block;width:100%;margin:5px 0 10px}
+.code-rain-panel .code-rain-phase,.code-rain-appearance-hint{overflow-wrap:anywhere}
 .code-rain-panel input[type="text"]{width:100%}.code-rain-panel input[type="color"]{width:100%;min-width:0}
 .code-rain-panel button[data-rain-action]{cursor:pointer}.code-rain-panel button:disabled{cursor:default;opacity:.6}
 .code-rain-panel :is(button,input,select):focus-visible{outline:2px solid var(--cle-focus);outline-offset:2px}
 .code-rain-panel .particle-settings-header-actions{flex-wrap:wrap;gap:6px}.code-rain-panel .code-rain-saved{color:var(--cle-muted)}
 @media(forced-colors:active){.code-rain-panel :is(button,input,select){forced-color-adjust:auto}}
 </style>`;
-export function codeRainCardMarkup():string{return `<article class="preview-extension appearance-extension" data-appearance-plugin="${ID}"><span class="preview-extension-icon" aria-hidden="true">${icons.preview}</span><div class="preview-extension-copy"><div class="preview-extension-title-row"><h4 data-plugin-name>Code Rain Background</h4><span class="preview-extension-status code-rain-status">Disabled</span></div></div><div class="preview-extension-actions"><button type="button" class="preview-extension-action code-rain-enable" aria-pressed="false">Enable</button><button type="button" class="particle-settings-trigger code-rain-settings" aria-label="Configure Code Rain" aria-haspopup="dialog" aria-controls="cle-code-rain-settings" aria-expanded="false">${icons.sliders}</button></div></article>`;}
-export function codeRainPanelMarkup():string{return `${panelStyle}<section id="cle-code-rain-settings" class="particle-settings-panel code-rain-panel" popover="manual" role="dialog" aria-modal="false" aria-labelledby="cle-code-rain-title"><header class="particle-settings-header"><div class="particle-settings-heading"><p data-rain-label="category">Appearance</p><h3 id="cle-code-rain-title" data-plugin-name>Code Rain Background</h3></div><button type="button" class="particle-settings-close code-rain-close" aria-label="Close settings">${icons.close}</button></header><div class="particle-settings-scroll"><p data-rain-label="hint">Changes apply to this session. Save keeps the current rain settings for next time.</p><p class="particle-settings-error code-rain-error" role="status" hidden></p><fieldset class="particle-settings-group"><legend data-rain-label="presetTitle">Presets and playback</legend><label for="cle-rain-preset" data-rain-label="preset">Rain preset</label><select id="cle-rain-preset">${PRESETS.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('')}</select><label><input id="cle-rain-inactive" type="checkbox" checked><span data-rain-label="inactive">Pause when window is inactive</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="apply">Apply</button><button type="button" data-rain-action="pause" aria-pressed="false">Pause</button></div></fieldset><fieldset class="particle-settings-group"><legend data-rain-label="motion">Rain controls</legend>${[...numericKeys,...COLORS,'glyphs' as const].map(key=>{const range=LIMITS[key as keyof typeof LIMITS];return `<div class="particle-control-row"><label for="cle-rain-${key}" data-rain-setting-label="${key}">${labels[key][0]}</label><input id="cle-rain-${key}" data-rain-control="${key}" type="${range?'range':key==='glyphs'?'text':'color'}" ${range?`min="${range[0]}" max="${range[1]}" step="${['density','brightness','opacity'].includes(key)?'.05':'1'}"`:key==='glyphs'?'maxlength="128"':''}><output for="cle-rain-${key}" data-rain-output="${key}"></output></div>`}).join('')}</fieldset><fieldset class="particle-settings-group"><legend data-rain-label="blendTitle">Blend to selected preset</legend><label for="cle-rain-duration" data-rain-label="duration">Duration (seconds)</label><input id="cle-rain-duration" type="number" min="0.5" max="60" step="0.5" value="8"><label for="cle-rain-hold" data-rain-label="hold">Hold (seconds)</label><input id="cle-rain-hold" type="number" min="0" max="120" step="1" value="3"><label><input id="cle-rain-loop" type="checkbox"><span data-rain-label="loop">Loop there and back</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="blend">Start blend</button><button type="button" data-rain-action="stop">Stop blend</button></div><p class="code-rain-phase" role="status"></p></fieldset><div class="particle-settings-header-actions"><button type="button" data-rain-action="reset">Reset current</button><button type="button" data-rain-action="save">Save</button><span class="code-rain-saved" role="status"></span></div></div></section>`;}
+export function codeRainCardMarkup():string{return `<article class="preview-extension appearance-extension" data-appearance-plugin="${ID}"><span class="preview-extension-icon" aria-hidden="true">${icons.preview}</span><div class="preview-extension-copy"><div class="preview-extension-title-row"><h4 data-plugin-name>Code Rain Background</h4><span class="preview-extension-status code-rain-status">Disabled</span></div><p id="cle-code-rain-appearance-hint" class="code-rain-appearance-hint" role="status" hidden></p></div><div class="preview-extension-actions"><button type="button" class="preview-extension-action code-rain-enable" aria-pressed="false" aria-describedby="cle-code-rain-appearance-hint">Enable</button><button type="button" class="particle-settings-trigger code-rain-settings" aria-label="Configure Code Rain" aria-haspopup="dialog" aria-controls="cle-code-rain-settings" aria-expanded="false">${icons.sliders}</button></div></article>`;}
+export function codeRainPanelMarkup():string{return `${panelStyle}<section id="cle-code-rain-settings" class="particle-settings-panel code-rain-panel" popover="manual" role="dialog" aria-modal="false" aria-labelledby="cle-code-rain-title"><header class="particle-settings-header"><div class="particle-settings-heading"><p data-rain-label="category">Appearance</p><h3 id="cle-code-rain-title" data-plugin-name>Code Rain Background</h3></div><button type="button" class="particle-settings-close code-rain-close" aria-label="Close settings">${icons.close}</button></header><div class="particle-settings-scroll"><p data-rain-label="hint">Changes apply to this session. Save keeps the current rain settings for next time.</p><p class="particle-settings-error code-rain-error" role="status" hidden></p><p class="code-rain-appearance-note" role="status" hidden></p><fieldset class="particle-settings-group"><legend data-rain-label="presetTitle">Presets and playback</legend><label for="cle-rain-preset" data-rain-label="preset">Rain preset</label><select id="cle-rain-preset">${PRESETS.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('')}</select><label><input id="cle-rain-inactive" type="checkbox" checked><span data-rain-label="inactive">Pause when window is inactive</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="apply">Apply</button><button type="button" data-rain-action="pause" aria-pressed="false">Pause</button></div></fieldset><fieldset class="particle-settings-group"><legend data-rain-label="motion">Rain controls</legend>${[...numericKeys,...COLORS,'glyphs' as const].map(key=>{const range=LIMITS[key as keyof typeof LIMITS];return `<div class="particle-control-row"><label for="cle-rain-${key}" data-rain-setting-label="${key}">${labels[key][0]}</label><input id="cle-rain-${key}" data-rain-control="${key}" type="${range?'range':key==='glyphs'?'text':'color'}" ${range?`min="${range[0]}" max="${range[1]}" step="${['density','brightness','opacity'].includes(key)?'.05':'1'}"`:key==='glyphs'?'maxlength="128"':''}><output for="cle-rain-${key}" data-rain-output="${key}"></output></div>`}).join('')}</fieldset><fieldset class="particle-settings-group"><legend data-rain-label="blendTitle">Blend to selected preset</legend><label for="cle-rain-duration" data-rain-label="duration">Duration (seconds)</label><input id="cle-rain-duration" type="number" min="0.5" max="60" step="0.5" value="8"><label for="cle-rain-hold" data-rain-label="hold">Hold (seconds)</label><input id="cle-rain-hold" type="number" min="0" max="120" step="1" value="3"><label><input id="cle-rain-loop" type="checkbox"><span data-rain-label="loop">Loop there and back</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="blend">Start blend</button><button type="button" data-rain-action="stop">Stop blend</button></div><p class="code-rain-phase" role="status"></p></fieldset><div class="particle-settings-header-actions"><button type="button" data-rain-action="reset">Reset current</button><button type="button" data-rain-action="save">Save</button><span class="code-rain-saved" role="status"></span></div></div></section>`;}
 
 export interface CodeRainSettingsPorts {
   readonly shadow:ShadowRoot;
-  readonly runtime:Pick<CodeRainBackgroundController,'enabled'|'pending'|'error'|'storageError'|'settings'|'dirty'|'paused'|'transitionPhase'|'initialize'|'subscribe'|'updateSettings'|'reset'|'setPaused'|'startTransition'|'stopTransition'|'saveSettings'|'pauseWhenUnfocused'|'pausedForFocus'|'setPauseWhenUnfocused'>;
+  readonly runtime:Pick<CodeRainBackgroundController,'enabled'|'pending'|'error'|'storageError'|'usesExistingDark'|'retainedAppearanceLease'|'settings'|'dirty'|'paused'|'transitionPhase'|'blendStatus'|'initialize'|'subscribe'|'updateSettings'|'reset'|'setPaused'|'startTransition'|'stopTransition'|'saveSettings'|'pauseWhenUnfocused'|'pausedForFocus'|'setPauseWhenUnfocused'>;
   readonly actions:BackgroundCommands;
   readonly enabled:()=>boolean;
   readonly closeOthers:()=>void;
@@ -36,6 +37,7 @@ export class CodeRainSettingsController {
   readonly #panel:HTMLElement;
   readonly #trigger:HTMLButtonElement;
   readonly #button:HTMLButtonElement;
+  #opener:HTMLButtonElement|undefined;
   #scope:AbortController|undefined;
   #unsubscribe:(()=>void)|undefined;
   #language:(()=>void)|undefined;
@@ -85,13 +87,39 @@ export class CodeRainSettingsController {
     window.addEventListener('resize',()=>this.position(),options);this.ports.shadow.addEventListener('scroll',()=>this.position(),{...options,capture:true});this.render();
   }
   #input<T extends HTMLElement>(suffix:string):T{return this.#panel.querySelector<T>(`#cle-rain-${suffix}`)!;}
-  containsEvent(event:Event):boolean{return event.composedPath().includes(this.#panel)||event.composedPath().includes(this.#trigger);}
+  #validOpener(value:unknown):value is HTMLButtonElement{
+    if(!(value instanceof HTMLButtonElement)||value.ownerDocument!==this.#panel.ownerDocument||value.getRootNode()!==this.ports.shadow||!value.isConnected||value.matches(':disabled')||value.closest('[hidden],[inert]'))return false;
+    const style=getComputedStyle(value),rect=value.getBoundingClientRect();
+    return style.visibility!=='hidden'&&style.visibility!=='collapse'&&rect.width>0&&rect.height>0&&value.getClientRects().length>0;
+  }
+  containsEvent(event:Event):boolean{
+    const path=event.composedPath();
+    return path.includes(this.#panel)||(!!this.#opener&&path.includes(this.#opener));
+  }
   get open():boolean{return this.#panel.matches(':popover-open');}
-  show():void{this.ports.closeOthers();this.#panel.showPopover();this.#trigger.setAttribute('aria-expanded','true');this.position();this.#panel.querySelector<HTMLButtonElement>('.code-rain-close')!.focus();}
-  close(focus=false):void{if(this.open)this.#panel.hidePopover();this.#trigger.setAttribute('aria-expanded','false');if(focus)this.#trigger.focus();}
+  show(opener?:HTMLButtonElement):boolean{
+    const anchor=opener===undefined?this.#trigger:opener;
+    // Reject stale callers/invalid anchors before touching another panel or focus.
+    if(!this.#scope||this.#scope.signal.aborted||!this.#panel.isConnected||!this.#validOpener(anchor))return false;
+    const wasOpen=this.open;
+    this.ports.closeOthers();
+    if(!wasOpen)this.#panel.showPopover();
+    if(this.#opener!==anchor)this.#opener?.setAttribute('aria-expanded','false');
+    this.#opener=anchor;anchor.setAttribute('aria-expanded','true');this.position();
+    // An already-open reanchor must leave unfinished input and its caret alone.
+    if(!wasOpen&&this.open)this.#panel.querySelector<HTMLButtonElement>('.code-rain-close')!.focus();
+    return this.open;
+  }
+  close(focus=false):void{
+    const opener=this.#opener;
+    if(this.open)this.#panel.hidePopover();
+    opener?.setAttribute('aria-expanded','false');this.#opener=undefined;
+    if(focus&&this.#validOpener(opener))opener.focus();
+  }
   position():void{
     if(!this.open)return;
-    const panel=this.#panel,edge=12,card=this.#trigger.getBoundingClientRect(),viewport=window.visualViewport;
+    if(!this.#validOpener(this.#opener)){this.close();return;}
+    const panel=this.#panel,edge=12,card=this.#opener.getBoundingClientRect(),viewport=window.visualViewport;
     const x=viewport?.offsetLeft??0,y=viewport?.offsetTop??0,w=viewport?.width??innerWidth,h=viewport?.height??innerHeight;
     // getBoundingClientRect is in viewport pixels; style sizes/positions inherit
     // the shadow host's CSS zoom. Measure that conversion before constraining.
@@ -102,6 +130,27 @@ export class CodeRainSettingsController {
     const top=Math.max(y+edge,Math.min(card.top,y+h-edge-panel.getBoundingClientRect().height));
     panel.dataset.side=left===right?'right':'overlay';panel.style.left=`${left/zoom}px`;panel.style.top=`${top/zoom}px`;
     panel.style.setProperty('--cle-particle-settings-anchor-y',`${Math.max(16,Math.min((card.top+card.height/2-top)/zoom,panel.offsetHeight-16))}px`);
+  }
+  #blendMessage():string{
+    const runtime=this.ports.runtime,blend=runtime.blendStatus;
+    const pause=runtime.pausedForFocus?text('Rain paused while window is inactive','窗口不活动，雨幕已暂停'):runtime.paused?text('Paused','已暂停'):'';
+    const prefix=pause?pause+' · ':'';
+    if(!blend)return prefix+text('No blend running. The selected preset is the next destination.','当前没有渐变。所选预设是下一次应用或渐变的目标。');
+    const from=blend.fromPresetName??text('Current/custom settings','当前/自定义设置');
+    const to=blend.toPresetName??text('Current/custom settings','当前/自定义设置');
+    const reverse=blend.phase==='Returning'||blend.phase==='Holding start';
+    const forward=['Transitioning','Forward','Holding target','Finished','Applied immediately for reduced motion'].includes(blend.phase);
+    const route=reverse?to+' → '+from:forward?from+' → '+to:from+' ↔ '+to;
+    if(blend.state==='completed')return prefix+text(blend.phase==='Applied immediately for reduced motion'?'Applied immediately for reduced motion':'Finished',blend.phase==='Applied immediately for reduced motion'?'已按减少动态效果偏好立即应用':'渐变完成')+' · '+route;
+    if(blend.state==='stopped')return prefix+text('Stopped','已停止')+' · '+route+' · '+text('Current appearance kept','已保留当前外观');
+    let phase=text('Blending','渐变中');
+    switch(blend.phase){
+      case 'Forward':phase=text('Forward','正向渐变');break;
+      case 'Returning':phase=text('Returning','返回中');break;
+      case 'Holding target':phase=text('Holding '+to,'停留：'+to);break;
+      case 'Holding start':phase=text('Holding '+from,'停留：'+from);break;
+    }
+    return prefix+route+' · '+phase;
   }
   render():void{
     const runtime=this.ports.runtime,enabled=this.ports.enabled();this.#panel.lang=getLocale();this.#panel.dataset.language=getLocale()==='zh-CN'?'zh':'en';
@@ -120,9 +169,20 @@ export class CodeRainSettingsController {
     }
     const actions:Record<string,readonly [string,string]>={apply:['Apply','应用'],pause:runtime.paused?['Resume','继续']:['Pause','暂停'],reset:['Reset current','重置当前'],save:['Save','保存'],blend:['Start blend','开始渐变'],stop:['Stop blend','停止渐变']};
     for(const button of this.#panel.querySelectorAll<HTMLButtonElement>('[data-rain-action]')){const action=button.dataset.rainAction!;button.textContent=text(...actions[action]!);button.disabled=runtime.pending||(['blend','pause','stop'].includes(action)&&!runtime.enabled)||(action==='stop'&&!runtime.transitionPhase);if(action==='pause')button.setAttribute('aria-pressed',String(runtime.paused));}
-    this.#panel.querySelector('.code-rain-phase')!.textContent=runtime.pausedForFocus?text('Paused while window is inactive','窗口不活动，已暂停'):runtime.transitionPhase?text('Blending · '+runtime.transitionPhase,'渐变中'):'';
+    const phase=this.#panel.querySelector('.code-rain-phase')!,message=this.#blendMessage();
+    if(phase.textContent!==message)phase.textContent=message;
     this.#panel.querySelector('.code-rain-saved')!.textContent=runtime.dirty?text('Unsaved settings','设置未保存'):this.#savedMessage;
     const error=this.#panel.querySelector<HTMLElement>('.code-rain-error')!;error.textContent=runtime.error??runtime.storageError??'';error.hidden=!error.textContent;
+    const appearanceNote = [
+      runtime.usesExistingDark ? text('Uses the current Dark appearance. Rain does not change the Codex theme.','使用当前深色外观。代码雨不会更改 Codex 主题。') : '',
+      runtime.retainedAppearanceLease ? text('An earlier appearance restoration record is kept. Use Codex Appearance to change the theme.','已保留以前的外观恢复记录。请使用 Codex 外观设置更改主题。') : ''
+    ].filter(Boolean).join(' ');
+    const updateStatus = (node: HTMLElement, message: string) => {
+      if (node.textContent !== message) node.textContent = message;
+      node.hidden = !message;
+    };
+    updateStatus(this.#panel.querySelector<HTMLElement>('.code-rain-appearance-note')!, appearanceNote);
+    updateStatus(this.ports.shadow.querySelector<HTMLElement>('.code-rain-appearance-hint')!, runtime.error || appearanceNote);
     this.#panel.setAttribute('aria-busy',String(runtime.pending));this.#button.closest('article')!.setAttribute('aria-busy',String(runtime.pending));
   }
   stop():void{this.close();this.#scope?.abort();this.#scope=undefined;this.#unsubscribe?.();this.#language?.();}

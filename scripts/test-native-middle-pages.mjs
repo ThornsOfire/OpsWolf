@@ -78,5 +78,45 @@ try{
  await ev(`document.querySelector('aside').removeAttribute('data-code-codex-owned');viewer.remove();controller.dispose()`);await delay(120);
  await check('Disposal restores original native header title divider and dimensions',`!document.querySelector('[data-code-codex-middle-owner]')&&!document.querySelector('[data-code-codex-owned="middle-tabs"]')&&getComputedStyle(document.querySelector('#native-divider')).display!=='none'&&getComputedStyle(document.querySelector('#title')).display!=='none'&&!document.querySelector('header').style.getPropertyValue('--cle-middle-new-tab-right')`);
  await check('No browser errors',`errors.length===0`);
- console.log(JSON.stringify({passed:true,checks}));
+ // F38 extension starts only after all original assertions and disposal checks.
+ // Synthetic public title metadata only; no native chat rename/account API.
+ const originalChecks=checks,titleChecks=[];
+ const titleCheck=async(name,expr)=>{titleChecks.push({name,passed:await ev(expr)});};
+ const titleIs=title=>`q('.chat')?.textContent===${JSON.stringify(title)}&&q('select')?.querySelector('option[value="chat"]')?.textContent===${JSON.stringify(title)}`;
+ await ev(`document.querySelector('#title [data-app-shell-titlebar-content]').textContent='Primary conversation';controller.start()`);await delay(150);
+ await titleCheck('Primary tab and chat option display qualified active native title',titleIs('Primary conversation'));
+ await ev(`document.querySelector('#title [data-app-shell-titlebar-content]').firstChild.data='Renamed synthetic conversation'`);await delay(150);
+ await titleCheck('Native title character-data rename refreshes both labels',titleIs('Renamed synthetic conversation'));
+ await ev(`const oldTitle=document.querySelector('#title [data-app-shell-titlebar-content]');const next=document.createElement('span');next.dataset.appShellTitlebarContent='';next.textContent='Replacement synthetic title';oldTitle.replaceWith(next)`);await delay(150);
+ await titleCheck('Native title element replacement refreshes both labels',titleIs('Replacement synthetic title'));
+ await ev(`document.querySelector('#title [data-app-shell-titlebar-content]').textContent='   '`);await delay(150);
+ await titleCheck('Blank native title falls back to Chat in both labels',titleIs('Chat'));
+ await ev(`document.querySelector('#title [data-app-shell-titlebar-content]').textContent='First title';const extra=document.createElement('span');extra.id='ambiguous-title';extra.dataset.appShellTitlebarContent='';extra.textContent='Second title';document.querySelector('#title').append(extra)`);await delay(150);
+ await titleCheck('Ambiguous native title markers fall back to Chat',titleIs('Chat'));
+ await ev(`document.querySelector('#ambiguous-title').remove();document.querySelector('#title [data-app-shell-titlebar-content]').textContent='Restored unique title'`);await delay(150);
+ await titleCheck('Removing ambiguity restores unique active title',titleIs('Restored unique title'));
+ const literalTitle='<img src=x onerror=alert(1)> & synthetic';
+ await ev(`document.querySelector('#title [data-app-shell-titlebar-content]').textContent=${JSON.stringify(literalTitle)}`);await delay(150);
+ await titleCheck('HTML-looking title is literal text in both labels',titleIs(literalTitle));
+ await titleCheck('HTML-looking title creates no owned markup',`q('.chat').children.length===0&&!q('select').querySelector('img,script,svg')`);
+ const longTitle='Long synthetic title '.repeat(40);
+ await ev(`document.querySelector('#title [data-app-shell-titlebar-content]').textContent=${JSON.stringify(longTitle)}`);await delay(150);
+ await titleCheck('Long title retains complete literal label values',titleIs(longTitle.trim()));
+ await titleCheck('Long primary label remains bounded by existing tab width',`rect(q('.chat')).w<=150.5&&rect(q('.chat')).x>=rect(document.querySelector('#toolbar')).x&&rect(q('.chat')).x+rect(q('.chat')).w<=rect(document.querySelector('#toolbar')).x+rect(document.querySelector('#toolbar')).w`);
+ await ev(`document.querySelector('#active').setAttribute('data-app-shell-active-page','false')`);await delay(150);
+ await titleCheck('Inactive page releases primary title presentation',`!q('.chat')&&!document.querySelector('[data-code-codex-middle-owner]')`);
+ await ev(`document.querySelector('#active').setAttribute('data-app-shell-active-page','true');context={threadId:'foreign-title-context',rootPath:'C:/workspace'};controller.dispose();controller.start()`);await delay(150);
+ await titleCheck('Foreign thread context cannot publish a primary title',`!q('.chat')&&!document.querySelector('[data-code-codex-middle-owner]')`);
+ await ev(`context={threadId:'thread123456',rootPath:'C:/workspace'};document.querySelector('#title [data-app-shell-titlebar-content]').textContent='Final qualified title';controller.dispose();controller.start()`);await delay(150);
+ await titleCheck('Matching context restores one correctly titled strip',`${titleIs('Final qualified title')}&&document.querySelectorAll('[data-code-codex-owned="middle-tabs"]').length===1`);
+ await ev(`const sibling=document.createElement('div');sibling.id='foreign-title-container';const marker=document.createElement('span');marker.dataset.appShellTitlebarContent='';marker.textContent='Ambiguous sibling synthetic title';sibling.append(marker);document.querySelector('#toolbar').append(sibling)`);await delay(150);
+ await titleCheck('Separate title containers release adapter and preserve native presentation',`!q('.chat')&&!document.querySelector('[data-code-codex-middle-owner]')&&getComputedStyle(document.querySelector('#title')).display!=='none'&&document.querySelector('#title [data-app-shell-titlebar-content]').textContent==='Final qualified title'&&document.querySelector('#composer').value==='Keep this unsent draft'`);
+ await ev(`document.querySelector('#foreign-title-container').remove()`);await delay(150);
+ await titleCheck('Removing sibling title container restores exact title and one strip',`${titleIs('Final qualified title')}&&document.querySelectorAll('[data-code-codex-owned="middle-tabs"]').length===1&&document.querySelector('#composer').value==='Keep this unsent draft'`);
+ await titleCheck('Title metadata changes preserve composer draft and native ownership',`document.querySelector('#composer').value==='Keep this unsent draft'&&nodes.get('browser-1').button.parentElement===nodes.get('browser-1').tab&&nodes.get('browser-1').panel.parentElement.id==='panels'`);
+ await ev('controller.dispose()');await delay(100);
+ await titleCheck('Title extension disposes without errors or leased controls',`errors.length===0&&!document.querySelector('[data-code-codex-owned="middle-tabs"]')`);
+ const titleFailures=titleChecks.filter(c=>!c.passed).map(c=>c.name);
+ console.log(JSON.stringify({passed:titleFailures.length===0,checks:originalChecks,titleChecks,titleFailures}));
+ assert.deepEqual(titleFailures,[],'F38 native-title fixture assertions');
 }finally{await browser.close();await new Promise(r=>server.close(r));stop()}

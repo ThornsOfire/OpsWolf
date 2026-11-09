@@ -175,8 +175,14 @@ export class ReadingAnchor {
     for (const child of this.scroller.children) this.resize.observe(child);
   }
   private schedule(): void {
-    if (!this.paused || this.disposed || this.frame) return;
-    this.frame = requestAnimationFrame(() => { this.frame = 0; this.restore(); });
+    if (this.disposed || this.frame || !this.paused && !this.following) return;
+    this.frame = requestAnimationFrame(() => {
+      this.frame = 0;
+      if (this.paused) this.restore();
+      // Plain response growth has no activity group to request a follow. Use
+      // the same guarded owner after content/layout changes, never a loop.
+      else if (!this.scroller.ownerDocument.hidden && this.scroller.getBoundingClientRect().height > 0) this.followLatest();
+    });
   }
   private restore(): void {
     if (!this.ports.valid() || !this.scroller.getBoundingClientRect().height) return;

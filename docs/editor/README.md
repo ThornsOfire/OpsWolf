@@ -10,6 +10,8 @@ The **OpsWolf** top menu's **Open GitHub Repository** link targets [our renamed 
 
 The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Hiding it exits fullscreen, so the next E opens it beside chat at its saved width. Open files and the current draft stay in the running session; hiding doesn't save to disk. Selecting the editor's chat tab or using Escape to return to chat also resets fullscreen after the switch is accepted. Cancelling a dirty-file switch leaves the layout intact.
 
+In the current unreleased source, closing an editor stays closed when its pinned files load again in that same window document. Files can load while the pane is hidden; **E** or an explicit file open brings them back. This temporary open/closed choice is separate from saved pins. It is not shared with other windows or preserved after reload/restart. Actual Dot navigation still needs live acceptance.
+
 Use the editor's fullscreen button to expand the editor, and the same button to restore the right pane. Drag the pane's left edge to resize it. The focused resize separator also supports Left/Right arrow keys. The pane preserves a minimum amount of chat space when the window becomes narrow.
 
 In the supported native shell layout, that divider extends through the tab-header band. Native tabs and their controls stay on the middle pane's side, with controls aligned at its right edge. Browser/file panes fit within that middle space rather than covering editor files or the resize handle. Native tab scrolling remains the host's behavior.
@@ -20,6 +22,8 @@ The compact native header is 32 CSS pixels tall; editor tabs and the file-contro
 
 The owned product-menu logo/name use a horizontal row even when native buttons inherit grid styling. In qualified middle-page layouts, the header reserves the measured end controls separately from chat actions and positions New tab by its actual visible bounds; this avoids overlap during Hide/Show tabs and hosted Changes. These source fixes require their matching reviewed build and live acceptance.
 
+Following an accepted message or Jump to latest now continues as ordinary visible reply text grows. Scroll upward to pause and keep reading in place. This uses existing content/layout events; hidden-window catchup without a new event still needs native qualification.
+
 ## Opening and managing files
 
 The explorer normally follows the active local chat’s current working directory. Once Codex reports a changed directory, Refresh, app focus or the visible-chat metadata check (every 15 seconds) can update the tree. An empty destination shows the normal empty-project state. A launcher configured with an explicit workspace keeps that override instead.
@@ -28,11 +32,11 @@ Project display name, linked folder and an existing chat's working directory are
 
 If an editor draft is dirty or saving, the automatic root switch waits. Save or discard the edit, then refresh; the draft stays associated with its original workspace until switching is safe. A failed metadata check preserves the existing root rather than guessing a destination. This behavior requires the matching updated native companion and UI; reloading only the UI cannot fix the older companion’s cached root.
 
-The [middle-page strip](middle-pages.md) keeps primary Chat pinned beside native pages, with one page visible at a time. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
+The [middle-page strip](middle-pages.md) keeps the primary chat pinned beside native pages, with one page visible at a time. Qualified standard shells show the actual chat title, with a compact label and the full name on hover, through accessibility and in the dropdown. Blank/ambiguous title text uses Chat; an ambiguous shell keeps native presentation. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
 
-The explorer footer shows the OpsWolf fork, upstream Code-Codex and attached Codex host package versions. Open Preview Market from the top application menu; the duplicate footer link is removed. The upstream button still checks upstream releases; the fork label is separate. See [versioning](versioning.md) before staging a replacement build or publishing a release.
+The explorer footer shows the OpsWolf fork, upstream Code-Codex and attached Codex host package versions. Open Preview Market from the top application menu; the duplicate footer link is removed. The upstream button checks upstream releases and shows available/held or failed-check feedback beside the versions. Review identifies the exact upstream release, while native enforcement blocks its installer from replacing OpsWolf. OpsWolf updates require the reviewed deployment process and separate explicit activation; host/Store updates are outside this control. See [manual updates](manual-updates.md). See [versioning](versioning.md) before staging a replacement build or publishing a release.
 
-Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width.
+Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width. In supported narrow drawer layouts, the compact arrow follows the content boundary and leaves native Home clickable, including at different zoom levels. When expanded, the narrow drawer fits the qualified content area below the native menu, even in short windows or at different zoom levels. Its visible width can shrink to fit without changing your saved width. Bounds refresh on qualified main-size changes and are released on collapse, wide layout, main replacement or disposal. Unrecognized main layouts keep the legacy fallback; native-version acceptance stays separate.
 
 The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, the header **E**, and our editor controls use rounded bubble tooltips styled after native Codex. Hover briefly or focus a control with the keyboard to show its tooltip; Escape dismisses it. Editor labels follow the current action, such as Expand/Restore and Enable/Disable wrap. Native comparison controls and document links retain their existing tooltips.
 
@@ -56,9 +60,23 @@ Closing a pinned tab individually keeps its pin for next session. **Unpin** remo
 
 Dragging an explorer file into chat supplies its absolute local path in the text payload. Internal tree moves keep their separate relative-path payload. The drag operation doesn't automatically give the agent the file's contents.
 
+## Background settings
+
+The sliders button at the top of the explorer opens the active Rain settings directly. It uses the same settings panel and explicit Save as Preview Market; opening it does not enable an effect or save anything. Escape or Close returns focus to the header. Direct Rain settings stay open and reposition while resizing; collapsing/hiding the explorer closes the panel.
+
+Other identified supported backgrounds open their existing card in Preview Market so you can use its normal settings button. No hidden Enable action is clicked. Applying states wait for completion; multiple, unknown, failed or unverified custom states use an honest browse/selection context. Full direct opening of every legacy panel is outside this first version. These source/synthetic results need their matching reviewed build and native acceptance.
+
+## Rain blend status
+
+The blend status names the captured start and destination, including the return direction and holds. Changing the preset dropdown chooses the next destination without renaming a running blend. Unmatched edited settings say Current/custom settings. Finished, stopped and no-blend states remain explicit, alongside any pause reason. Save keeps the current appearance; it does not save blend playback/options. These are unreleased source changes pending a matching build and native checks.
+
+## Dot background
+
+Code Rain also supports the qualified embedded messaging surface used by Dot when the Rain canvas is already in that document. It clears the chat backing while keeping the composer, messages and controls readable. Use the existing Rain enable/disable controls; forced colors and reduced transparency keep opaque native backings. Detached windows and unknown layouts need separate qualification. See [scope and verification limits](dot-background.md).
+
 ## Preview, edit, save
 
-**Preview** is read-only. **Edit** enables source editing when the native reader marks the file editable. **Save**, or **Ctrl+S**, writes the complete draft using the loaded file version for conflict detection.
+**Preview** is read-only. **Edit** enables source editing when the native reader marks the file editable. **Save**, or **Ctrl+S**, writes the complete draft using the loaded file version for conflict detection. Delayed file notifications are checked against that version, so the editor can distinguish its own completed save from a real external change. If verification fails or the file changed elsewhere, your draft stays intact and the conflicting version is not silently accepted for the next save.
 
 Read-only text shows a red warning in place of the unavailable mode buttons. Hover or focus it for the reason and next step. A file mixing Windows CRLF and Unix LF line endings is read-only to avoid silently rewriting its formatting. Normalize its line endings consistently in an external editor, then close/reopen it here. Larger files and unverified versions retain their existing restrictions; this UI does not override the workspace reader's save policy. The warning follows the theme's error/deletion color and system high-contrast colors.
 

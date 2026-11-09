@@ -27,12 +27,26 @@ export const style4 = String.raw`  .statusbar {
   }
   .fork-version, .codex-version { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 
+  .update-indicator {
+    flex:0 1 auto; min-width:0; max-width:100%; overflow-wrap:anywhere;
+    border:1px solid var(--cle-rule); border-radius:5px; padding:2px 5px;
+    background:var(--cle-paper); color:var(--cle-muted); font:inherit; cursor:pointer;
+  }
+  .update-indicator[data-update-state="updateAvailable"] { color:var(--cle-ink); border-color:var(--cle-focus); }
+  .update-indicator[data-update-state="error"] { color:var(--cle-ink); border-style:dashed; }
+  .update-indicator:focus-visible { outline:2px solid var(--cle-focus); outline-offset:1px; }
+  .update-message { overflow-wrap:anywhere; }
+  .update-message p { margin:8px 0; }
+  .update-message a { color:var(--cle-focus); }
+  .update-warning { border-inline-start:2px solid var(--cle-focus); padding-inline-start:6px; }
   .update-popover {
     position: absolute;
     right: 8px;
     bottom: calc(100% + 8px);
     z-index: 21;
-    width: min(276px, calc(100% - 16px));
+    width: min(390px, calc(100% - 16px));
+    max-height: min(570px, calc(100vh - 100px));
+    overflow-y: auto;
     padding: 13px;
     color: var(--cle-ink);
     background: var(--cle-paper-raised);
@@ -69,6 +83,7 @@ export const style4 = String.raw`  .statusbar {
   }
   .update-actions {
     display: flex;
+    flex-wrap: wrap;
     justify-content: flex-end;
     gap: 7px;
   }

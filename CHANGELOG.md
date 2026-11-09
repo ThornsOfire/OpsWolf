@@ -10,6 +10,18 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- An offline startup-status helper summarizes one explicitly selected runtime log when the OpsWolf menu is unavailable. See the [startup status guide](docs/startup-status.md).
+
+- Background settings in the explorer header opens active Rain directly, with the existing panel, draft and Save controls. Other identified supported backgrounds open their existing Preview Market card; unknown, unverified custom or multiple states use an honest browse context. Keyboard/Close/Escape focus returns to the visible opener, and direct Rain settings stay open while resizing.
+
+- Rain blend status shows both captured endpoints, current direction and honest custom/finished/stopped states. Inactive-window/manual pause feedback stays visible, including outside an active blend; Save still stores the current appearance only.
+
+- Qualified native middle tabs show the actual chat title, with compact ellipsis and the complete name in hover/accessibility/dropdown text. Title changes keep navigation and focus stable; ambiguous structures retain native presentation.
+
+- Code Rain can show through the qualified active embedded messaging surface used by Dot when its existing canvas shares that document. Only qualified chat backings are cleared; the main mask, native avatar/message/composer controls and input remain native. Disabled Rain, forced colors, reduced transparency and unknown/inactive layouts retain their original appearance. No extra renderer or native-window opacity hook is added.
+
+- Update review beside footer versions shows upstream availability, check time and validated release/installer identity when available. The native companion blocks upstream setup before download or launch because it can replace OpsWolf; fork deployment still requires a separately reviewed exact build and rollback. Official Codex/Store and external plugin updates are explicitly outside this control.
+
 - Explorer footer identifies the attached Codex host package separately from OpsWolf and upstream Code-Codex, with an explicit unavailable state. Preview Market is accessed through the top application menu instead of a duplicate footer button.
 
 - Code Rain pauses animation and blends while its window is inactive by default, with a Save-controlled opt-out. Returning focus preserves manual Pause; older saved settings default to this behavior.
@@ -18,7 +30,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 - Separate Cursadex development version in the explorer footer alongside the inherited upstream version. Fork identity starts at `0.1.0-dev.1` in `cursadex-version.json`; the upstream update action, package/plugin versions and protocol identities remain separate. See the [versioning workflow](docs/editor/versioning.md).
 
-- Recognized running activity has a fixture-tested adapter to open available native tool disclosures and follow new entries through the shared reading controller. Owner testing confirms following and scroll-to-pause, but automatic disclosure expansion is failing in the current live host and remains unresolved. Manual collapse and native completion remain owned by Codex; unknown/localized layouts stay native.
+- Recognized running activity has a fixture-tested adapter to open available native tool disclosures and follow new entries through the shared reading controller. Owner testing confirms following and scroll-to-pause, but automatic disclosure expansion failed in the owner-tested host. A later source repair covers composer replacement; the original live report still awaits acceptance. Manual collapse and native completion remain owned by Codex; unknown/localized layouts stay native.
 
 - Personal identity profiles in the owned settings panel: local PNG logo, display name and name-badge colors, with draft preview, explicit next-launch save, default/reset and up to eight personal profiles. Saved changes leave the current renderer identity intact. Windows names/icons, shortcuts and Discord identity remain unchanged; see the [scope matrix](docs/editor/identity.md).
 
@@ -71,6 +83,40 @@ This initial record was reconstructed from the fork's commits and checked implem
 - The native Codex sidebar waits for your first chat selection before collapsing once per launch. Startup, project browsing and automatic chat restoration leave its native state alone. Manually toggling it opts out of further automatic collapse; the explorer has independent controls. ([initial sidebar behavior](https://github.com/ThornsOfire/OpsWolf/commit/52eeb34))
 
 ### Fixed
+
+- The explorer retries the initial workspace lookup when a new local chat appears before its folder metadata is ready.
+
+- Code Rain can run on the Dark appearance already applied by Codex when automatic appearance control is unavailable. Choose Dark in Codex first, then Enable Rain. Rain leaves the native setting and any earlier restoration record intact. Its card explains when Dark is needed and when it is using the existing appearance.
+
+- Code Rain waits for the window to finish applying a confirmed Dark setting. It no longer sends a duplicate request while the window catches up.
+
+- Window and tab clicks outside the chat composer skip the send detector transcript scan. Composer clicks still use the current conversation and accepted-message checks.
+
+- Code Rain releases the background controls if Codex never answers an appearance read during Enable or Disable. A late reply cannot resume the failed action. If the previous theme could not be restored, Code Rain keeps its restoration record so Disable can be retried.
+
+- Running activity resolves the current qualified composer after native composer replacement, so new tool disclosures can still open without resetting manual-collapse choices, retired turns or paused reading. Native-host acceptance remains pending.
+
+- Expanded file-tree drawers stay inside the qualified content area in narrow windows, including short windows and zoomed views. The native menu remains accessible; the collapsed arrow and saved panel width keep their existing behavior. Unknown layouts retain their previous fallback.
+
+- The local deployment source inventory includes new Rust modules and integration tests, alongside tracked source, so a staged build retains the regression that qualified its transport repair.
+
+- Oversized native Changes-history replies are rejected without stopping the shared App Server response reader, so later project-folder lookups can still complete. The four-MiB frame limit remains; no partial history is presented as complete. New requests after a closed response stream is detected fail promptly. Concurrent reads present when an uncorrelatable oversized frame is rejected may also need a manual retry.
+
+- Settled Rain progress updates no longer replay unrelated background/settings and package-market controls. Rain feedback stays live; loading/download ownership and changed control state retain full refreshes. This reduces tested UI work without changing renderer quality, settings or claiming a native FPS/hitch fix.
+
+- Following an accepted send or Jump to latest continues through ordinary visible response growth. Scrolling up still pauses reading; no background follow loop is added.
+
+- A chat's explicitly closed editor stays closed during automatic pin restoration in the same window document. Explicit E/file actions reopen it; files, pins and drafts keep their existing ownership. Open/close intent is bounded session state, without restart or cross-window persistence.
+
+- In supported narrow layouts, the collapsed explorer arrow sits on the content side of native navigation instead of covering part of Home. Pointer and keyboard controls retain native handlers; the wide strip is unchanged.
+
+- Editor-divider dragging coalesces intermediate widths at the display frame, then flushes the final width before saving. Other pointers cannot finish the drag, and hiding, suspending, moving or disconnecting the pane cancels pending work. Keyboard resizing stays immediate. Native browser bounds updates retain their notifications without rebuilding unchanged explorer rows; the reported live hitch still needs verification.
+
+- Accepted chat sends can resume following when native rendering reuses a message bubble with a new stable identity. Same-message rerenders, history loads and later user scrolling remain guarded. Rich-editor fixture coverage includes both message/composer commit orders; native-host acceptance remains pending.
+
+- Qualified Dot chat transparency also clears its direct inner body pane, which previously remained solid after the outer wrappers became transparent. Native avatar/cards/composer, active-layout/media guards and Rain-off restoration retain their existing behavior.
+
+- Saving an edited file reconciles delayed notifications for its own write instead of raising a false disk-change warning. Real external changes and failed verification keep the draft and its expected version; a conflict discovered during saving no longer makes a retry silently adopt the external version.
 
 - Appearance discovery skips individual host functions that cannot be inspected, and invokes callable RPC methods through the intrinsic without looking up their synthesized `.call`/`.apply` properties. A whole-explorer regression covers persisted Rain selection, a prior theme lease, normal market clicks and repeated theme restoration. Alpha.2 failed owner testing on these host edge cases; replacement source remains subject to new live acceptance.
 

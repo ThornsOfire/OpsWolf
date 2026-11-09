@@ -174,9 +174,15 @@ pub struct ThreadWorkspace {
 
 type DynWriter = Box<dyn AsyncWrite + Unpin + Send>;
 
+#[derive(Default)]
+struct PendingRequests {
+    entries: HashMap<u64, oneshot::Sender<Result<Value, ResolverError>>>,
+    terminal: Option<ResolverError>,
+}
+
 struct Inner {
     writer: Mutex<DynWriter>,
-    pending: Mutex<HashMap<u64, oneshot::Sender<Result<Value, ResolverError>>>>,
+    pending: Mutex<PendingRequests>,
     next_id: AtomicU64,
     timeout: Duration,
     notifications: broadcast::Sender<Value>,
@@ -296,7 +302,7 @@ impl AppServerClient {
         let lifetime_guard = Arc::new(StdMutex::new(guard));
         let inner = Arc::new(Inner {
             writer: Mutex::new(Box::new(writer)),
-            pending: Mutex::new(HashMap::new()),
+            pending: Mutex::new(PendingRequests::default()),
             next_id: AtomicU64::new(1),
             timeout: DEFAULT_REQUEST_TIMEOUT,
             notifications,
@@ -421,7 +427,13 @@ impl AppServerClient {
         }
         encoded.push(b'\n');
         let (sender, receiver) = oneshot::channel();
-        self.inner.pending.lock().await.insert(id, sender);
+        {
+            let mut pending = self.inner.pending.lock().await;
+            if let Some(error) = &pending.terminal {
+                return Err(error.clone());
+            }
+            pending.entries.insert(id, sender);
+        }
         let write_result = async {
             let mut writer = self.inner.writer.lock().await;
             writer.write_all(&encoded).await?;
@@ -430,14 +442,14 @@ impl AppServerClient {
         .await;
         if let Err(e)=write_result {
             diagnostic("request write","failed",json!({"requestNumber":id,"ioKind":format!("{:?}",e.kind()),"osErrorCode":e.raw_os_error()}));
-            self.inner.pending.lock().await.remove(&id);
+            self.inner.pending.lock().await.entries.remove(&id);
             return Err(ResolverError::Io.context("writing App Server request", format!("requestNumber={id}; ioKind={:?}; osCode={:?}; cause={e}",e.kind(),e.raw_os_error())));
         }
         match tokio::time::timeout(self.inner.timeout, receiver).await {
             Ok(Ok(result)) => result,
             Ok(Err(error)) => Err(ResolverError::Io.context("waiting for App Server reply", format!("requestNumber={id}; response channel closed; cause={error}"))),
             Err(_) => {
-                self.inner.pending.lock().await.remove(&id);
+                self.inner.pending.lock().await.entries.remove(&id);
                 Err(ResolverError::Timeout.context("waiting for App Server reply", format!("requestNumber={id}; timeoutMs={}",self.inner.timeout.as_millis())))
             }
         }

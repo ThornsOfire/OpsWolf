@@ -47,6 +47,39 @@ export class PreviewEditingController {
   reportConflict(message:string):void { this.drafts.error=message; }
   readonly drafts = new DraftStore();
   constructor(private readonly host: PreviewEditingControllerPorts) { }
+  async reconcileModifiedPreview(tab: PreviewTab): Promise<void> {
+    const bridge=this.host.bridge,context=this.host.context,mainPreview=this.host.mainPreview;
+    if(!this.host.connected||this.host.dismissed||!this.host.previewTabs.includes(tab)||this.drafts.path!==tab.path||this.drafts.saving) return;
+    const baseline=tab.view;
+    const generation=this.host.generation,sessionRevision=this.host.previewSessionRevision;
+    const instanceId=tab.instanceId,path=tab.path,editSession=this.drafts.session,revision=tab.revision;
+    if(!bridge?.available||!context||!mainPreview?.isConnected) {
+      this.reportConflict("This file changed on disk and could not be verified. Your draft has been kept. Reload it before saving.");
+      this.host.syncMainPreview();
+      return;
+    }
+    const current=(): boolean => bridge.available&&mainPreview.isConnected&&!this.drafts.saving&&
+      tab.revision===revision&&tab.view===baseline&&
+      this.canApplyEditSave(tab,bridge,context,mainPreview,generation,sessionRevision,instanceId,path,editSession);
+    try {
+      const raw=await bridge.request<unknown>("explorer.preview",{relativePath:path});
+      if(!current()) return;
+      const preview=normalizePreview(raw);
+      // Watch events have no writer identity. Compare content versions rather
+      // than treating a delayed notification for our own save as a conflict.
+      if(preview.kind==="text"&&isEditablePreview(baseline)&&baseline.version&&preview.version===baseline.version) {
+        tab.dirty=false;
+      } else {
+        this.reportConflict("This file changed on disk. Reload it before saving.");
+      }
+      this.host.syncMainPreview();
+    } catch(error) {
+      if(!current()) return;
+      recordCaughtRuntimeError("#reconcileModifiedPreview",error);
+      this.reportConflict("This file changed on disk and could not be verified. Your draft has been kept. Reload it before saving.");
+      this.host.syncMainPreview();
+    }
+  }
   toggleEditing(): void {
     if(this.drafts.saving) return;
     if(this.drafts.path) {
@@ -224,8 +257,9 @@ export class PreviewEditingController {
         throw new ExplorerBridgeError({ code: "INVALID_REQUEST",message: "The verification preview response was not valid." });
       }
       if(current.version!==saved.version) {
-        tab.view=this.host.previewView(tab,current);
-        tab.dirty=false;
+        // An observed external version is not permission to overwrite it on
+        // retry. Keep the editing baseline until the user explicitly reloads.
+        tab.dirty=true;
         tab.modifiedDuringSave=false;
         this.drafts.saving=false;
         this.drafts.error="This file changed on disk while it was being saved. Your draft has been kept.";

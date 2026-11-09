@@ -1,3 +1,5 @@
+import { clearDocumentEditorVisibility } from "../features/preview/editor-visibility";
+import { isNativeBrowserGeometryResize } from "../features/preview/native-browser-geometry";
 import {mountNovaRestore} from '../features/nova-restore';
 import { ChangeReviewController } from "../features/workspace/change-review";
 import { nativeReviewRevisions } from "../features/workspace/native-review-revisions";
@@ -17,6 +19,7 @@ import {CODE_RAIN_PLUGIN_ID} from '../effects/code-rain/model';
 import {getCodeRainBackgroundController} from '../plugin-host/backgrounds/code-rain-native';
 import {CodeRainSettingsController,codeRainCardMarkup,codeRainPanelMarkup} from '../features/plugin-settings/code-rain';
 import type { WorkspaceBridge } from "../contracts/bridge";
+import {BackgroundSettingsShortcut,type BackgroundSettingsShortcutInput} from '../features/plugin-settings/background-settings-shortcut';
 import { BackgroundActions } from "../core/appearance/background-actions";
 import { AppearanceCoordinator } from '../core/lifecycle/appearance-coordinator';
 import { PanelCoordinator } from "../core/lifecycle/panel-coordinator";
@@ -50,7 +53,7 @@ import { NativeWindowBackground } from "../host/native-surfaces/native-window-ba
 import { requireConstructor } from '../plugin-host/api1';
 // Domain extracted from the original explorer composition; behavior and storage contracts retained.
 import { type CustomBackground } from "../../plugins/appearance/custom-background/controller";
-import { ActiveThreadTracker } from "../active-thread";
+import { ActiveThreadTracker, resolveActiveThread } from "../active-thread";
 import { MAIN_SURFACE_SELECTOR,activePageElements } from "../adapters/codex-26.715";
 import { BackgroundPackageMarket } from "../background-package-market";
 import { backgroundModule,connectBackgroundPackages } from "../background-plugin-runtime";
@@ -62,9 +65,10 @@ import { type BackgroundSettingsLanguage,type BlackHoleColorSettingKey,type Blac
 import { asRecord,errorCode,isTransientBootstrapError,normalizeChange,normalizeContext,normalizeHeaderLabel,normalizeList,normalizeSettings } from "../core/bridge/response-validation";
 import { ACTION_NOTICE_DURATION_MS,APPEARANCE_PLUGIN_IDS,APPEARANCE_PLUGIN_SETTINGS_KEY,AURORA_IONOSPHERE_BACKGROUND_PLUGIN_ID,AURORA_IONOSPHERE_NUMERIC_CONTROL_DEFINITIONS,BLACK_HOLE_BACKGROUND_PLUGIN_ID,BLACK_HOLE_BACKGROUND_PRESETS,BLACK_HOLE_NUMERIC_CONTROL_DEFINITIONS,BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,BOOTSTRAP_RETRY_DELAY_MS,CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,DEFAULT_SETTINGS,FORCED_COLORS_QUERY,GLOW_HORIZON_BACKGROUND_PLUGIN_ID,GLOW_HORIZON_NUMERIC_CONTROL_DEFINITIONS,HEAVENLY_CLOUD_BACKGROUND_PLUGIN_ID,HEAVENLY_CLOUD_NUMERIC_CONTROL_DEFINITIONS,MAX_WIDTH,MILKY_WAY_BACKGROUND_PLUGIN_ID,MIN_WIDTH,MOUNTAIN_BACKGROUND_PLUGIN_ID,PAGE_SIZE,PARTICLE_BACKGROUND_PLUGIN_ID,PARTICLE_IMAGE_TRANSFORM_CONTROL_DEFINITIONS,PARTICLE_NUMERIC_CONTROL_DEFINITIONS,PIXEL_SCULPT_BACKGROUND_PLUGIN_ID,PREVIEWER_DEFINITIONS,PREVIEWER_IDS,PREVIEWER_SETTINGS_KEY,REDUCED_TRANSPARENCY_QUERY,SETTINGS_KEY,TRANSPARENT_BACKGROUND_ATTRIBUTE,TRANSPARENT_BACKGROUND_HEALTH_INTERVAL_MS,TRANSPARENT_BACKGROUND_PLUGIN_ID } from "../core/configuration/explorer";
 import { MAIN_PREVIEW_TAG } from "../core/preview/configuration";
-import { readParticleThemeLease,transferParticleThemeLease } from "../host/appearance/theme-lease";
+import { prepareParticleThemeTransfer,readParticleThemeLease,transferParticleThemeLease } from "../host/appearance/theme-lease";
 import { WindowTransparencyResult,transparencyActionError,validateTransparencyResult } from "../host/native-surfaces/window-result";
 import { localizeOwnedUi,parameterLanguage,subscribeLanguage } from "../i18n";
+import { isHomeWorkspaceView } from "../home-view";
 import { icons } from "../icons";
 import { cloneParticleMorphCurve,normalizeParticleSettings } from "../particle-image-startup";
 import { getAuroraIonosphereBackgroundController } from "../plugin-host/backgrounds/aurora-ionosphere";
@@ -91,6 +95,17 @@ import { parentPath } from "../tree-model";
 import { applyTransparentPresentation,clearTransparentPresentation,transparentPresentation } from "../utility-plugin-facade";
 import { VersionFeedback } from "../version-feedback";
 import { CodeCodexMainPreviewElement,registerMainPreviewElement } from "./main-preview-element";
+interface RainMarketControls {
+    readonly selected: boolean;
+    readonly enabled: boolean;
+    readonly pending: boolean;
+    readonly error: string | undefined;
+    readonly externalStop: boolean;
+    readonly busy: boolean;
+    readonly transitionPending: boolean;
+    readonly pluginPending: boolean;
+}
+
 export class CodeCodexElement extends HTMLElement {
     #nativeWindowBackgroundValue:NativeWindowBackground|undefined;
     get #nativeWindowBackground():NativeWindowBackground {
@@ -109,7 +124,7 @@ export class CodeCodexElement extends HTMLElement {
 
     #previewWorkspaceValue: PreviewWorkspaceController | undefined;
     get #previewWorkspace(): PreviewWorkspaceController {
-      if(!this.#previewWorkspaceValue){const owner=this;this.#previewWorkspaceValue=new PreviewWorkspaceController({element:owner,collapse:collapsed=>owner.collapse(collapsed),reportEditingConflict:message=>owner.#previeweditingSettings.reportConflict(message),
+      if(!this.#previewWorkspaceValue){const owner=this;this.#previewWorkspaceValue=new PreviewWorkspaceController({element:owner,collapse:collapsed=>owner.collapse(collapsed),reconcileEditingModification:tab=>{void owner.#previeweditingSettings.reconcileModifiedPreview(tab);},
         get state(){return owner.#state;},
         get context(){return owner.#workspaceSession.context;},
         get bridge(){return owner.#workspaceSession.bridge;},
@@ -209,6 +224,11 @@ export class CodeCodexElement extends HTMLElement {
           },
           reconcileNative:()=>this.#reconcilePersistedWindowTransparency(),
           transferTheme:id=>{const target=entries.find(entry=>entry.id===id)?.id;const lease=readParticleThemeLease();if(lease?.owner&&target&&lease.owner!==target)transferParticleThemeLease(lease.owner,target);},
+          prepareThemeTransfer:(id,outgoing)=>{
+            const target=entries.find(entry=>entry.id===id)?.id;
+            if(!target)throw Error('Unknown background for Appearance restoration');
+            return prepareParticleThemeTransfer(target,outgoing);
+          },
           committed:()=>{
             if(entries.some(entry=>entry.runtime.enabled)){
               this.#enabledAppearancePlugins.delete(TRANSPARENT_BACKGROUND_PLUGIN_ID);
@@ -257,7 +277,7 @@ export class CodeCodexElement extends HTMLElement {
     #updatesSettingsValue: UpdatesController | undefined;
     get #updatesSettings(): UpdatesController { if (!this.#updatesSettingsValue) {
         const owner = this;
-        this.#updatesSettingsValue = new UpdatesController({ get versionFeedback() { return owner.#versionFeedback; }, get actionNotice() { return owner.#actionNotice; }, hideActionNotice: (...args) => owner.#hideActionNotice(...args), get state() { return owner.#state; }, get bridge() { return owner.#workspaceSession.bridge; }, renderStatus: (...args) => owner.#renderStatus(...args), showActionNotice: (...args) => owner.#showActionNotice(...args), showActionProgress: (...args) => owner.#showActionProgress(...args), get connected() { return owner.#connected; }, closePreviewMarket: (...args) => owner.#closePreviewMarket(...args), get updateMessage() { return owner.#updateMessage; }, get updatePopover() { return owner.#updatePopover; }, get statusCode() { return owner.#statusCode; }, get updateInstallButton() { return owner.#updateInstallButton; }, get updateLaterButton() { return owner.#updateLaterButton; }
+        this.#updatesSettingsValue = new UpdatesController({ get versionFeedback() { return owner.#versionFeedback; }, get actionNotice() { return owner.#actionNotice; }, hideActionNotice: (...args) => owner.#hideActionNotice(...args), get state() { return owner.#state; }, get bridge() { return owner.#workspaceSession.bridge; }, renderStatus: (...args) => owner.#renderStatus(...args), showActionNotice: (...args) => owner.#showActionNotice(...args), showActionProgress: (...args) => owner.#showActionProgress(...args), get connected() { return owner.#connected; }, closePreviewMarket: (...args) => owner.#closePreviewMarket(...args), get updateMessage() { return owner.#updateMessage; }, get updatePopover() { return owner.#updatePopover; }, get statusCode() { return owner.#statusCode; }, get updateInstallButton() { return owner.#updateInstallButton; }, get updateLaterButton() { return owner.#updateLaterButton; }, get updateCheckButton() { return owner.#required<HTMLButtonElement>(".update-check"); }, get updateIndicator() { return owner.#required<HTMLButtonElement>(".update-indicator"); }, get codexVersion() { return owner.#codexVersion; }
         });
     } return this.#updatesSettingsValue; }
     #auroraionosphereSettingsValue: AuroraIonosphereSettingsController | undefined;
@@ -340,6 +360,7 @@ export class CodeCodexElement extends HTMLElement {
     readonly #codeRainRuntime=getCodeRainBackgroundController();
     readonly #codeRainSettings:CodeRainSettingsController;
     #codeRainUnsubscribe:(()=>void)|undefined;
+    #codeRainMarketControls: RainMarketControls | undefined;
     #codeRainInitialization:Promise<void>|undefined;
     readonly #asciiTilesRuntime=getAsciiTilesBackgroundController();
     readonly #asciiTilesSettings:AsciiTilesSettingsController;
@@ -356,6 +377,8 @@ export class CodeCodexElement extends HTMLElement {
     #themeObserver: MutationObserver | undefined;
     #mountObserver: MutationObserver | undefined;
     #resizeObserver: ResizeObserver | undefined;
+    #drawerBoundsObserver: ResizeObserver | undefined;
+    #drawerBoundsSurface: HTMLElement | undefined;
     #persistTimer: ReturnType<typeof setTimeout> | undefined;
     #refreshCommit: Promise<void> = Promise.resolve();
     #refreshRevision = 0;
@@ -589,6 +612,7 @@ export class CodeCodexElement extends HTMLElement {
             <div class="root-label">Waiting for local task</div>
           </div>
           <div class="masthead-actions">
+            <button class="icon-button background-settings-shortcut" type="button" aria-label="Background settings" aria-haspopup="dialog" aria-controls="cle-code-rain-settings cle-preview-market" aria-expanded="false">${icons.sliders}</button>
             <button class="icon-button refresh" type="button" data-tooltip="Refresh visible directories" aria-label="Refresh visible directories">${icons.refresh}</button>
             <button class="icon-button collapse" type="button" data-tooltip="Collapse explorer" aria-label="Collapse explorer">${icons.collapse}</button>
             <button class="icon-button disable" type="button" data-tooltip="Hide until a conversation is selected" aria-label="Hide Code-Codex until a conversation is selected">${icons.close}</button>
@@ -632,14 +656,16 @@ export class CodeCodexElement extends HTMLElement {
             </div>
           </div>
           <div class="update-popover" id="cle-update-dialog" role="dialog" aria-modal="false" aria-labelledby="cle-update-title" aria-describedby="cle-update-message" hidden>
-            <h3 id="cle-update-title">Code-Codex update available</h3>
-            <p class="update-message" id="cle-update-message"></p>
+            <h3 id="cle-update-title" data-i18n-skip>Update review</h3>
+            <div class="update-message" id="cle-update-message" data-i18n-skip></div>
             <div class="update-actions">
-              <button class="update-later" type="button">Later</button>
-              <button class="update-install" type="button">Update</button>
+              <button class="update-check" type="button" data-i18n-skip>Check again</button>
+              <button class="update-later" type="button" data-i18n-skip>Keep pending / Close</button>
+              <button class="update-install" type="button" data-i18n-skip disabled>Installer blocked</button>
             </div>
           </div>
           <div class="build-versions" aria-label="Build versions">
+            <button class="update-indicator" type="button" data-i18n-skip aria-label="Review update availability and control limits" aria-haspopup="dialog" aria-controls="cle-update-dialog" aria-expanded="false">Review updates</button>
             <span class="codex-version" data-i18n-skip>Codex version unavailable</span>
             <span class="fork-version" data-i18n-skip title="${PRODUCT_NAME} development build; fork updates are managed separately">${PRODUCT_NAME} v${CURSADEX_VERSION}</span>
             <button class="status-code" type="button" title="Check GitHub for upstream updates" aria-label="Check GitHub for upstream updates" aria-haspopup="dialog" aria-controls="cle-update-dialog" aria-expanded="false">WAIT</button>
@@ -861,10 +887,24 @@ export class CodeCodexElement extends HTMLElement {
     #nativeDiffHost:NativeDiffHost|undefined;
     #novaRestoreDispose: (() => void) | undefined;
     #nativeMiddlePages:NativeMiddlePages|undefined;
+    #backgroundSettingsShortcut:BackgroundSettingsShortcut|undefined;
     connectedCallback(): void {
         if (this.#connected)
             return;
         this.#connected = true;
+        this.#backgroundSettingsShortcut?.dispose();
+        this.#backgroundSettingsShortcut=new BackgroundSettingsShortcut({
+            button:this.#required<HTMLButtonElement>('.background-settings-shortcut'),
+            read:()=>this.#readBackgroundSettingsShortcut(),
+            openDirect:(id,opener)=>{
+                if(id!==CODE_RAIN_PLUGIN_ID||!this.#usableSettingsFocus(opener)||!this.#connected||this.#dismissed||!this.#codeRainRuntime.enabled||this.#backgroundActions.busy)return false;
+                if(this.#previewMarketOpen)this.#closePreviewMarket(false);
+                this.#customBackground?.close();
+                return this.#codeRainSettings.show(opener);
+            },
+            openMarket:(id,opener)=>this.#openBackgroundMarketContext(id,opener),
+            notice:message=>this.#showActionNotice(message,'error'),
+        });
         this.#novaRestoreDispose?.();
         this.#novaRestoreDispose = mountNovaRestore(this.#required<HTMLElement>('.masthead-actions'), this.ownerDocument);
         const owner=this;
@@ -1060,6 +1100,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#particleSettings.renderParticleBackgroundPlugin();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#particleBackgroundInitialization = this.#particleSettings.initializeParticleBackground(appearanceInitializationGeneration);
         this.#blackHoleBackgroundUnsubscribe?.();
@@ -1071,6 +1112,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#blackholeSettings.renderBlackHoleBackgroundPlugin();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#blackHoleBackgroundInitialization = this.#particleBackgroundInitialization
             .then(() => this.#blackholeSettings.initializeBlackHoleBackground(appearanceInitializationGeneration));
@@ -1083,6 +1125,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#glowhorizonSettings.renderGlowHorizonBackgroundPlugin();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#glowHorizonBackgroundInitialization = this.#blackHoleBackgroundInitialization
             .then(() => this.#glowhorizonSettings.initializeGlowHorizonBackground(appearanceInitializationGeneration));
@@ -1095,6 +1138,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#heavenlycloudSettings.renderHeavenlyCloudBackgroundPlugin();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#heavenlyCloudBackgroundInitialization = this.#glowHorizonBackgroundInitialization
             .then(() => this.#heavenlycloudSettings.initializeHeavenlyCloudBackground(appearanceInitializationGeneration));
@@ -1108,6 +1152,7 @@ export class CodeCodexElement extends HTMLElement {
             }
             this.#auroraionosphereSettings.renderAuroraIonosphereBackgroundPlugin();
             this.#milkywaySettings.renderMilkyWayBackgroundPlugin();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#auroraIonosphereBackgroundInitialization = this.#heavenlyCloudBackgroundInitialization
             .then(() => this.#auroraionosphereSettings.initializeAuroraIonosphereBackground(appearanceInitializationGeneration));
@@ -1120,6 +1165,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#milkywaySettings.renderMilkyWayBackgroundPlugin();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#milkyWayBackgroundInitialization = this.#auroraIonosphereBackgroundInitialization
             .then(() => this.#milkywaySettings.initializeMilkyWayBackground(appearanceInitializationGeneration));
@@ -1131,6 +1177,7 @@ export class CodeCodexElement extends HTMLElement {
             }
             this.#mountainSettings.renderMountain();
             this.#cloudtrainSettings.renderCloudTrain();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#mountainInitialization = this.#milkyWayBackgroundInitialization!.then(()=>this.#backgroundActions.initialize(MOUNTAIN_BACKGROUND_PLUGIN_ID,appearanceInitializationGeneration));
         this.#mountainSettings.bindMountain();
@@ -1141,6 +1188,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#cloudtrainSettings.renderCloudTrain();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#cloudTrainInitialization = this.#mountainInitialization!.then(()=>this.#backgroundActions.initialize(CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,appearanceInitializationGeneration));
         this.#cloudtrainSettings.bindCloudTrain();
@@ -1151,6 +1199,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#pixelsculptSettings.renderPixelSculpt();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#pixelSculptInitialization = this.#cloudTrainInitialization!.then(()=>this.#backgroundActions.initialize(PIXEL_SCULPT_BACKGROUND_PLUGIN_ID,appearanceInitializationGeneration));
         this.#pixelsculptSettings.bindPixelSculpt();
@@ -1161,6 +1210,7 @@ export class CodeCodexElement extends HTMLElement {
                 this.#writeEnabledAppearancePlugins();
             }
             this.#blinkingsquaresSettings.renderBlinkingSquares();
+            this.#backgroundSettingsShortcut?.refresh();
         });
         this.#blinkingSquaresInitialization = this.#pixelSculptInitialization!.then(()=>this.#backgroundActions.initialize(BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,appearanceInitializationGeneration));
         this.#blinkingsquaresSettings.bindBlinkingSquares();
@@ -1170,7 +1220,8 @@ export class CodeCodexElement extends HTMLElement {
         this.#asciiTilesUnsubscribe?.();
         this.#asciiTilesUnsubscribe=this.#asciiTilesRuntime.subscribe(()=>{if(!this.#connected)return;if(this.#asciiTilesRuntime.stoppedForExternalThemeChange&&this.#enabledAppearancePlugins.delete(ASCII_TILES_BACKGROUND_PLUGIN_ID))this.#writeEnabledAppearancePlugins();this.#renderPreviewMarket();});
         this.#codeRainUnsubscribe?.();
-        this.#codeRainUnsubscribe=this.#codeRainRuntime.subscribe(()=>{if(!this.#connected)return;if(this.#codeRainRuntime.stoppedForExternalThemeChange&&this.#enabledAppearancePlugins.delete(CODE_RAIN_PLUGIN_ID))this.#writeEnabledAppearancePlugins();this.#renderPreviewMarket();});
+        this.#codeRainMarketControls=undefined;
+        this.#codeRainUnsubscribe=this.#codeRainRuntime.subscribe(()=>{if(!this.#connected)return;if(this.#codeRainRuntime.stoppedForExternalThemeChange&&this.#enabledAppearancePlugins.delete(CODE_RAIN_PLUGIN_ID))this.#writeEnabledAppearancePlugins();this.#refreshCodeRainMarket();});
         this.#asciiTilesInitialization=this.#milkyWayBackgroundInitialization?.then(()=>this.#backgroundActions.initialize(ASCII_TILES_BACKGROUND_PLUGIN_ID,appearanceInitializationGeneration));
         this.#codeRainInitialization=this.#asciiTilesInitialization?.then(()=>this.#backgroundActions.initialize(CODE_RAIN_PLUGIN_ID,appearanceInitializationGeneration));
         this.#surfaceOpacity.start();
@@ -1223,6 +1274,8 @@ export class CodeCodexElement extends HTMLElement {
         });
     }
     #disposeDisconnected(): void {
+        this.#backgroundSettingsShortcut?.dispose();this.#backgroundSettingsShortcut=undefined;
+        this.#positionDrawer(null);
         this.#rootRevalidation?.dispose();
           this.#citations?.dispose();
           this.#chatFileLinks?.dispose();
@@ -1243,7 +1296,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#backgroundPackageMarket?.dispose();
         this.#backgroundPackageMarket = undefined;
         this.#codeRainSettings.stop();
-        this.#codeRainUnsubscribe?.();this.#codeRainUnsubscribe=undefined;this.#codeRainInitialization=undefined;
+        this.#codeRainUnsubscribe?.();this.#codeRainUnsubscribe=undefined;this.#codeRainInitialization=undefined;this.#codeRainMarketControls=undefined;
         this.#asciiTilesSettings.stop();
         this.#asciiTilesUnsubscribe?.();this.#asciiTilesUnsubscribe=undefined;
         this.#asciiTilesInitialization=undefined;
@@ -1490,6 +1543,7 @@ export class CodeCodexElement extends HTMLElement {
             return;
         runtimeEvent("renderer", "file tree visibility", active ? "shown" : "hidden", { reason: active ? "Home active" : "outside Home" });
         this.#homeViewActive = active;
+        this.#positionDrawer();
         if (!active)
             this.#homeScrollTop = this.#treeShell.scrollTop;
         this.toggleAttribute("data-home-view-hidden", !active);
@@ -1551,6 +1605,7 @@ export class CodeCodexElement extends HTMLElement {
         if (!this.#homeViewActive)
             return;
         const nextSurface = surface?.isConnected ? surface : undefined;
+        this.#positionDrawer(nextSurface ?? null);
         const alreadyReconciled = nextSurface === this.#mainPreviewSurface &&
             (!this.#mainPreview || this.#mainPreview.parentElement === nextSurface);
         if (this.#previeweditingSettings.drafts.saving) {
@@ -1599,6 +1654,9 @@ export class CodeCodexElement extends HTMLElement {
         if (this.#previeweditingSettings.drafts.path)
             this.#previeweditingSettings.clearEditing(false);
         this.#flushQueuedMainPreviewReconcile();
+        // A changed native bridge authority starts a new UI-intent scope, only
+        // after the existing save/discard gates accept the reconnect.
+        if (this.#nativeReconnectMarker !== bootstrap) clearDocumentEditorVisibility(this.ownerDocument);
         this.#nativeReconnectMarker = bootstrap;
         const compatibility = assessBootstrapCompatibility(bootstrap);
         this.#workspaceSession.generation += 1;
@@ -1783,6 +1841,8 @@ export class CodeCodexElement extends HTMLElement {
                 else
                     void this.#updatesSettings.checkForUpdates();
             });
+            this.#required<HTMLButtonElement>(".update-indicator").addEventListener("click",()=>this.#updatesSettings.openUpdateDialog());
+            this.#required<HTMLButtonElement>(".update-check").addEventListener("click",()=>void this.#updatesSettings.checkForUpdates());
             this.#updateLaterButton.addEventListener("click", () => this.#updatesSettings.closeUpdateDialog(true));
             this.#updateInstallButton.addEventListener("click", () => void this.#updatesSettings.installUpdate());
             this.#previewMarketCloseButton.addEventListener("click", () => this.#closePreviewMarket(true));
@@ -2179,7 +2239,7 @@ export class CodeCodexElement extends HTMLElement {
         else
             delete preview.dataset.theme;
     }
-    #onWindowResize = (): void => {
+    #onWindowResize = (event: Event): void => {
         if (this.#shadow.querySelector(".custom-background-panel:popover-open"))
             return;
         if (this.#shadow.querySelector("#cle-startupTransition-settings")?.matches(":popover-open")) {
@@ -2193,12 +2253,16 @@ export class CodeCodexElement extends HTMLElement {
         this.#cloudtrainSettings.positionCloudTrain();
         this.#fileactionsSettings.closeContextMenu(false);
         const marketHasFocus = this.#previewMarketPopover.contains(this.#shadow.activeElement);
-        if (!this.#shadow.querySelector("#cle-startupTransition-settings:popover-open, .custom-background-panel:popover-open"))
+        if (!this.#shadow.querySelector("#cle-startupTransition-settings:popover-open, .custom-background-panel:popover-open")
+            && (this.#previewMarketOpen || !this.#codeRainSettings.open))
             this.#closePreviewMarket(marketHasFocus);
         this.#updatesSettings.closeUpdateDialog(false);
         this.#applyResponsivePlacement();
         this.#applySettings();
-        this.#treeinteractionSettings.renderVisible();
+        // The native browser must receive moved-only bounds notifications. Its
+        // movement does not invalidate tree rows; actual tree size changes are
+        // independently handled by the tree-shell ResizeObserver.
+        if (!isNativeBrowserGeometryResize(event)) this.#treeinteractionSettings.renderVisible();
     };
     #onBeforeUnload = (event: BeforeUnloadEvent): void => {
         if (!this.#previeweditingSettings.isEditDirty())
@@ -2410,6 +2474,7 @@ export class CodeCodexElement extends HTMLElement {
             const before = this.#inlineNextSibling?.parentNode === this.#inlineParent ? this.#inlineNextSibling : null;
             this.#moveHost(this.#inlineParent, before);
         }
+        this.#positionDrawer();
     }
     #rememberInlineMount(): void {
         if (this.#requestedPlacement === "drawer" || !this.parentElement || this.parentElement === document.body)
@@ -2440,6 +2505,12 @@ export class CodeCodexElement extends HTMLElement {
         }
     }
     async #switchThread(threadId: string | null, force = false): Promise<void> {
+        const usesNativeSelection = !!threadId && !force && threadId !== "manual-workspace";
+        const selectionIsCurrent = () => !usesNativeSelection ||
+            (isHomeWorkspaceView() && resolveActiveThread() === threadId);
+        // A switch queued during a save may no longer match the visible chat.
+        if (!selectionIsCurrent())
+            return;
         const diagnostic = beginRuntimeOperation('file-tree', 'workspace switch', { from: runtimeTaskLabel(this.#workspaceSession.threadId), to: runtimeTaskLabel(threadId), force });
         let diagnosticGeneration = this.#workspaceSession.generation;
         try {
@@ -2482,10 +2553,11 @@ export class CodeCodexElement extends HTMLElement {
                 this.#githistorySettings.showGitHistoryUnavailable("Code-Codex is not connected.");
                 return;
             }
+            const isCurrent = () => this.#canUseBridge(bridge, generation) && selectionIsCurrent();
             this.#setState("loading");
             try {
                 await this.#stopWatch(bridge);
-                if (generation !== this.#workspaceSession.generation)
+                if (!isCurrent())
                     return;
                 if (!threadId) {
                     await this.#clearNativeContext(bridge);
@@ -2495,8 +2567,8 @@ export class CodeCodexElement extends HTMLElement {
                     this.#githistorySettings.showGitHistoryUnavailable("Choose a local project to view its Git history.");
                     return;
                 }
-                const rawContext = await this.#requestBootstrap<unknown>(bridge, generation, "explorer.context", { threadId });
-                if (generation !== this.#workspaceSession.generation)
+                const rawContext = await this.#requestBootstrap<unknown>(bridge, generation, "explorer.context", { threadId }, isCurrent, usesNativeSelection);
+                if (!isCurrent())
                     return;
                 const context = normalizeContext(rawContext, threadId);
                 if (!context.compatible) {
@@ -2504,12 +2576,12 @@ export class CodeCodexElement extends HTMLElement {
                     this.#githistorySettings.showGitHistoryUnavailable("Git history is unavailable for this task.");
                     return;
                 }
-                this.#workspaceSession.context = context;
-                this.#setHeader(context.projectName, context.rootName);
-                const rawList = await this.#requestBootstrap<unknown>(bridge, generation, "explorer.list", { relativePath: "", limit: PAGE_SIZE });
-                if (generation !== this.#workspaceSession.generation)
+                const rawList = await this.#requestBootstrap<unknown>(bridge, generation, "explorer.list", { relativePath: "", limit: PAGE_SIZE }, isCurrent);
+                if (!isCurrent())
                     return;
                 const list = normalizeList(rawList);
+                this.#workspaceSession.context = context;
+                this.#setHeader(context.projectName, context.rootName);
                 this.#treeinteractionSettings.model.reset();
                 this.#treeinteractionSettings.model.beginLoad("");
                 this.#treeinteractionSettings.model.commitLoad("", list);
@@ -2545,20 +2617,22 @@ export class CodeCodexElement extends HTMLElement {
             catch (error) {
                 recordCaughtRuntimeError("#switchThread", error);
                 diagnostic.event('workspace preparation', 'failed', runtimeErrorDetails(error));
-                if (generation !== this.#workspaceSession.generation)
+                if (!isCurrent())
                     return;
                 if (error instanceof ExplorerBridgeError && error.code === "NO_CONTEXT") {
                     try {
                         await this.#stopWatch(bridge);
+                        if (!isCurrent())
+                            return;
                         await this.#clearNativeContext(bridge);
-                        if (generation !== this.#workspaceSession.generation)
+                        if (!isCurrent())
                             return;
                         this.#showNoProject();
                         this.#githistorySettings.showGitHistoryUnavailable("Choose a local project to view its Git history.");
                     }
                     catch (clearError) {
                         recordCaughtRuntimeError("#switchThread", clearError);
-                        if (generation === this.#workspaceSession.generation) {
+                        if (isCurrent()) {
                             this.#setState("error", errorCode(clearError));
                             this.#githistorySettings.showGitHistoryUnavailable("Git history is unavailable for this task.");
                         }
@@ -2578,23 +2652,41 @@ export class CodeCodexElement extends HTMLElement {
             diagnostic.finish(diagnosticGeneration !== this.#workspaceSession.generation ? 'discarded' : ['error', 'incompatible'].includes(this.#state) ? 'failed' : 'completed', { state: this.#state, generation: diagnosticGeneration, currentGeneration: this.#workspaceSession.generation, selectionStillCurrent: threadId === this.#workspaceSession.threadId, watching: this.#watching, workspaceAvailable: !!this.#workspaceSession.context });
         }
     }
-    async #requestBootstrap<T>(bridge: WorkspaceBridge, generation: number, method: "explorer.context" | "explorer.list", params: Record<string, unknown>): Promise<T> {
-        try {
-            return await bridge.request<T>(method, params);
+    async #requestBootstrap<T>(
+        bridge: WorkspaceBridge,
+        generation: number,
+        method: "explorer.context" | "explorer.list",
+        params: Record<string, unknown>,
+        isCurrent: () => boolean,
+        waitForWorkspace = false,
+    ): Promise<T> {
+        // A new chat can have a canonical ID before its workspace metadata exists.
+        // Retry only that read, without reopening tabs or resetting the tree.
+        const workspaceDelays = waitForWorkspace ? [500, 2_000, 5_500] : [];
+        let workspaceAttempt = 0;
+        let retriedTransport = false;
+        while (true) {
+            try {
+                return await bridge.request<T>(method, params);
+            }
+            catch (error) {
+                recordCaughtRuntimeError("#requestBootstrap", error);
+                let delayMs: number | undefined;
+                if (method === "explorer.context" && error instanceof ExplorerBridgeError && error.code === "NO_CONTEXT") {
+                    delayMs = workspaceDelays[workspaceAttempt++];
+                }
+                else if (!retriedTransport && isTransientBootstrapError(error)) {
+                    retriedTransport = true;
+                    delayMs = BOOTSTRAP_RETRY_DELAY_MS;
+                }
+                if (delayMs === undefined || !isCurrent())
+                    throw error;
+                runtimeEvent('file-tree', 'bootstrap retry', 'scheduled', { method, generation, delayMs, ...runtimeErrorDetails(error) });
+                await new Promise<void>((resolve) => setTimeout(resolve, delayMs));
+                if (!isCurrent())
+                    throw error;
+            }
         }
-        catch (error) {
-            recordCaughtRuntimeError("#requestBootstrap", error);
-            if (!isTransientBootstrapError(error) || !this.#canRetryBootstrap(bridge, generation))
-                throw error;
-            runtimeEvent('file-tree', 'bootstrap retry', 'scheduled', { method, generation, delayMs: BOOTSTRAP_RETRY_DELAY_MS, ...runtimeErrorDetails(error) });
-            await new Promise<void>((resolve) => setTimeout(resolve, BOOTSTRAP_RETRY_DELAY_MS));
-            if (!this.#canRetryBootstrap(bridge, generation))
-                throw error;
-            return bridge.request<T>(method, params);
-        }
-    }
-    #canRetryBootstrap(bridge: WorkspaceBridge, generation: number): boolean {
-        return this.#canUseBridge(bridge, generation);
     }
     #canUseBridge(bridge: WorkspaceBridge, generation: number): boolean {
         return this.#connected && !this.#dismissed && this.#workspaceSession.generation === generation && this.#workspaceSession.bridge === bridge;
@@ -2692,6 +2784,7 @@ export class CodeCodexElement extends HTMLElement {
             if ((change.kind === "deleted" || change.kind === "renamed") && this.#previeweditingSettings.drafts.path === removedPath) {
                 const tab = this.#previewWorkspace.tabStore.items.find((candidate) => candidate.path === removedPath);
                 if (tab) {
+                    tab.revision += 1;
                     if (this.#previeweditingSettings.drafts.saving)
                         tab.modifiedDuringSave = true;
                     tab.dirty = true;
@@ -2949,6 +3042,9 @@ export class CodeCodexElement extends HTMLElement {
             }
             this.#activePreviewPath = null;
             this.#previewWorkspace.syncMainPreview();
+            // Commit close only after accepted navigation, including an async
+            // save/discard decision. Passive purge/suspension never records it.
+            this.#mainPreview?.hideEditor();
             this.#treeinteractionSettings.renderVisible();
             this.#announce("Conversation shown");
             return;
@@ -3432,6 +3528,51 @@ export class CodeCodexElement extends HTMLElement {
         this.#appearanceSyncQueued = false;
         void this.#syncPersistedAppearance(bridge, true);
     }
+    #readBackgroundSettingsShortcut():BackgroundSettingsShortcutInput {
+        const snapshot=this.#backgroundActions.snapshot();
+        const customCards=this.#shadow.querySelectorAll<HTMLElement>('[data-appearance-plugin="code-codex.custom-background-background"]');
+        const customButtons=customCards.length===1?customCards[0]!.querySelectorAll<HTMLButtonElement>('.custom-background-enable'):[];
+        const custom=customButtons.length===1?customButtons[0]:undefined;
+        const selected=custom?.getAttribute('aria-pressed');
+        const customPending=custom?.dataset.runtimePending==='true'||customCards[0]?.getAttribute('aria-busy')==='true';
+        // Custom media is outside the runtime registry. Owned card selection is
+        // a competing/unverified fact, never proof that media is running.
+        return {snapshot:{...snapshot,entries:snapshot.entries.map(entry=>
+            entry.id===TRANSPARENT_BACKGROUND_PLUGIN_ID?{...entry,enabled:entry.enabled&&entry.selected&&this.#transparentBackgroundPresentation()!==undefined&&!this.#transparencyPreferenceBlocked()}:entry)},
+            completeNegative:false,unverified:!this.#connected||this.#dismissed||!custom||customPending||selected!=='false',directId:CODE_RAIN_PLUGIN_ID};
+    }
+    #usableSettingsFocus(element:HTMLElement|null|undefined):element is HTMLElement {
+        if(!element?.isConnected||element.ownerDocument!==this.ownerDocument||element.closest('[hidden],[inert],[aria-hidden="true"]')||element.matches(':disabled'))return false;
+        const view=this.ownerDocument.defaultView;
+        if(!view||view.getComputedStyle(element).visibility!=='visible')return false;
+        const rect=element.getBoundingClientRect();
+        return rect.width>0&&rect.height>0&&rect.bottom>0&&rect.right>0&&rect.left<view.innerWidth&&rect.top<view.innerHeight;
+    }
+    #openBackgroundMarketContext(id:string|undefined,opener:HTMLButtonElement):boolean {
+        if(!this.#connected||this.#dismissed||opener.getRootNode()!==this.#shadow||!this.#usableSettingsFocus(opener))return false;
+        this.#codeRainSettings.close();
+        if(!this.#previewMarketOpen)this.#togglePreviewMarket();
+        this.#selectPreviewMarketCategory('appearance',false);
+        this.#previewMarketReturnFocus=opener;
+        opener.setAttribute('aria-expanded','true');
+        // Run after the existing market/category focus work, including when the
+        // market was already open. Never click or focus an Enable action.
+        queueMicrotask(()=>{
+            if(!this.#connected||!this.#previewMarketOpen||this.#previewMarketReturnFocus!==opener||this.#previewMarketList.dataset.previewMarketCategory!=='appearance')return;
+            const cards=id?[...this.#previewMarketList.querySelectorAll<HTMLElement>('[data-appearance-plugin]')].filter(card=>card.dataset.appearancePlugin===id):[];
+            const card=cards.length===1?cards[0]:undefined;
+            if(card?.isConnected&&!card.closest('[hidden],[inert],[aria-hidden="true"]')&&card.getBoundingClientRect().height>0&&getComputedStyle(card).visibility==='visible'){
+                const list=this.#previewMarketList;
+                const top=list.scrollTop+card.getBoundingClientRect().top-list.getBoundingClientRect().top-8;
+                list.scrollTop=Math.max(0,Math.min(top,list.scrollHeight-list.clientHeight));
+                card.tabIndex=-1;card.focus({preventScroll:true});
+            }else{
+                this.#previewMarketCloseButton.focus();
+                if(id)this.#showActionNotice('Background settings are available in Preview Market. Choose a background to configure it.');
+            }
+        });
+        return true;
+    }
     #togglePreviewMarket(): void {
         if (this.#previewMarketOpen) {
             this.#closePreviewMarket(true);
@@ -3496,6 +3637,7 @@ export class CodeCodexElement extends HTMLElement {
         list.scrollTop = Math.max(0, Math.min(top, list.scrollHeight - list.clientHeight));
     }
     #closePreviewMarket(restoreFocus: boolean): void {
+        this.#shadow.querySelector('.background-settings-shortcut')?.setAttribute('aria-expanded','false');
         this.#customBackground?.close();
         this.#asciiTilesSettings.close();this.#codeRainSettings.close();
         this.#surfaceOpacity.close();
@@ -3517,8 +3659,9 @@ export class CodeCodexElement extends HTMLElement {
         const returnFocus = this.#previewMarketReturnFocus;
         this.#previewMarketReturnFocus = null;
         if (restoreFocus) {
-            if (returnFocus?.isConnected && !this.#previewMarketPopover.contains(returnFocus)) returnFocus.focus();
-            else this.#treeShell.focus();
+            if (this.#usableSettingsFocus(returnFocus) && !this.#previewMarketPopover.contains(returnFocus)) returnFocus.focus();
+            else if(this.#usableSettingsFocus(this.#treeShell))this.#treeShell.focus();
+            else {const collapsed=this.#shadow.querySelector<HTMLElement>('.collapsed-tab');if(this.#usableSettingsFocus(collapsed))collapsed.focus();}
         }
     }
     #togglePreviewer(previewer: PreviewerDefinition): void {
@@ -3627,6 +3770,27 @@ export class CodeCodexElement extends HTMLElement {
             recordCaughtRuntimeError('custom background restore', e);
         }
     }
+    #refreshCodeRainMarket(): void {
+        // The leaf subscription keeps Rain's own panel current. Only shared
+        // control changes need to replay all sibling and package controls.
+        const runtime=this.#codeRainRuntime;
+        const next: RainMarketControls={
+            selected:this.#enabledAppearancePlugins.has(CODE_RAIN_PLUGIN_ID),
+            enabled:runtime.enabled,pending:runtime.pending,error:runtime.error,
+            externalStop:runtime.stoppedForExternalThemeChange,
+            busy:this.#backgroundActions.busy,
+            transitionPending:this.#appearanceCoordinator.transitionPending,
+            pluginPending:this.#appearanceCoordinator.pluginPending,
+        };
+        const runtimeOwnsCard=this.#backgroundPackageMarket?.runtimeOwnsCard("code-rain")===true;
+        const previous=this.#codeRainMarketControls;
+        this.#codeRainMarketControls=next;
+        if(!runtimeOwnsCard||!previous||(Object.keys(next) as (keyof RainMarketControls)[]).some(key=>next[key]!==previous[key])){
+            this.#renderPreviewMarket();
+        }else{
+            this.#backgroundSettingsShortcut?.refresh();
+        }
+    }
     #renderPreviewMarket(): void {
         this.#asciiTilesSettings.render();this.#codeRainSettings.render();
         this.#surfaceOpacity.render();
@@ -3705,6 +3869,7 @@ export class CodeCodexElement extends HTMLElement {
             this.#transparentBackgroundButton.title = title;
         else
             this.#transparentBackgroundButton.removeAttribute("title");
+        this.#backgroundSettingsShortcut?.refresh();
     }
     #applyMediaPreviewerToggle(previewerId: string, enabled: boolean): void {
         let activeReload: PreviewTab | undefined;
@@ -3759,6 +3924,64 @@ export class CodeCodexElement extends HTMLElement {
         this.dataset.collapsed = String(this.#settings.collapsed);
         this.#collapseButton.setAttribute("aria-expanded", String(!this.#settings.collapsed));
         this.#collapsedTab.setAttribute("aria-expanded", String(!this.#settings.collapsed));
+        this.#positionDrawer();
+    }
+    #observeDrawerBounds(surface: HTMLElement | undefined): void {
+        if (this.#drawerBoundsSurface === surface)
+            return;
+        this.#drawerBoundsObserver?.disconnect();
+        this.#drawerBoundsObserver = undefined;
+        this.#drawerBoundsSurface = surface;
+        if (surface && typeof ResizeObserver !== "undefined") {
+            // A native pane/header can resize main without resizing the window.
+            // Only this qualified surface is observed; fixed drawer writes do not
+            // resize it, and repeated measurements write changed values only.
+            this.#drawerBoundsObserver = new ResizeObserver(() => this.#positionDrawer(this.#drawerBoundsSurface ?? null));
+            this.#drawerBoundsObserver.observe(surface);
+        }
+    }
+    #positionDrawer(surface: HTMLElement | null | undefined = this.#mainPreviewSurface): void {
+        const mains = activePageElements<HTMLElement>(this.ownerDocument, MAIN_SURFACE_SELECTOR);
+        const qualified = this.#connected && this.isConnected && this.#homeViewActive &&
+            this.dataset.placement === "drawer" && surface?.isConnected &&
+            surface.matches(MAIN_SURFACE_SELECTOR) && mains.length === 1 && mains[0] === surface;
+        this.#observeDrawerBounds(qualified && !this.#settings.collapsed ? surface : undefined);
+        let left: string | undefined;
+        const bounds: Record<string, string> = {};
+        if (qualified && !this.#isHidden(surface)) {
+            const content = surface.getBoundingClientRect(), box = this.getBoundingClientRect();
+            const width = Number.parseFloat(getComputedStyle(this).width);
+            const scale = width > 0 ? box.width / width : 0;
+            if (content.width > 0 && content.height > 0 && Number.isFinite(scale) && scale > 0) {
+                if (this.#settings.collapsed) {
+                    // Preserve the existing collapsed button placement exactly.
+                    const x = Math.max(0, Math.min(content.left, window.innerWidth - box.width));
+                    left = String(x / scale) + "px";
+                }
+                else {
+                    const x = Math.max(0, content.left), y = Math.max(0, content.top);
+                    const availableWidth = Math.min(window.innerWidth, content.right) - x;
+                    const availableHeight = Math.min(window.innerHeight, content.bottom) - y;
+                    if (availableWidth > 0 && availableHeight > 0) {
+                        bounds["--cle-drawer-left"] = String(x / scale) + "px";
+                        bounds["--cle-drawer-top"] = String(y / scale) + "px";
+                        bounds["--cle-drawer-available-width"] = String(availableWidth / scale) + "px";
+                        bounds["--cle-drawer-height"] = String(availableHeight / scale) + "px";
+                    }
+                }
+            }
+        }
+        const property = "--cle-collapsed-drawer-left";
+        if (left !== undefined) {
+            if (this.style.getPropertyValue(property) !== left) this.style.setProperty(property, left);
+        } else if (this.style.getPropertyValue(property)) this.style.removeProperty(property);
+        for (const name of ["--cle-drawer-left", "--cle-drawer-top", "--cle-drawer-available-width", "--cle-drawer-height"]) {
+            const value = bounds[name];
+            if (value !== undefined) {
+                if (this.style.getPropertyValue(name) !== value) this.style.setProperty(name, value);
+            } else if (this.style.getPropertyValue(name)) this.style.removeProperty(name);
+        }
+        this.toggleAttribute("data-drawer-bounded", Object.keys(bounds).length > 0);
     }
     #writeLocalSettings(): void {
         try {
@@ -3800,10 +4023,15 @@ export class CodeCodexElement extends HTMLElement {
         this.#versionFeedback.sync(versionVisible);
         this.#statusCode.disabled = !versionVisible || this.#updatesSettings.updateCheckPending || this.#updatesSettings.updateInstallPending;
         this.#statusCode.dataset.updateState = versionVisible ? this.#updatesSettings.updateCheckPresentation : "idle";
+        const updateIndicator=this.#required<HTMLButtonElement>(".update-indicator");
+        updateIndicator.textContent=this.#updatesSettings.indicatorText;
+        updateIndicator.dataset.updateState=this.#updatesSettings.updateCheckPresentation;
+        updateIndicator.dataset.tooltip=this.#updatesSettings.reviewSummary;
+        updateIndicator.setAttribute("aria-label",this.#updatesSettings.indicatorText+". Review upstream availability, policy and other products' update limits.");
         this.#statusCode.setAttribute("aria-busy", String(versionVisible && (this.#updatesSettings.updateCheckPending || this.#updatesSettings.updateInstallPending)));
         if (versionVisible) {
-            this.#statusCode.title = this.#updatesSettings.updateCheckSummary;
-            this.#statusCode.setAttribute("aria-label", this.#updatesSettings.updateCheckSummary);
+            this.#statusCode.title = this.#updatesSettings.reviewSummary;
+            this.#statusCode.setAttribute("aria-label", this.#updatesSettings.reviewSummary);
         }
         else {
             this.#statusCode.removeAttribute("title");

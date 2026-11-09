@@ -1,18 +1,20 @@
 # Middle pages and local-file transfers
 
-On qualified native shells, the middle area has one visible page at a time. A pinned **Chat** button returns to the primary conversation; native browser, file, terminal, and other eligible right-panel pages appear beside it in one strip. The internal chat/page divider is hidden. The file explorer and editor retain their separate boundaries.
+On qualified native shells, the middle area has one visible page at a time. The pinned primary-chat button returns to the conversation and shows its actual qualified title; native browser, file, terminal, and other eligible right-panel pages appear beside it in one strip. The internal chat/page divider is hidden. The file explorer and editor retain their separate boundaries.
 
 Chat remains mounted when a native page is shown. Switching pages preserves its unsent composer draft and scroll position. Native pages keep their original nodes, session owners, selection handlers, and close handlers. The extension changes presentation; it does not recreate browser sessions or terminal processes.
 
 ## Controls
 
-- **Chat** is always first and cannot be closed or scrolled away. Selecting it shows the whole middle area. From an expanded editor, selecting a middle page hides the expanded editor so the middle area is visible; E reopens the editor docked.
+- The primary-chat tab is always first and cannot be closed or scrolled away. Its full literal title appears on hover, through accessibility and in the dropdown; the visual label keeps the existing150px ellipsis bound. Blank or ambiguous title text uses **Chat**. Selecting it shows the whole middle area. From an expanded editor, selecting a middle page hides the expanded editor so the middle area is visible; E reopens the editor docked.
 - Click a page to invoke its native selection handler. Its X invokes the native close handler, including native confirmation behavior.
-- Use the mouse wheel over crowded page tabs to scroll them. The arrow dropdown lists Chat and all supported middle pages. Left/Right and Home/End navigate from the custom tab controls.
+- Use the mouse wheel over crowded page tabs to scroll them. The arrow dropdown lists the primary chat and all supported middle pages. Left/Right and Home/End navigate from the custom tab controls.
 - The native **New tab**, chat actions, summary, and E controls retain their handlers. The native tab-creation menu stays anchored to its real button. Hide tabs returns to Chat; a page selection can reopen hidden native tabs.
 - Changes keeps its existing dedicated editor integration instead of acquiring a second middle-page proxy.
 
 Page selection is running-session UI state. It does not add a new disk archive or promise restoration of unsaved native state after restarting the app.
+
+In unreleased source, the primary middle tab also follows native title text changes and replacements without recreating native-page controls or stealing focus. The title is display metadata, never chat identity. Multiple candidate title containers retain native presentation; inactive or mismatched contexts release the adapter. Native app/DPI qualification remains pending.
 
 The editor's separate conversation tab tracks the active native chat title in both docked and expanded layouts, including renames. It uses a generic label if the title cannot be identified uniquely; inactive cached pages do not supply the title.
 

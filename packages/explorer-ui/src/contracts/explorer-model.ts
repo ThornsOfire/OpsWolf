@@ -54,12 +54,21 @@ export type PreviewMarketCategory="appearance"|"file-preview"|"developer-tools";
 
 
 
+export interface UpdateInstallerIdentity {
+  readonly name: string;
+  readonly url: string;
+  readonly size: number;
+  readonly sha256: string;
+}
 export interface UpdateCheckResult {
   readonly currentVersion: string;
   readonly latestVersion: string;
   readonly status: UpdateCheckStatus;
   readonly tagName: string;
   readonly releaseUrl: string;
+  readonly checkedAtUnixMs?: number;
+  readonly installPolicy?: "blockedInFork";
+  readonly installer?: UpdateInstallerIdentity;
 }
 
 

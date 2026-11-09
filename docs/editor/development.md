@@ -30,6 +30,8 @@ npm --prefix packages/explorer-ui run build
 
 For the full native/UI build, use `scripts/build.ps1 -Configuration Release` from the repository root. It performs locked dependency installation and the workspace release build. The inherited packaging scripts can produce installation assets, but existing upstream assets should not be relabeled as releases of this fork.
 
+See the [three-tier testing plan](testing.md) for the portable fast-source runner, read-only post-restart reporting, evidence/skip semantics and later CI/clean-install gates. Existing focused checks below remain authoritative for their boundaries.
+
 ## Choose checks for what changed
 
 Before building, run `node scripts/check-version.mjs`. Fork metadata lives in `cursadex-version.json`; upstream package/plugin identity remains separate. The current-UI fixture also checks both footer labels, narrow widths and the unchanged upstream update-check action. Follow [version handoff rules](versioning.md).
@@ -38,12 +40,15 @@ These commands run from the repository root after UI dependencies are installed.
 
 | Change | Focused check |
 | --- | --- |
+| Upstream update review, native install denial, connection-bound policy, keyboard and narrow layout | `node scripts/test-update-policy.mjs`; native `cargo test --offline --locked -p code-codex --bin code-codex update_ -- --test-threads=1`; see [manual updates](manual-updates.md) |
 | Shared semantic palettes, host theme changes, custom hooks, contrast and forced-color editing | `node scripts/test-appearance.mjs`; see [appearance contract](appearance.md); also editor, tooltips and background-surface fixtures |
 | Owned settings, legacy preference migration, reset boundaries, modal focus and persistence failures | `node scripts/test-preferences.mjs`; see [settings and scope](settings.md); also editor-pane, minimap, typing, sidebar and menu fixtures |
 | Personal identity profiles, local logo upload/fallback, explicit save and next-document application | `node scripts/test-identity-profiles.mjs`; see [identity scope and Windows/Discord boundaries](identity.md) |
 | Composer WPM timing, trusted input policy, IME boundaries, preferences and cleanup | `node scripts/test-typing-meter.mjs`; see [measurement and verification limits](typing-meter.md) |
 | Chat reading anchor, native scroll displacement, reflow, zoom and lifecycle | `node scripts/test-chat-reading.mjs`; see [candidate behavior](chat-reading.md) |
 | Accepted Enter/button send resumes following, multiline/IME/blocked sends, history, rerenders and stale chats | `node scripts/test-send-follow.mjs`; also reading and activity suites |
+| Oversized Changes-history JSONL frames, subsequent workspace reads, fragmented framing and terminal transport | `cargo test --offline --locked -p context-resolver --test oversized_history`; full `cargo test --offline --locked -p context-resolver`; native focused context/review tests when integrating |
+| First local chat workspace binding, bounded retry, stale route or save, and manual recovery | `node scripts/test-workspace-first-load.mjs` with the matching built explorer bundle |
 | Same-chat project/cwd moves, empty destination, deferred dirty drafts and stale metadata replies | `node scripts/test-root-revalidation.mjs`; `node scripts/test-workspace-root-host.mjs`; `cargo test -p context-resolver --locked --offline`; `cargo test -p code-codex --bin code-codex context_ --locked --offline -- --test-threads=1` |
 | Shared bubble hover/focus, dismissal, bounds, colors and editor/E lifecycle | `node scripts/test-tooltips.mjs`; `node scripts/test-editor-pane.mjs` |
 | E, pane geometry, fullscreen, compact headers, wrap, logical line gutter | `node scripts/test-editor-pane.mjs` |
@@ -52,6 +57,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Header action reservations with actual E/middle-page/pane controllers, native tab transitions, zoom, pointer hits and cleanup | `node scripts/test-header-action-layout.mjs` |
 | First chat selection, restored-chat startup, pointer/keyboard activation, delayed readiness and manual reopen | `node scripts/test-native-sidebar.mjs` |
 | Tab wheel/drag/dropdown/pins and close behavior | `node scripts/test-tab-navigation.mjs` |
+| Delayed own-save notifications, real external conflicts, retry baseline protection and stale verification | `node scripts/test-save-watch-reconciliation.mjs` |
 | Save/discard/cancel, failed/stale saves and switching | `node scripts/test-close-dialog.mjs` |
 | Complete inline Markdown/editor delivery and rejecting partial responses | `node scripts/test-complete-text.mjs` |
 | Large text and explicit large Markdown rendering | `node scripts/test-large-text.mjs` |
@@ -59,6 +65,7 @@ These commands run from the repository root after UI dependencies are installed.
 | Selection/right-click citations, grouping, quote relocation, large-file anchors and safe composer insertion | `node scripts/test-citations.mjs` |
 | Running native activity disclosures, shared reading/following, manual collapse, completion and cached chats | `node scripts/test-chat-activity.mjs`; `node scripts/test-chat-reading.mjs` |
 | Accepted-send resumes following without intercepting drafts/IME or later user scrolling | `node scripts/test-send-follow.mjs` |
+| Dot/embedded messaging backings, inactive/unknown surfaces, accessibility and input restoration | `node scripts/test-rain-embedded-messaging-surfaces.mjs`; see [Dot background scope](dot-background.md) |
 | Inactive Rain pause, explicit-save opt-out, manual pause and blend lifetime | `node scripts/test-code-rain-focus.mjs`; `node scripts/test-code-rain-runtime.mjs` |
 | Rain native hover menu, editor/Changes layers, forced colors and restoration | `node scripts/test-code-rain-layered-surfaces.mjs`; `node scripts/test-background-surfaces.mjs` |
 | Optional Nova restore control and fresh/legacy preferences | `node scripts/test-nova-restore.mjs`; `node scripts/test-preferences.mjs` |
@@ -84,6 +91,8 @@ Browser checks launch their own headless Chrome with a temporary profile and loo
 The [custom editor workflow](https://github.com/ThornsOfire/OpsWolf/blob/feature/right-editor-pane/.github/workflows/editor-build.yml) defines the three native test packages and native reader/launcher build. Its configured branch/path filters determine when it runs; do not infer candidate-branch CI success from a historical workflow link. Its artifacts are temporary and aren't permanent fork releases. A documentation or UI-only push doesn't trigger that native rebuild under the current path filter.
 
 ## Checking the real host
+
+For startup triage, see [reading startup status](../startup-status.md).
 
 An isolated fixture verifies our contracts, not every future native markup change. When the native adapter changes, check the relevant real-host behavior after using a matching build:
 
@@ -121,8 +130,7 @@ Update the appropriate Unreleased changelog entry alongside each meaningful user
 | --- | --- |
 | Context meter | [Protocol researched](context-meter-research.md); no safe active-session data source established, so no metric is fabricated |
 | Compact citation composer chips and readable hover tooltips | Core citation routing is implemented and live-tested; presentation remains unfinished. See [citation status](citations.md). |
-| Broader editable-format support | Planned; additional formats and priorities are still to be chosen. Track preview, source/structured editing, and save support separately; don't treat a preview plugin as an editor. |
-| Structured Markdown table-cell editing | Source editing exists; a dedicated matrix editor doesn't |
+| Broader formats, spreadsheets and Markdown table cells (F39) | [Canonical format-support scope](format-support.md): research only. Existing preview definitions do not establish installed/live support or structured edit/save; formats and priorities remain open. |
 | Configurable name/logo/appearance branding | Owned menu/settings profile candidate; Windows/launcher/Discord identity remains open. See [identity scope](identity.md). |
 | Fork-specific update selection/distribution | Upstream endpoints remain inherited |
 | Language servers, completion and debugger integration | Outside the current basic editor |

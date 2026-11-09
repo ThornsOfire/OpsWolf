@@ -1,5 +1,5 @@
 import type { AppearanceCoordinator } from '../lifecycle/appearance-coordinator';
-import type { BackgroundCommands } from '../../contracts/appearance';
+import type { BackgroundCommands, BackgroundStateReader, BackgroundStateSnapshot } from '../../contracts/appearance';
 
 /** Runtime capability shared by mutually exclusive visual backgrounds only. */
 export interface BackgroundRuntime {
@@ -9,6 +9,7 @@ export interface BackgroundRuntime {
   readonly stoppedForExternalThemeChange?: boolean;
   initialize(): Promise<unknown>;
   enable(): Promise<unknown>;
+  enableWithAppearanceTransfer?(qualified: (usesLease: boolean) => void, resuming: boolean): Promise<unknown>;
   disable(preserveTheme?: boolean): Promise<unknown>;
 }
 export interface BackgroundEntry {
@@ -30,6 +31,7 @@ export interface BackgroundActionPorts {
   readonly leaveNativeTransparency: (target: string) => Promise<void>;
   readonly reconcileNative: () => Promise<void>;
   readonly transferTheme: (target: string) => void;
+  readonly prepareThemeTransfer: (target: string, outgoing: readonly string[]) => () => void;
   readonly committed: () => void;
   readonly changed: () => void;
   readonly suspendHealth: () => void;
@@ -39,7 +41,7 @@ export interface BackgroundActionPorts {
 }
 
 /** Owns cross-background policy. Settings panels never enumerate their siblings. */
-export class BackgroundActions implements BackgroundCommands {
+export class BackgroundActions implements BackgroundCommands, BackgroundStateReader {
   readonly #entries: Map<string, BackgroundEntry>;
   readonly #runtimeOwners = new Map<string, object>();
   constructor(private readonly ports: BackgroundActionPorts) {
@@ -47,6 +49,16 @@ export class BackgroundActions implements BackgroundCommands {
     if (this.#entries.size !== ports.entries.length) throw new Error('BACKGROUND_REGISTRY_DUPLICATE: Background IDs must be unique.');
   }
   get busy(): boolean { return this.ports.coordinator.busy || this.ports.entries.some(entry => entry.runtime.pending); }
+  snapshot(): BackgroundStateSnapshot {
+    return {
+      busy: this.busy,
+      entries: this.ports.entries.map(({id, label, runtime}) => ({
+        id, label, selected: this.ports.enabled.has(id),
+        enabled: runtime.enabled, pending: runtime.pending, error: runtime.error,
+      })),
+      requestedIds: [...this.ports.enabled],
+    };
+  }
   async deactivate(id: string): Promise<void> {
     const entry = this.#required(id);
     if (this.ports.enabled.has(id) || entry.runtime.enabled) await entry.runtime.disable(true);
@@ -61,14 +73,17 @@ export class BackgroundActions implements BackgroundCommands {
         if (entry.runtime.enabled) await entry.runtime.disable();
         return;
       }
+      const outgoing: string[] = [];
       for (const other of this.ports.entries) {
         if (other.id === id) continue;
-        if (other.runtime.enabled) await other.runtime.disable(true);
+        if (other.runtime.enabled) {
+          outgoing.push(other.id);
+          await other.runtime.disable(true);
+        }
         if (!this.ports.initializationCurrent(generation)) return;
       }
-      this.ports.transferTheme(id);
       this.#runtimeOwners.set(id, {});
-      await entry.runtime.enable();
+      await this.#enable(entry, () => this.ports.initializationCurrent(generation), true, outgoing);
       if (!this.ports.initializationCurrent(generation)) return;
       if (entry.runtime.stoppedForExternalThemeChange) this.ports.enabled.delete(id);
       else if (entry.runtime.enabled) this.#select(id);
@@ -116,9 +131,8 @@ export class BackgroundActions implements BackgroundCommands {
           if (!current()) return;
         }
         if (entry.activationOrder !== 'before-exclusion') {
-          p.transferTheme(id);
           this.#runtimeOwners.set(id, owner);
-          await entry.runtime.enable();
+          await this.#enable(entry, current, false, previous.map(prior => prior.id));
           started = entry.runtime.enabled;
         }
         if (!current()) return;
@@ -135,10 +149,16 @@ export class BackgroundActions implements BackgroundCommands {
       // Rollback belongs to this operation only. A stale operation may not revive
       // an old background or disable one that a newer operation has acquired.
       if (!committed && captured && current()) {
-        if (entry.runtime.enabled && this.#runtimeOwners.get(id) === owner) await entry.runtime.disable(previous.length > 0).catch(error => p.failed('rollback stop ' + id, error));
+        const stopped: string[] = [];
+        if (entry.runtime.enabled && this.#runtimeOwners.get(id) === owner) {
+          try {
+            await entry.runtime.disable(previous.length > 0);
+            if (!entry.runtime.enabled) stopped.push(id);
+          } catch (error) { p.failed('rollback stop ' + id, error); }
+        }
         for (const prior of previous) {
           if (!current()) break;
-          try { p.transferTheme(prior.id); await prior.runtime.enable(); }
+          try { await this.#enable(prior, current, true, stopped); }
           catch (error) { p.failed('rollback restore ' + prior.id, error); }
         }
         if (current()) {
@@ -154,6 +174,17 @@ export class BackgroundActions implements BackgroundCommands {
         p.changed(); p.resumeHealth();
       }
     }
+  }
+  #enable(entry: BackgroundEntry, current: () => boolean, resuming: boolean, outgoing: readonly string[]): Promise<unknown> {
+    if (entry.runtime.enableWithAppearanceTransfer) {
+      const transfer = this.ports.prepareThemeTransfer(entry.id, outgoing);
+      return entry.runtime.enableWithAppearanceTransfer(usesLease => {
+        if (!current()) throw new DOMException('Background operation is no longer current', 'AbortError');
+        if (usesLease) transfer();
+      }, resuming);
+    }
+    this.ports.transferTheme(entry.id);
+    return entry.runtime.enable();
   }
   #select(id: string): void {
     for (const other of this.ports.entries) this.ports.enabled.delete(other.id);

@@ -14,7 +14,7 @@ const bundle=await build({bundle:true,write:false,format:'iife',stdin:{resolveDi
   const state={mode:'ok',released:[],storage:new Map(),writes:0,prepared:0,acquired:0,surfaces:0,failures:[],listeners:0};
   const runtime=new CodeRainBackgroundController({
    prepare:async()=>{state.prepared++;if(state.mode==='prepare-fail')throw Error('package rejected');if(state.mode==='prepare-wait')await new Promise(r=>state.resume=r);},
-   acquireAppearance:async()=>{state.acquired++;if(state.mode==='appearance-fail')throw Error('appearance refused');if(state.mode==='appearance-wait')await new Promise(r=>state.resume=r);},
+   prepareAppearance:async()=>({mode:'managed',apply:async()=>{state.acquired++;if(state.mode==='appearance-fail')throw Error('appearance refused');if(state.mode==='appearance-wait')await new Promise(r=>state.resume=r);}}),
    releaseAppearance:async preserve=>{state.released.push(preserve);if(state.mode==='release-fail')throw Error('restore refused');if(state.mode==='release-wait')await new Promise(r=>state.resumeRelease=r);},
    mountSurface:()=>{const target=document.createElement('div');target.className='rain';target.style.cssText='width:400px;height:240px';document.querySelector('#surface').append(target);state.surfaces++;return {target,setColor:color=>target.style.backgroundColor=color,release:()=>{target.remove();state.surfaces--}}},
    createRenderer:(target,settings,onTransition)=>{if(state.mode==='renderer-fail')throw Error('canvas refused');state.renderer=new CodeRain(target,settings,{onTransition});return state.renderer},
@@ -26,7 +26,7 @@ const bundle=await build({bundle:true,write:false,format:'iife',stdin:{resolveDi
  window.makeActions=(runtime,state)=>{
   const prior={enabled:true,pending:false,error:undefined,initialize:async()=>{},enable:async()=>{prior.enabled=true;prior.starts++},disable:async()=>{prior.enabled=false;prior.stops++},starts:0,stops:0};
   const enabled=new Set(['prior']),coordinator=new AppearanceCoordinator();
-  const actions=new BackgroundActions({entries:[{id:'rain',label:'Rain',runtime},{id:'prior',label:'Previous',runtime:prior}],coordinator,enabled,connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{if(state.mode==='prepare-fail')throw Error('package rejected')},ready:async()=>true,leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{},committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:(op,error)=>state.failures.push(String(error)),announce:()=>{}});
+  const actions=new BackgroundActions({entries:[{id:'rain',label:'Rain',runtime},{id:'prior',label:'Previous',runtime:prior}],coordinator,enabled,connected:()=>true,initializationCurrent:()=>true,prepare:async()=>{if(state.mode==='prepare-fail')throw Error('package rejected')},ready:async()=>true,leaveNativeTransparency:async()=>{},reconcileNative:async()=>{},transferTheme:()=>{},prepareThemeTransfer:()=>()=>{},committed:()=>{},changed:()=>{},suspendHealth:()=>{},resumeHealth:()=>{},failed:(op,error)=>state.failures.push(String(error)),announce:()=>{}});
   return {actions,prior,enabled,coordinator};
  };
 `}});

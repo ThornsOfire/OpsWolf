@@ -1200,6 +1200,9 @@ mod tests {
         let available =
             classify_update("0.1.91", github_release("v0.2.0")).expect("available release");
         assert_eq!(available.status, UpdateAvailability::UpdateAvailable);
+        assert_eq!(available.install_policy, "blockedInFork");
+        assert!(available.checked_at_unix_ms > 0);
+        assert!(available.installer.is_none());
     }
 
     #[test]
@@ -1382,6 +1385,21 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn upstream_update_install_route_is_blocked_before_network_or_launch() {
+        let (_directory, mut bridge) = manual_bridge().await;
+        // A listening local endpoint proves no connection is attempted; an
+        // unreachable endpoint alone could hide a failed network request.
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        Arc::get_mut(&mut bridge.inner).unwrap().update_checker = UpdateChecker::new(format!("http://{address}/latest"));
+        let error = bridge.handle(request("explorer.update.install", json!({"latestVersion":"999.0.0"})))
+            .await.expect_err("upstream installer must never start from this fork");
+        assert_eq!(error.code, "UPDATE_INSTALL_BLOCKED");
+        assert!(tokio::time::timeout(Duration::from_millis(75), listener.accept()).await.is_err(), "blocked route must not contact the release endpoint");
+        assert!(bridge.inner.update_checker.startup_result.lock().await.is_none(), "blocking install must not seed metadata cache");
+    }
+
+    #[tokio::test]
     async fn update_install_rechecks_github_and_requires_the_setup_asset() {
         let body = serde_json::to_vec(&json!({
             "tag_name": "v999.0.0",
@@ -1396,13 +1414,12 @@ mod tests {
             .expect("exclusive bridge")
             .update_checker = UpdateChecker::new(endpoint);
 
-        let error = bridge
-            .handle(request(
-                "explorer.update.install",
-                json!({ "latestVersion": "999.0.0" }),
-            ))
-            .await
-            .expect_err("the exact setup asset is required");
+        // Retain legacy download/asset validation coverage below the blocked
+        // public mutation route; this only contacts the local fixture server.
+        let error = bridge.inner.update_checker.download_installer(
+            env!("CARGO_PKG_VERSION"), "999.0.0",
+            &UpdateProgress { sender: None, epoch: 0, version: "999.0.0".into() },
+        ).await.err().expect("the exact setup asset is required");
         assert_eq!(error.code, "UPDATE_ASSET_UNAVAILABLE");
         server.await.expect("mock update server");
 

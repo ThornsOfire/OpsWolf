@@ -112,6 +112,11 @@ export class BackgroundPackageMarket {
     }
     this.#timer=setTimeout(()=>void this.#refresh(),this.#busy.size?600:5000);
   }
+  /** Read-only ownership; runtime renders must not overwrite package actions. */
+  runtimeOwnsCard(id:string):boolean {
+    return !this.#disposed&&isPluginPackageLoaded(id)&&
+      this.#states.get(id)?.installed===true&&!this.#busy.has(id)&&!this.#loading.has(id);
+  }
   render():void {
     if(this.#disposed)return;
     for(const info of PLUGIN_PACKAGES) {

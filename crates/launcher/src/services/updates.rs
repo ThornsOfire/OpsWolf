@@ -86,6 +86,19 @@ pub(super) struct UpdateCheckResult {
     pub(super) status: UpdateAvailability,
     pub(super) tag_name: String,
     pub(super) release_url: String,
+    pub(super) checked_at_unix_ms: u64,
+    pub(super) install_policy: &'static str,
+    pub(super) installer: Option<UpdateInstallerIdentity>,
+}
+
+/// Metadata only. Never an authorization to download, launch or adopt upstream.
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(super) struct UpdateInstallerIdentity {
+    pub(super) name: String,
+    pub(super) url: String,
+    pub(super) size: u64,
+    pub(super) sha256: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -458,7 +471,17 @@ pub(super) fn classify_update(
         std::cmp::Ordering::Equal => UpdateAvailability::UpToDate,
         std::cmp::Ordering::Greater => UpdateAvailability::Ahead,
     };
+    let installer = select_update_asset(&release, &latest.to_string()).ok().and_then(|asset| {
+        validate_update_asset(asset, &release.tag_name, &latest.to_string()).ok().map(|sha256| UpdateInstallerIdentity {
+            name: asset.name.clone(), url: asset.browser_download_url.clone(), size: asset.size, sha256,
+        })
+    });
+    let checked_at_unix_ms = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH)
+        .map_err(|_| update_internal_error())?.as_millis().try_into().map_err(|_| update_internal_error())?;
     Ok(UpdateCheckResult {
+        checked_at_unix_ms,
+        install_policy: "blockedInFork",
+        installer,
         current_version: current.to_string(),
         latest_version: latest.to_string(),
         status,

@@ -24,6 +24,9 @@ let sequence = 0;
 export class NativeMiddlePages {
   private readonly key = `middle-${++sequence}`;
   private observer: MutationObserver | undefined;
+  private titleObserver: MutationObserver | undefined;
+  private titleContainer: HTMLElement | undefined;
+  private primaryTitle = 'Chat';
   private resize: ResizeObserver | undefined;
   private frame = 0;
   private started = false;
@@ -49,7 +52,7 @@ export class NativeMiddlePages {
     this.started = true;
     this.observer = new MutationObserver(this.schedule);
     this.observer.observe(this.ports.element.ownerDocument.body, { childList: true, subtree: true, attributes: true,
-      attributeFilter: ['data-app-shell-active-page', 'data-code-codex-owned', 'data-tab-id', 'aria-selected', 'hidden', 'aria-hidden', 'style', 'data-above-composer-conversation-id', 'data-response-annotation-conversation'] });
+      attributeFilter: ['data-app-shell-active-page', 'data-code-codex-owned', 'data-tab-id', 'aria-selected', 'hidden', 'aria-hidden', 'style', 'data-above-composer-conversation-id', 'data-response-annotation-conversation', 'data-app-shell-titlebar-content'] });
     this.ports.element.ownerDocument.addEventListener('click', this.onNativeClick, true);
     this.resize = new ResizeObserver(this.schedule);
     this.schedule();
@@ -78,6 +81,8 @@ export class NativeMiddlePages {
     this.originals.delete(element);
   }
   private release(): void {
+    this.titleObserver?.disconnect(); this.titleObserver = undefined;
+    this.titleContainer = undefined; this.primaryTitle = 'Chat';
     this.resize?.disconnect();
     this.geometryObserved.clear();
     for (const element of this.originals.keys()) this.restore(element);
@@ -102,7 +107,8 @@ export class NativeMiddlePages {
     const main = scope?.querySelector<HTMLElement>('main[data-app-shell-main-surface="default"]');
     const header = scope?.querySelector<HTMLElement>('header[data-app-shell-titlebar]');
     const toolbar = header?.querySelector<HTMLElement>('[data-app-shell-header-toolbar]');
-    const title = [...toolbar?.children ?? []].find((child): child is HTMLElement => child instanceof HTMLElement && !!child.querySelector('[data-app-shell-titlebar-content]'));
+    const titleContainers = [...toolbar?.children ?? []].filter((child): child is HTMLElement => child instanceof HTMLElement && !!child.querySelector('[data-app-shell-titlebar-content]'));
+    const title = titleContainers.length === 1 ? titleContainers[0] : undefined;
     const viewport = main?.querySelector<HTMLElement>('[data-app-shell-main-content-layout]');
     // Main-controller page placements need a separate adapter; never hide an
     // unfamiliar primary page or invent a chat identity from a tab label.
@@ -114,6 +120,7 @@ export class NativeMiddlePages {
     if (this.scope !== scope || this.header !== header || this.control?.parentElement !== toolbar) {
       this.release(); this.scope = scope; this.header = header; this.mount(toolbar);
     }
+    this.readPrimaryTitle(title);
     const pages: Page[] = [];
     for (const node of header.querySelectorAll<HTMLElement>('[data-app-shell-tab-controller="right"][data-tab-id]')) {
       const id = node.dataset.tabId;
@@ -158,6 +165,19 @@ export class NativeMiddlePages {
     for (const element of this.originals.keys()) if (!desired.has(element)) this.restore(element);
     this.render();
     this.layoutHeader(header, toolbar);
+  }
+  private readPrimaryTitle(container: HTMLElement): void {
+    if (this.titleContainer !== container) {
+      this.titleObserver?.disconnect();
+      this.titleContainer = container;
+      this.titleObserver = new MutationObserver(this.schedule);
+      // Native title text can change without replacing its Text node. Observe
+      // only the qualified title container, never the streaming chat body.
+      this.titleObserver.observe(container, {childList: true, subtree: true, characterData: true,
+        attributes: true, attributeFilter: ['data-app-shell-titlebar-content']});
+    }
+    const labels = container.querySelectorAll<HTMLElement>('[data-app-shell-titlebar-content]');
+    this.primaryTitle = labels.length === 1 ? labels[0]!.textContent?.trim() || 'Chat' : 'Chat';
   }
   private headerVariable(header: HTMLElement, name: string, value: string): void {
     let variables = this.headerVariables.get(header);
@@ -288,6 +308,14 @@ export class NativeMiddlePages {
       select.value = this.selected;
       this.shadow.querySelector('.chat')!.setAttribute('aria-selected',String(this.selected === 'chat'));
     }
+    // A rename changes display metadata only. Keep native-page buttons and
+    // their focus/handlers stable rather than rebuilding the strip.
+    const primary = this.shadow.querySelector<HTMLButtonElement>('.chat')!;
+    if (primary.textContent !== this.primaryTitle) primary.textContent = this.primaryTitle;
+    if (primary.title !== this.primaryTitle) primary.title = this.primaryTitle;
+    if (primary.getAttribute('aria-label') !== this.primaryTitle) primary.setAttribute('aria-label', this.primaryTitle);
+    const primaryOption = this.shadow.querySelector<HTMLOptionElement>('option[value="chat"]');
+    if (primaryOption && primaryOption.textContent !== this.primaryTitle) primaryOption.textContent = this.primaryTitle;
     const move = this.shadow.querySelector<HTMLButtonElement>('.move')!, root = this.ports.context?.rootPath;
     move.hidden = !root || !nativeTabFilePath(this.selected, root);
     const panel = this.scope && [...this.scope.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tab-id]')].find(panel => panel.dataset.tabId === this.selected);

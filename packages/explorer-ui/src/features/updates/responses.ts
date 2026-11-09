@@ -11,7 +11,7 @@ export function normalizeUpdateCheckResult(raw: unknown): UpdateCheckResult {
   const status=object?.status;
   if(
     !object||
-    Object.keys(object).length!==5||
+    Object.keys(object).some(key=>!["currentVersion","latestVersion","status","tagName","releaseUrl","checkedAtUnixMs","installPolicy","installer"].includes(key))||
     typeof object.currentVersion!=="string"||
     object.currentVersion!==__CODE_CODEX_VERSION__||
     !versionPattern.test(object.currentVersion)||
@@ -46,12 +46,32 @@ export function normalizeUpdateCheckResult(raw: unknown): UpdateCheckResult {
     throw new ExplorerBridgeError({ code: "INVALID_REQUEST",message: "The GitHub release URL was not valid." });
   }
 
+  const metadataKeys=["checkedAtUnixMs","installPolicy","installer"];
+  const hasMetadata=metadataKeys.some(key=>Object.hasOwn(object,key));
+  if(hasMetadata && (!metadataKeys.every(key=>Object.hasOwn(object,key)) ||
+      typeof object.checkedAtUnixMs!=="number" || !Number.isSafeInteger(object.checkedAtUnixMs) ||
+      object.checkedAtUnixMs<=0 || object.checkedAtUnixMs>8_640_000_000_000_000 || object.installPolicy!=="blockedInFork")) {
+    throw new ExplorerBridgeError({code:"INVALID_REQUEST",message:"The update policy metadata was not valid."});
+  }
+  let installer: UpdateCheckResult["installer"];
+  if(hasMetadata && object.installer!==null) {
+    const asset=asRecord(object.installer);
+    const name=`CodeCodex-${object.latestVersion}-x64-setup.exe`;
+    if(!asset || Object.keys(asset).length!==4 || asset.name!==name ||
+       asset.url!==`https://github.com/Rice-dog/code-codex/releases/download/${object.tagName}/${name}` ||
+       typeof asset.size!=="number" || !Number.isSafeInteger(asset.size) || asset.size<256*1024 || asset.size>128*1024*1024 ||
+       typeof asset.sha256!=="string" || !/^[a-f0-9]{64}$/.test(asset.sha256)) {
+      throw new ExplorerBridgeError({code:"INVALID_REQUEST",message:"The update installer identity was not valid."});
+    }
+    installer={name,url:asset.url as string,size:asset.size,sha256:asset.sha256};
+  }
   return {
     currentVersion: object.currentVersion,
     latestVersion: object.latestVersion,
     status,
     tagName: object.tagName,
     releaseUrl: releaseUrl.href,
+    ...(hasMetadata ? {checkedAtUnixMs:object.checkedAtUnixMs as number,installPolicy:"blockedInFork" as const,...(installer?{installer}:{})} : {}),
   };
 }
 

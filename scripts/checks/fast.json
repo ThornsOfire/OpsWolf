@@ -1,0 +1,66 @@
+{
+  "schemaVersion": 1,
+  "name": "OpsWolf installed-tool fast checks",
+  "dependencies": [
+    {
+      "name": "typescript",
+      "packageJson": "packages/explorer-ui/node_modules/typescript/package.json"
+    }
+  ],
+  "checks": [
+    {
+      "id": "version",
+      "required": true,
+      "args": ["scripts/check-version.mjs"],
+      "prerequisites": ["scripts/check-version.mjs", "cursadex-version.json", "packages/explorer-ui/package.json", "packages/explorer-ui/src/core/branding.json"],
+      "timeoutMs": 30000,
+      "maxOutputBytes": 131072,
+      "evidenceFormat": "command"
+    },
+    {
+      "id": "changelog-structure",
+      "required": true,
+      "args": ["scripts/check-changelog.mjs"],
+      "prerequisites": ["scripts/check-changelog.mjs", "CHANGELOG.md"],
+      "timeoutMs": 30000,
+      "maxOutputBytes": 131072,
+      "evidenceFormat": "command"
+    },
+    {
+      "id": "typecheck",
+      "required": true,
+      "args": ["packages/explorer-ui/node_modules/typescript/bin/tsc", "--noEmit", "-p", "packages/explorer-ui/tsconfig.json"],
+      "prerequisites": ["packages/explorer-ui/node_modules/typescript/bin/tsc", "packages/explorer-ui/node_modules/typescript/lib/typescript.js", "packages/explorer-ui/node_modules/@types/node/package.json", "packages/explorer-ui/tsconfig.json"],
+      "timeoutMs": 120000,
+      "maxOutputBytes": 262144,
+      "evidenceFormat": "command"
+    },
+    {
+      "id": "architecture",
+      "required": true,
+      "args": ["scripts/check-architecture.mjs"],
+      "prerequisites": ["scripts/check-architecture.mjs", "packages/explorer-ui/node_modules/typescript/lib/typescript.js", "packages/explorer-ui/tsconfig.json", "resources/bridge-contract.json", "resources/plugin-distribution.lock.json"],
+      "timeoutMs": 120000,
+      "maxOutputBytes": 262144,
+      "evidenceFormat": "command"
+    },
+    {
+      "id": "localization",
+      "required": true,
+      "args": ["scripts/check-i18n.mjs"],
+      "prerequisites": ["scripts/check-i18n.mjs", "scripts/localization-catalogs.mjs", "resources/i18n/en.json", "resources/i18n/zh-CN.json", "installer/Finalize-Uninstall.ps1", "installer/LanguageResources.h"],
+      "timeoutMs": 30000,
+      "maxOutputBytes": 262144,
+      "evidenceFormat": "command"
+    },
+    {
+      "id": "runner-self-tests",
+      "required": true,
+      "args": ["scripts/test-check-runner.mjs"],
+      "prerequisites": ["scripts/run-checks.mjs", "scripts/test-check-runner.mjs"],
+      "timeoutMs": 120000,
+      "maxOutputBytes": 262144,
+      "evidenceFormat": "tap"
+    }
+  ]
+}

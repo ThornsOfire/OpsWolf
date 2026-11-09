@@ -4,13 +4,10 @@ use cdp_client::BridgeError;
 
 use semver::Version;
 
-use serde_json::{Value, json};
-use sha2::Digest as _;
+use serde_json::Value;
 
-#[cfg(any(windows, not(windows)))]
-use super::launch_downloaded_update;
 use super::{
-    NativeBridge, UPDATE_INSTALLER_ACTIVE, UpdateInstallParams, UpdateProgress, operation_error,
+    NativeBridge, UPDATE_INSTALLER_ACTIVE, UpdateInstallParams, operation_error,
     require_empty_object, update_busy_error, update_internal_error,
 };
 
@@ -87,42 +84,13 @@ impl NativeBridge {
         {
             return Err(BridgeError::invalid_request());
         }
-        let _guard = self
-            .inner
-            .update_install_lock
-            .try_lock()
-            .map_err(|_| update_busy_error())?;
-        let update = self
-            .inner
-            .update_checker
-            .download_installer(
-                env!("CARGO_PKG_VERSION"),
-                &params.latest_version,
-                &UpdateProgress {
-                    sender: self.inner.notification_sender.read().await.clone(),
-                    epoch,
-                    version: params.latest_version.clone(),
-                },
-            )
-            .await?;
-        self.ensure_epoch(epoch)?;
-        let progress = UpdateProgress {
-            sender: self.inner.notification_sender.read().await.clone(),
-            epoch,
-            version: params.latest_version.clone(),
-        };
-        progress.publish("waiting for installer window", json!({"timeoutMs":15000}));
-        let result = tokio::task::spawn_blocking(move || launch_downloaded_update(update))
-            .await
-            .map_err(|_| update_internal_error())??;
-        progress.publish(
-            if result.window_ready {
-                "installer window shown"
-            } else {
-                "installer window unconfirmed"
-            },
-            json!({"windowReady":result.window_ready,"installationComplete":false}),
-        );
-        serde_json::to_value(result).map_err(|_| update_internal_error())
+        // Upstream setup enters installation immediately and can replace this
+        // fork. Availability/renderer clicks are not reviewed OpsWolf activation.
+        // Reject at the native mutation boundary, before networking or launch,
+        // including callers that bypass or predate the current renderer UI.
+        Err(BridgeError::new(
+            "UPDATE_INSTALL_BLOCKED",
+            "Upstream Code-Codex setup is blocked in OpsWolf: it can replace the fork. Review the exact update and use a separately authorized, verified deployment with rollback; no installer was downloaded or launched.",
+        ))
     }
 }

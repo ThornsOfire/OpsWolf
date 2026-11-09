@@ -40,8 +40,19 @@ export const style0 = String.raw`
     filter: drop-shadow(10px 0 24px rgba(0, 0, 0, .18));
   }
 
+  /* Only a qualified expanded drawer receives measured content bounds.
+   * Unknown layouts retain the original safe-drawer fallback. */
+  :host([data-placement="drawer"][data-drawer-bounded]:not([data-collapsed="true"])) {
+    inset: var(--cle-drawer-top) auto auto var(--cle-drawer-left);
+    width: min(var(--cle-width), var(--cle-drawer-available-width));
+    min-width: 0;
+    max-width: var(--cle-drawer-available-width);
+    height: var(--cle-drawer-height);
+    min-height: 0;
+  }
+
   :host([data-placement="drawer"][data-collapsed="true"]) {
-    inset: 88px auto auto 0;
+    inset: 88px auto auto var(--cle-collapsed-drawer-left, 0px);
     height: 42px;
     min-height: 42px;
     filter: drop-shadow(4px 4px 12px rgba(0, 0, 0, .16));
@@ -62,7 +73,8 @@ export const style0 = String.raw`
   :host-context(.dark),
   :host-context(.electron-dark),
   :host-context([data-theme="dark"]),
-  :host([data-theme="dark"]) {    --cle-scroll-arrow-up: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%235c5c5c%22%20d=%22M4%20.5%208%204.5H0Z%22/%3E%3C/svg%3E");
+  :host([data-theme="dark"]) {
+    --cle-scroll-arrow-up: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%235c5c5c%22%20d=%22M4%20.5%208%204.5H0Z%22/%3E%3C/svg%3E");
     --cle-scroll-arrow-down: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%235c5c5c%22%20d=%22M0%20.5H8L4%204.5Z%22/%3E%3C/svg%3E");
     --cle-scroll-arrow-faded-up: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%23373737%22%20d=%22M4%20.5%208%204.5H0Z%22/%3E%3C/svg%3E");
     --cle-scroll-arrow-faded-down: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%23373737%22%20d=%22M0%20.5H8L4%204.5Z%22/%3E%3C/svg%3E");
@@ -71,7 +83,8 @@ export const style0 = String.raw`
   }
 
   @media (prefers-color-scheme: dark) {
-    :host(:not([data-theme="light"])) {      --cle-scroll-arrow-up: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%235c5c5c%22%20d=%22M4%20.5%208%204.5H0Z%22/%3E%3C/svg%3E");
+    :host(:not([data-theme="light"])) {
+      --cle-scroll-arrow-up: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%235c5c5c%22%20d=%22M4%20.5%208%204.5H0Z%22/%3E%3C/svg%3E");
       --cle-scroll-arrow-down: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%235c5c5c%22%20d=%22M0%20.5H8L4%204.5Z%22/%3E%3C/svg%3E");
       --cle-scroll-arrow-faded-up: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%23373737%22%20d=%22M4%20.5%208%204.5H0Z%22/%3E%3C/svg%3E");
       --cle-scroll-arrow-faded-down: url("data:image/svg+xml,%3Csvg%20xmlns=%22http://www.w3.org/2000/svg%22%20viewBox=%220%200%208%205%22%3E%3Cpath%20fill=%22%23373737%22%20d=%22M0%20.5H8L4%204.5Z%22/%3E%3C/svg%3E");

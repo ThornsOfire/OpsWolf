@@ -12,7 +12,7 @@ export class SendFollow {
 
   constructor(private readonly doc: Document, private readonly ports: {
     readonly scroll: HTMLElement;
-    readonly composer: () => HTMLElement | undefined;
+    readonly composer: (target?: Element) => HTMLElement | undefined;
     readonly valid: () => boolean;
     readonly interactionRevision: () => number;
     readonly resume: () => void;
@@ -47,8 +47,10 @@ export class SendFollow {
   };
   private click = (event: MouseEvent): void => {
     if (!event.isTrusted || !(event.target instanceof Element)) return;
-    const root = this.ports.composer(), button = event.target.closest<HTMLButtonElement>('button');
-    if (!root || !button || !root.contains(button) || button.disabled || button.getAttribute('aria-disabled') === 'true') return;
+    const button = event.target.closest<HTMLButtonElement>('button');
+    if (!button || button.disabled || button.getAttribute('aria-disabled') === 'true') return;
+    const root = this.ports.composer(button);
+    if (!root?.contains(button)) return;
     const editor = this.editor(root);
     // Labels may be localized. Native acceptance, not the button's name,
     // distinguishes sending from attachment/settings/other composer actions.
@@ -66,7 +68,12 @@ export class SendFollow {
     if (!this.ports.valid() || this.doc.hidden || this.ports.composer() !== pending.root ||
         this.editor(pending.root) !== pending.editor || pending.revision !== this.ports.interactionRevision()) { this.cancel(); return; }
     const latest = this.latest();
-    if (!latest || latest.node === pending.previous?.node || latest.key && latest.key === pending.previous?.key) return;
+    if (!latest) return;
+    // Native rendering can reuse a bubble node for a new stable message unit.
+    // Compare unit identity first; unkeyed messages still require a new node.
+    if (latest.key && pending.previous?.key) {
+      if (latest.key === pending.previous.key) return;
+    } else if (latest.node === pending.previous?.node) return;
     // Stable unit identity survives native rerenders. Without it, require an
     // actual append after the old connected message, not a replacement/history load.
     if (pending.previous && (!latest.key || !pending.previous.key) &&

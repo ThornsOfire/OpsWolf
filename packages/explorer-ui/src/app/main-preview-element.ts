@@ -20,6 +20,7 @@ import { LargeTextReader,largeTextStyles } from "../features/preview/large-text-
 import { MAX_PREVIEW_TEXT_UNITS } from "../core/configuration/explorer";
 import { CONVERSATION_ICON,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,MAIN_PREVIEW_ACTIVATE_EVENT,MAIN_PREVIEW_CLOSE_EVENT,MAIN_PREVIEW_DRAFT_EVENT,MAIN_PREVIEW_RELOAD_EVENT,MAIN_PREVIEW_SAVE_EVENT,MAIN_PREVIEW_TAG,MARKDOWN_PREVIEWER_ID } from "../core/preview/configuration";
 import { cloneView,firstVisibleLineOffset,formatBytes,isCsvPreviewPath,isDiagramPreviewPath,isMarkdownPreviewPath,isMediaPreviewView,normalizeState,officeDocumentKind,previewerIdForMediaKind,previewMethod,previewPackageId,restoreAttribute,selectionOffsetWithin,sourceLineCount,textPositionAtOffset,unsupportedCopy } from "../features/preview/view-state";
+import { documentEditorVisibility } from "../features/preview/editor-visibility";
 import type { DiagramPreviewJob,DocxBlockSplitResult,DocxPaginationClock,FocusSnapshot,MainPreviewActivateDetail,MainPreviewActivateEvent,MainPreviewCloseDetail,MainPreviewCloseEvent,MainPreviewDraftDetail,MainPreviewDraftEvent,MainPreviewEditorState,MainPreviewEmptyView,MainPreviewFileView,MainPreviewGitDiffView,MainPreviewMediaView,MainPreviewModelView,MainPreviewPathDetail,MainPreviewReloadEvent,MainPreviewSaveEvent,MainPreviewState,MainPreviewTextView,ModelMemoryCacheScope,ModelPreviewJob,ModelPreviewSourceInspection,NotebookCellModel,NotebookMimeBundle,NotebookModel,NotebookOutputModel,NotebookPreviewJob,NotebookRenderBudget,OfficeDomBudget,OfficePreviewJob,ParsedXlsxWorksheet,PdfPreviewJob,SuppressedAttributes,XlsxSharedStrings,XlsxStyleTable,XlsxWorksheetMeta } from "../file-preview/contracts";
 import { localizeOwnedUi } from "../i18n";
 import { getFileIcon,icons } from "../icons";
@@ -262,6 +263,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   disconnectedCallback(): void {
     if (this._reparenting) return;
+    this._paneResizeCleanup?.();
     // A replacement may mount before deferred media disposal runs. Release our
     // native leases now, before another editor records them as original state.
     this._restoreSuppressedChildren();
@@ -319,6 +321,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   reparent(parent: Element): void {
     if (this.parentElement === parent) return;
+    this._paneResizeCleanup?.();
     this._restoreSuppressedChildren();
     this._reparenting = true;
     try {
@@ -356,10 +359,18 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   setState(state: MainPreviewState): void {
     const nextState = normalizeState(state);
-    if(nextState.activePath!==this._state.activePath) {
-      if(nextState.activePath!==null) this._editorVisible=true;
-      else if(nextState.tabs.length>0) {this._editorVisible=false;this._resetFullscreen();}
+    const workspaceChanged = nextState.workspace?.threadId !== this._state.workspace?.threadId ||
+      nextState.workspace?.rootPath !== this._state.workspace?.rootPath;
+    const remembered = documentEditorVisibility(this.ownerDocument).read(nextState.workspace);
+    // Restoration/loading is passive. Only explicit UI actions record intent;
+    // a newly loaded file must not reopen a chat whose editor was closed.
+    if (nextState.activePath === null && nextState.tabs.length > 0) this._editorVisible = false;
+    else if (remembered !== undefined) this._editorVisible = remembered;
+    else if (nextState.activePath !== this._state.activePath || workspaceChanged) {
+      if (nextState.activePath !== null) this._editorVisible = true;
+      else if (workspaceChanged) this._editorVisible = false;
     }
+    if (!this._editorVisible) this._resetFullscreen();
     const previousEditorPath = this._state.editor?.path ?? null;
     const nextEditorPath = nextState.editor?.path ?? null;
     const editorTransition = nextEditorPath !== previousEditorPath;
@@ -460,6 +471,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   showEditor(): void { this._setEditorVisible(true); }
+  hideEditor(): void { this._setEditorVisible(false); }
   revealMiddle(): void { if (this._editorVisible && !this._panePreference.docked) this._setEditorVisible(false); }
 
   revealMarkdownHeading(path:string,fragment:string):void {this._linkUi.queueHeading(path,fragment);}
@@ -475,6 +487,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _setEditorVisible(open:boolean):void {
+    documentEditorVisibility(this.ownerDocument).write(this._state.workspace, open);
     this._editorVisible=open;
     if(!open)this._resetFullscreen();
     if(!open && this._openFilesMenu.matches(':popover-open')) this._openFilesMenu.hidePopover();
@@ -2237,6 +2250,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _syncSuppression(): void {
     const hasNativeSurface = this.parentElement?.matches(MAIN_SURFACE_SELECTOR) === true;
     const paneActive = hasNativeSurface && this._connected && !this._suspended && this._panePreference.docked && this._editorVisible;
+    if (!paneActive) this._paneResizeCleanup?.();
     const title = this._syncNativeTitle(hasNativeSurface && this._connected && !this._suspended && this._editorVisible ? this.parentElement : null);
     this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
@@ -2374,18 +2388,43 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     event.preventDefault();
     this._paneResizeCleanup?.();
     const handle = event.currentTarget as HTMLElement;
+    const parent = this.parentElement, view = this.ownerDocument.defaultView;
+    if (!parent || !view) return;
     const startX = event.clientX;
     const bounds=this.getBoundingClientRect();
     const startWidth = Number.parseFloat(this.ownerDocument.defaultView!.getComputedStyle(this).width);
     const scale=bounds.width/startWidth||1;
     handle.setPointerCapture(event.pointerId);
+    let frame = 0, pendingWidth: number | undefined;
+    const current = () => this.isConnected && this._connected && !this._suspended &&
+      this._editorVisible && this._panePreference.docked && this.parentElement === parent;
+    const flush = () => {
+      if (frame) view.cancelAnimationFrame(frame);
+      frame = 0;
+      const width = pendingWidth;
+      pendingWidth = undefined;
+      if (width === undefined || !current()) return;
+      this._panePreference.width = width;
+      this._editorPane.apply(parent, width);
+    };
     const move = (next: PointerEvent) => {
       if (next.pointerId !== event.pointerId) return;
-      this._panePreference.width = Math.max(260, Math.min(1200, startWidth + (startX - next.clientX)/scale));
-      if (this.parentElement) this._editorPane.apply(this.parentElement, this._panePreference.width);
+      if (!current()) { cleanup(); return; }
+      pendingWidth = Math.max(260, Math.min(1200, startWidth + (startX - next.clientX)/scale));
+      // Keep apply synchronous for keyboard/mount callers; only drag events
+      // coalesce intermediate widths before the next display frame.
+      if (!frame) frame = view.requestAnimationFrame(() => { frame = 0; flush(); });
     };
-    const finish = () => { cleanup(); this._savePanePreference(); };
+    const finish = (next: PointerEvent) => {
+      if (next.pointerId !== event.pointerId) return;
+      const valid = current();
+      if (valid) flush();
+      cleanup();
+      if (valid) this._savePanePreference();
+    };
     const cleanup = () => {
+      if (frame) view.cancelAnimationFrame(frame);
+      frame = 0; pendingWidth = undefined;
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', finish);
       handle.removeEventListener('pointercancel', finish);

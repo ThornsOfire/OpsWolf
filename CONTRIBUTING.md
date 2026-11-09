@@ -4,6 +4,10 @@ Keep changes understandable, keep the tests useful, and tell people what actuall
 
 Use the editor branch named in [README.md](README.md). Read the [project rules](AGENTS.md) and [development guide](docs/editor/development.md) for architecture, synthetic test fixtures, build/install differences and focused checks. Contributors should target `candidate/planned-development` for this alpha checkpoint; `feature/right-editor-pane` is the historical baseline.
 
+## Testing at the right depth
+
+Use the [three-tier testing plan and portable runner](docs/editor/testing.md): a small source profile, the existing post-restart acceptance receipt, and separately planned CI/release qualification. Choose additional [focused checks](docs/editor/development.md#choose-checks-for-what-changed) for the actual boundary. Report required skipped/blocked/untested coverage explicitly; source checks do not accept a running build. Missing dependencies do not authorize automatic installation.
+
 ## Keeping the changelog useful
 
 [CHANGELOG.md](CHANGELOG.md) is curated alongside the code. Git preserves exact implementation history; the changelog explains notable behavior changes to someone using the editor.

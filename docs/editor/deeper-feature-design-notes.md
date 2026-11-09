@@ -62,7 +62,7 @@ The current editor remains the foundation. Native Codex still owns its composer,
 
 **Already present:** local owned menu/settings profiles. They do not rename the signed native application or enable Discord activity.
 
-**Unresolved:** the supported handoff between saved profiles and launcher/shortcut ownership, what the actual host allows, and external registration/setup requirements. Preserve host binaries and stable internal identifiers. Windows and Discord behavior would need owner-assisted verification. See the [identity capability matrix](identity.md).
+**Unresolved:** the supported handoff between saved profiles and launcher/shortcut ownership, what the actual host allows, and external registration/setup requirements. Preserve host binaries and stable internal identifiers. Windows and Discord behavior would need owner-assisted verification. See the [identity capability matrix](identity.md) and [F21 feasibility/terms reconciliation](branding-feasibility.md). The owner wants an add-on around an existing Codex installation, not redistribution of Codex. Non-redistribution does not itself establish permission to modify the installed host. Research only; no native modification is authorized.
 
 ## Parked: context meter
 

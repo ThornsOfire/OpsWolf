@@ -14,6 +14,12 @@ This is not a filesystem watcher. Shell/manual/external edits absent from native
 
 The renderer immediately discards returned patch bodies after deriving a length and two numeric fingerprints, scoped by native turn ID. These are change-detection fingerprints, not security hashes. The native history remains the only patch archive. The adapter never expands a collapsed section merely to scrape hidden content.
 
+## History response limits
+
+A single persisted turn can exceed the App Server transport's four-MiB JSONL frame limit even though the patch response sent to the renderer is smaller. An oversized frame is rejected as an error, never displayed as a complete or silently truncated history result. The transport drains that frame to its newline with bounded memory, then continues reading subsequent replies so a rejected review does not disable later project-folder lookups.
+
+The rejected frame cannot be trusted to supply its request ID. Requests already pending at detection therefore fail explicitly; a concurrent workspace read may also need a retry. There is no automatic request replay. EOF or a terminal read error closes the request registry and later requests fail promptly. This does not increase history limits, add an archive, change context/path authority, or accept every native host/version.
+
 ## Ownership and verification
 
 `NativeDiffSections` owns disclosures' initial collapse requests, its added markers/control row, and bounded polling. Original native disclosure handlers perform the collapse/expand operations. `native-review-model` validates the existing response contract for both persistent review and marker consumers; `native-review-revisions` derives transient fingerprints. Application composition supplies the authenticated bridge capability, and `NativeDiffHost` supplies the qualified panel/visibility lifecycle.

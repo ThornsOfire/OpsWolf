@@ -1,5 +1,7 @@
 # Personal identity: local candidate
 
+F21 research reconciliation, 2026-10-31: the desired extension is personalization around an existing official Codex installation, without redistributing Codex. This page records the existing profile implementation; [branding feasibility](branding-feasibility.md) separates owned launcher/UI presentation from signed-host identity, current official terms and untested options. No new native identity capability is established or implemented by that review.
+
 Open **OpsWolf → OpsWolf settings → Personal identity**. A custom display name replaces those two owned labels after a fresh app window loads. OpsWolf is the public default, formerly Cursadex. The visible rebrand keeps existing selected personal profiles and technical storage identities; an explicitly saved custom name remains a custom name. This is the first part of the broader personal control-center work; it does not rename the Windows application.
 
 ## Profiles and controls
@@ -36,7 +38,7 @@ Writes validate first and publish in-memory saved state only after storage accep
 
 Windows' `SetCurrentProcessExplicitAppUserModelID` sets the **calling process** identity for taskbar grouping and is intended for application startup before UI. Calling it in our launcher would not by itself set the existing host's process identity. [Microsoft documentation](https://learn.microsoft.com/en-us/windows/win32/api/shobjidl_core/nf-shobjidl_core-setcurrentprocessexplicitappusermodelid).
 
-Discord's documented `UpdateRichPresence` overwrites the activity's name and applicationId; the client identifies a registered application using its application ID. An arbitrary profile name is therefore not a supported substitute for registered-app setup. No registration, publication or real presence activation has been attempted. [Discord Client reference](https://discord.com/developers/docs/social-sdk/classdiscordpp_1_1Client.html).
+Discord research correction, 2026-10-31: [Social SDK 1.6.12170 release notes](https://discord.com/developers/docs/social-sdk/release_notes.html) introduce customizable `activity.name`; the [Client reference](https://discord.com/developers/docs/social-sdk/classdiscordpp_1_1Client.html) retains conflicting older wording. Do not treat display names as universally fixed, or as a substitute for registered application identity and an explicit presence integration. Exact SDK/client behavior remains untested. No registration, SDK installation, publication or real presence activation has been attempted; see the [updated feasibility review](branding-feasibility.md).
 
 Local source evidence: `crates/launcher/build.rs` compiles ProductName/FileDescription and the icon resources. `crates/launcher/src/bin/code-codex-shortcut.rs` manages specific shortcuts with ownership, target and rollback manifests; it retains the official host AUMID. Those paths were inspected, not changed. Renderer code has no generic native process-title/identity capability. Deeper launch/shortcut integration remains open rather than being replaced with a cosmetic claim.
 

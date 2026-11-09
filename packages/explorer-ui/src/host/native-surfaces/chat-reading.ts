@@ -1,4 +1,4 @@
-import {activePageElements, annotationConsensusThreadId, MAIN_SURFACE_SELECTOR} from '../../adapters/codex-26.715';
+import {activePageElements, annotationConsensusThreadId, COMPOSER_THREAD_SELECTOR, MAIN_SURFACE_SELECTOR} from '../../adapters/codex-26.715';
 import {ReadingAnchor} from '../../features/chat/reading-anchor';
 import {ChatActivity, createChatActivityState, type ChatActivityState} from './chat-activity';
 import {SendFollow} from './send-follow';
@@ -6,6 +6,7 @@ import {SendFollow} from './send-follow';
 const OWNER = Symbol.for('code-codex:chat-reading:v1');
 const VIEWPORT = '.thread-scroll-container[data-app-action-timeline-scroll]';
 const MESSAGES = '[data-content-search-unit-key],[data-response-annotation-target],[data-user-message-bubble]';
+const COMPOSER_ROOT = '[data-codex-composer-root]';
 
 /** Uses inspected public DOM markers; unknown/ambiguous pages keep native scrolling. */
 export function installChatReading(doc: Document = document): () => void {
@@ -52,11 +53,20 @@ export function installChatReading(doc: Document = document): () => void {
     const state = activityStates.get(next.thread) ?? createChatActivityState();
     activityStates.delete(next.thread); activityStates.set(next.thread, state);
     if (activityStates.size > 16) activityStates.delete(activityStates.keys().next().value!);
-    const activity = new ChatActivity({scroll: next.scroll, composer: next.portal.closest<HTMLElement>('[data-codex-composer-root]') ?? next.portal,
+    // A native composer can be replaced while the same thread/timeline stays mounted.
+    const composer = (target?: Element) => {
+      // A button outside both supported composer containers cannot send a message.
+      if (target && !target.closest(`${COMPOSER_ROOT},${COMPOSER_THREAD_SELECTOR}`)) return;
+      const active = qualify();
+      return active?.scroll === next.scroll && active.thread === next.thread
+        ? active.portal.closest<HTMLElement>(COMPOSER_ROOT) ?? active.portal
+        : undefined;
+    };
+    const activity = new ChatActivity({scroll: next.scroll, composer,
       valid: () => { const active = qualify(); return active?.scroll === next.scroll && active.thread === next.thread; },
       follow: () => anchor.followLatest()}, state);
     const send = new SendFollow(doc, {scroll: next.scroll,
-      composer: () => { const active = qualify(); return active?.scroll === next.scroll && active.thread === next.thread ? active.portal.closest<HTMLElement>('[data-codex-composer-root]') ?? active.portal : undefined; },
+      composer,
       valid: () => { const active = qualify(); return active?.scroll === next.scroll && active.thread === next.thread; },
       interactionRevision: () => anchor.interactionRevision,
       resume: () => anchor.resume(),

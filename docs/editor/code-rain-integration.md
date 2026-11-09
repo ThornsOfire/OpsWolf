@@ -1,8 +1,32 @@
 # Code Rain integration candidate
 
-**Current host acceptance, 2026-10-30:** Alpha.3 is activated; the owner confirms Rain startup, Enable/Disable, saved current settings and previous-theme restoration on Codex package 26.1027.3384.0. BUG-017 is resolved for this tested setup. Later restart retention remains a follow-up. Blend-option persistence is not implemented (F29), and blend performance/cross-theme opacity remain separate. The earlier source-only and pending-live statements below are historical for their named checkpoints. No renderer/plugin pin or updater-policy change was part of this repair.
+## Current source behavior
 
-## Current local state — OpsWolf dev.9 baseline / Rain plugin 0.1.2
+On hosts where the adapter finds no supported Appearance interface, Code Rain can render on the Dark appearance already applied by Codex. Set Dark through Codex Appearance, then use Rain's existing Enable control. The card and settings explain when Rain is using the existing appearance. This route makes no appearance calls, transfers no theme lease and leaves the setting in place when Rain stops. A previous Rain or unowned restoration record is preserved and shown separately. A record owned by another background blocks the fallback.
+
+Unknown or conflicting appearance markers, forced colors and reduced transparency prevent this route from starting. Losing the Dark marker or entering either accessibility mode stops the renderer. Failed or ambiguous adapter calls keep their errors. Reopening a saved Rain selection does not force a native appearance change. Use Enable, Disable and Save as before. The verified renderer pin and existing surface rules are shared by both activation paths.
+
+When Code Rain switches Codex from Light or System to Dark, it waits for the window to reflect the confirmed setting before mounting the canvas. It sends one Dark request even if the window updates its theme marker later. The existing reapply path remains available if the original setting already reads Dark and the window lacks its marker.
+
+A dispatched appearance read during Code Rain activation or theme restoration has a five-second response deadline. If Codex does not reply, the controls become available again and report `CC-APPEARANCE-READ-TIMEOUT`. A late response cannot resume the failed action. A failed restoration retains the existing lease for retry. The deadline leaves background monitoring and appearance writes on their existing paths. This covers an isolated stalled-read fixture, while the November 5 live symptom and any update connection remain unverified.
+
+The explorer-header background-settings button opens active Rain directly through the existing panel. Preview Market remains the route for enabling/installing Rain and for other background cards. Direct Rain settings remain open while resizing; market-owned settings retain the market's resize-close behavior. Close/Escape returns focus to the visible opener. Blend feedback identifies the captured start/destination, direction, hold and custom/finished/stopped states, including manual and inactive-window pause. Save stores the current appearance, not blend playback options.
+
+Rain's settings subscriber keeps its panel current. The application avoids replaying the whole market for every settled progress notification. First/changed selection, enabled/pending/error and shared control facts still refresh synchronously after external-theme-stop selection cleanup. A read-only capability on the package controller permits filtering only for a verified loaded, installed package without active loading/download ownership; unknown states retain the complete refresh. Existing package, language, native and other-background refresh paths remain intact. No renderer, frame cap, preset, persistence schema, default or plugin pin changes are involved.
+
+The actual full-app regression keeps 39 behavior checks and adds one work expectation: old source passes 39/40, repaired source passes the identical 40/40. It covers direct-panel feedback, pending/failure/retry, external stop, repeated package-owned labels/ARIA, release, language, focused draft/caret, explicit Save and cleanup. A separate same-script observation found about 22,500 -> 1,200 setter attempts per blend, with Rain renders 28 -> 14. These are instrumented synthetic work counts, not a CPU/GPU/FPS percentage. Timings were mixed, including a higher open-panel callback outlier; native blend smoothness and BUG-011 acceptance remain open. Unknown/disposed capability and other unisolated branches are conservative source guards, not additional invented passing tests.
+
+After building the UI/plugin assets with the documented installed tools, run the focused regression from this checkout:
+
+```powershell
+node scripts/test-code-rain-market-work.mjs
+```
+
+The dated checkpoints below preserve earlier package and host evidence. Their old versions, current-state labels and restart instructions do not describe the latest source or authorize activation.
+
+**Historical host acceptance, 2026-10-30:** Alpha.3 is activated; the owner confirms Rain startup, Enable/Disable, saved current settings and previous-theme restoration on Codex package 26.1027.3384.0. BUG-017 is resolved for this tested setup. Later restart retention remains a follow-up. Blend-option persistence is not implemented (F29), and blend performance/cross-theme opacity remain separate. The earlier source-only and pending-live statements below are historical for their named checkpoints. No renderer/plugin pin or updater-policy change was part of this repair.
+
+## Historical dev.9 baseline / Rain plugin 0.1.2
 
 The owner-used dev.9 baseline retains reviewed renderer commit `c976189e3ec78d0f902a27e5aacf33470c38ebd8`. Plugin 0.1.2 is independently named and pinned: 10,580 bytes, SHA-256 `8e2909de7967c0d1a8432833c45c71320d08a9f3220d0c29a42f2bd84977cdae`. Its fixed 30 FPS deadlines correct the reproduced 20–23 FPS cadence slip without changing appearance, resource caps, persistence or opt-ins. The matching native/UI build passed normal offline import of all 27 locked packages; the other 26 lock entries were unchanged. Source/public plugin releases remain unapproved. Drawing the intended extra frames can increase work; this is a smoothness fix, not a GPU-saving claim.
 
@@ -96,7 +120,7 @@ Twenty-four browser checks use the actual renderer and existing `BackgroundActio
 
 ## Controls and application integration
 
-After the verified package is available, enable **Code Rain Background** in Preview Market's Appearance category. Its sliders button opens the settings panel. Seven numeric controls, four rain colors and the character set remain independent of interface colors. Apply selects one of four presets; Start blend interpolates toward it using duration, hold and optional return looping. Pause suspends playback, Stop blend retains the current intermediate settings, Reset current changes the session, and Save persists the current snapshot. Blend timing and paused state are session-only. The existing market closes its panels when the window is resized; reopening preserves unsaved settings.
+After the verified package is available, enable **Code Rain Background** in Preview Market's Appearance category. Its sliders button opens the settings panel. Seven numeric controls, four rain colors and the character set remain independent of interface colors. Apply selects one of four presets; Start blend interpolates toward it using duration, hold and optional return looping. Pause suspends playback, Stop blend retains the current intermediate settings, Reset current changes the session, and Save persists the current snapshot. Blend timing and paused state are session-only. Market-opened settings still close on window resize; direct header-opened Rain settings remain open and reposition. Reopening preserves session values.
 
 Activation uses Dark appearance. Disabling restores a prior Light/System preference only while the owned forced preference still applies. A manual native appearance change wins: Rain stops and its enabled preference clears. Its canvas uses the shared particle surface contract, cannot intercept pointer input, and is hidden in forced colors. Settings use the shared semantic interface colors. No files, citation data or composer history are stored by this feature.
 
