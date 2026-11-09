@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
 import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
-import {join} from 'node:path';
+import {join,resolve} from 'node:path';
 import {buildSync} from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
 import {installedBackgroundFixture} from './background-package-fixture.mjs';
-import {openBrowser,root} from './fixtures/browser-fixture.mjs';
+import {delay,launchFixture} from './browser-fixture.mjs';
 
+const root=resolve(import.meta.dirname,'..');
 const version=JSON.parse(readFileSync(join(root,'packages/explorer-ui/package.json'),'utf8')).version;
 const directory=join(root,'artifacts','appearance-adapter-'+Date.now());mkdirSync(directory,{recursive:true});
 const report={version,checks:[],limits:['Browser fixture uses controlled official actions; actual Codex integration is a separate delivery check.']};
@@ -60,8 +61,19 @@ const server=createServer((req,res)=>{
 await new Promise(r=>server.listen(0,'127.0.0.1',r));let browser;
 const check=(name,condition)=>{report.checks.push({name,passed:!!condition});assert.ok(condition,name);};
 try{
- browser=await openBrowser('<title>Appearance adapter</title>');const {cmd,ev,wait}=browser;
- const page=async scenario=>{await cmd('Page.navigate',{url:`http://127.0.0.1:${server.address().port}/?case=${scenario}`});await wait('!!window.fixture','Appearance fixture ready');};
+ const ev=expression=>browser.evaluate(expression);
+ const wait=async(expression,label,ms=12_000)=>{
+  const deadline=Date.now()+ms;
+  while(Date.now()<deadline){if(await ev(expression))return;await delay(60);}
+  throw Error(label+' timeout');
+ };
+ const origin='http://127.0.0.1:'+server.address().port;
+ const page=async scenario=>{
+  const url=origin+'/?case='+scenario;
+  if(browser)await browser.command('Page.navigate',{url});
+  else browser=await launchFixture(url);
+  await wait('location.href==='+JSON.stringify(url)+'&&!!window.fixture','Appearance fixture ready');
+ };
  // The old detector cannot see the split module; its only app-initial exports are unrelated.
  for(const scenario of ['legacy','initial-dispatch','split','no-initial','shared']){
   await page(scenario);
@@ -336,7 +348,7 @@ try{
    manualPolicy.stopped&&manualPolicy.released);
  await page('anonymous-layout');
  await wait('window.fixtureAnonymousChunkLoaded===true','Anonymous accessibility fixture ready');
- await cmd('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
+ await browser.command('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});
  const restricted=await ev(`(async()=>{
    window.mode='dark';document.documentElement.dataset.theme='dark';
    fixture.connectBackgroundPackages(async()=>({loaded:true}));
@@ -347,7 +359,7 @@ try{
      error?.includes('forced colors')&&calls.length===0&&!document.querySelector('[data-code-codex-rain-layer]');
    await rain.dispose(true);return safe;
  })()`);
- await cmd('Emulation.setEmulatedMedia',{features:[]});
+ await browser.command('Emulation.setEmulatedMedia',{features:[]});
  check('Forced colors refuses manual Rain before any lease or canvas',restricted);
  await page('ambiguous');
  const unsafeAdapter=await ev(`(async()=>{
@@ -510,4 +522,11 @@ try{
  })()`);
  check('Rollback cannot claim the lease of a target that never enabled',rollbackLease);
  console.log('Appearance adapter: '+report.checks.length+' checks passed');
-}catch(error){report.error=String(error);throw error;}finally{writeFileSync(join(directory,'results.json'),JSON.stringify(report,null,2));await browser?.close();server.close();}
+}catch(error){report.error=String(error);throw error;}finally{
+ try{await browser?.close();}
+ catch(error){report.cleanupError=String(error);throw error;}
+ finally{
+  await new Promise(resolve=>server.close(resolve));
+  writeFileSync(join(directory,'results.json'),JSON.stringify(report,null,2));
+ }
+}

@@ -2,14 +2,15 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { createServer } from 'node:http';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { buildSync } from '../packages/explorer-ui/node_modules/esbuild/lib/main.js';
 import { installedBackgroundFixture } from './background-package-fixture.mjs';
-import { openBrowser, root, sleep } from './fixtures/browser-fixture.mjs';
+import { delay as sleep, launchFixture } from './browser-fixture.mjs';
 
 // Real controller, coordinator, IDB, image preparation and published renderer.
 // The barrier extends asynchronous preparation without replacing its result.
 // Only the official appearance ports and the other background are test doubles.
+const root = resolve(import.meta.dirname, '..');
 const label = process.argv[2] ?? String(Date.now());
 assert.match(label, /^[a-zA-Z0-9_-]+$/);
 const directory = join(root, 'artifacts', `particle-rotation-${label}`);
@@ -34,7 +35,7 @@ const report = {
   version, at: new Date().toISOString(),
   controllerSha256: createHash('sha256').update(readFileSync(join(root, 'packages/explorer-ui/src/plugin-host/backgrounds/particle.ts'))).digest('hex'),
   checks: [], failures: [],
-  limitations: ['Isolated browser/software WebGL fixture; not a live official Codex session or installer test',
+  limitations: ['Isolated browser fixture requiring WebGL',
     'Controlled preparation barriers are not performance benchmarks'],
 };
 const check = (name, passed, value) => {
@@ -55,9 +56,16 @@ const server = createServer((req, res) => {
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 let browser;
 try {
-  browser = await openBrowser('<!doctype html><title>Particle rotation regression</title>');
-  const { ev, cmd, wait } = browser;
-  await cmd('Page.navigate', { url: `http://127.0.0.1:${server.address().port}` });
+  browser = await launchFixture('http://127.0.0.1:' + server.address().port);
+  const { evaluate: ev } = browser;
+  const wait = async (expression, label, ms = 12_000) => {
+    const deadline = Date.now() + ms;
+    while (Date.now() < deadline) {
+      if (await ev(expression)) return;
+      await sleep(60);
+    }
+    throw Error(label + ' timeout');
+  };
   await wait('!!window.fixture', 'fixture ready');
   await ev(`(async()=>{
     window.blob=await(await fetch('/photo.png')).blob();
@@ -141,10 +149,15 @@ try {
   check('fixture has no unhandled or background-action errors', await ev('errors.length===0&&issues.length===0'), await ev('({errors,issues})'));
 } catch (error) {
   report.failures.push(String(error.stack ?? error));
-  if (browser) report.observation = await browser.ev('({errors:window.errors,issues:window.issues,pending:window.controller?.pending,enabled:window.controller?.enabled,hits:window.hits,settings:window.controller?.settings})').catch(() => null);
+  if (browser) report.observation = await browser.evaluate('({errors:window.errors,issues:window.issues,pending:window.controller?.pending,enabled:window.controller?.enabled,hits:window.hits,settings:window.controller?.settings})').catch(() => null);
 } finally {
-  if (browser) await browser.close();
-  await new Promise(resolve => server.close(resolve));
+  try {
+    await browser?.close();
+  } catch (error) {
+    report.failures.push(String(error.stack ?? error));
+  } finally {
+    await new Promise(resolve => server.close(resolve));
+  }
   report.passed = report.failures.length === 0;
   writeFileSync(join(directory, 'results.json'), JSON.stringify(report, null, 2) + '\n');
 }

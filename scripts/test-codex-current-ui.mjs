@@ -8,6 +8,10 @@ import {join, resolve} from 'node:path';
 const root=resolve(import.meta.dirname,'..');
 const forkVersion=JSON.parse(readFileSync(join(root,'cursadex-version.json'),'utf8')).version;
 const tag=builtExplorerTag(root);
+const upstreamVersion=JSON.parse(readFileSync(join(root,'packages/explorer-ui/package.json'),'utf8')).version;
+const upstreamTag='v'+upstreamVersion;
+const updateReply={currentVersion:upstreamVersion,latestVersion:upstreamVersion,status:'upToDate',
+ tagName:upstreamTag,releaseUrl:'https://github.com/Rice-dog/code-codex/releases/tag/'+upstreamTag};
 const page=(active,id,title)=>`<div data-app-shell-active-page="${active}" style="display:${active?'contents':'none'}"><div class="_Workspace_new" data-app-shell-page-surface="true"><header data-app-shell-titlebar="true"><span data-app-shell-titlebar-content>${title}</span></header><div class="_MainContentClip_new"><main data-app-shell-main-surface="default"><div class="_WorkspaceContent_new"><div data-app-shell-workspace-layout="split"><div data-app-shell-main-content-top-fade="visible"><div class="_MainContentTopFade_new"></div></div><article data-response-annotation-conversation="${id}">Conversation</article><div data-thread-scroll-footer="true"><div class="pointer-events-none bg-surface"></div><div data-above-composer-conversation-id="${id}"><textarea>Preserved draft</textarea></div></div></div></div></main></div></div></div>`;
 const script=`
 const calls=[];let watchFinished=false;
@@ -19,7 +23,7 @@ if(method==='explorer.context')return {threadId:params.threadId,projectName:'Fix
 if(method==='explorer.list')return {entries:[{name:'README.md',relativePath:'README.md',kind:'file'},{name:'main.ts',relativePath:'main.ts',kind:'file'}]};
 if(method==='explorer.preview')return {kind:'text',text:params.relativePath==='README.md'?'# Preview':'const value = 1;',sizeBytes:10,truncated:false,editable:true,version:'a'.repeat(64),lineEnding:'lf'};
 if(method==='explorer.watch.start'){await new Promise(r=>setTimeout(r,1500));watchFinished=true;return {watching:true};}
-if(method==='explorer.update.check')return {currentVersion:'0.5.40',latestVersion:'0.5.40',status:'upToDate',tagName:'v0.5.40',releaseUrl:'https://github.com/Rice-dog/code-codex/releases/tag/v0.5.40'};
+if(method==='explorer.update.check')return ${JSON.stringify(updateReply)};
 return {};}};
 window.testErrors=[];addEventListener('error',e=>testErrors.push(e.message));addEventListener('unhandledrejection',e=>testErrors.push(String(e.reason)));
 `;
@@ -99,7 +103,7 @@ try{
  assert.ok(result,'fixture completed');
  const versions=await browser.evaluate(`(()=>{const s=document.querySelector('${tag}').shadowRoot;return {fork:s.querySelector('.fork-version')?.textContent,upstream:s.querySelector('.status-code')?.textContent,codex:s.querySelector('.codex-version')?.textContent};})()`);
  assert.equal(versions.fork,'OpsWolf v'+forkVersion,'fork identity comes from manifest');
- assert.equal(versions.upstream,'Upstream v0.5.40','upstream identity stays separate');
+ assert.equal(versions.upstream,'Upstream '+upstreamTag,'upstream identity stays separate');
  assert.equal(versions.codex,'Codex v26.928.2636.0','host identity comes from launcher bootstrap, not fork/upstream');
  assert.equal(await browser.evaluate(`document.querySelector('${tag}').shadowRoot.querySelector('.preview-market-button')===null`),true,'duplicate footer market control removed');
  await browser.evaluate(`window.marketOrigin=document.createElement('button');marketOrigin.textContent='Market menu trigger';document.body.append(marketOrigin);marketOrigin.focus();document.querySelector('${tag}').openPreviewMarket()`);
@@ -127,6 +131,9 @@ try{
  }
  result.versionFooter.reconnectAndUnavailable=true;
  writeFileSync(join(root,'artifacts/current-ui-result.json'),JSON.stringify(result,null,2));
-}finally{await browser?.close();await new Promise(r=>server.close(r));}
+}finally{
+ try{await browser?.close();}
+ finally{await new Promise(r=>server.close(r));}
+}
 console.log({...result,calls:result.calls.length});
 assert.equal(result.error,undefined);for(const key of ['moduleBootstrapRetained','readyBeforeWatch','rootResynced','positions','titleTracksRename','replacementTitleTracked','dockedTitleVisible','ambiguousTitleSafe','expandedTitleRetained','cachedTitleScoped','maskClear','fileTransparent','clickable','switchInline'])assert.equal(result[key],true,key);assert.equal(result.label,'Current title');assert.deepEqual(result.errors,[]);
