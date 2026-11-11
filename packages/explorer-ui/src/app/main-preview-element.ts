@@ -738,6 +738,16 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       button.style.cssText='flex:none;padding:2px 6px;font:inherit;color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;cursor:pointer';
       button.addEventListener('click',callback);metaBar.append(button);return button;
     };
+    if (!view.path.includes('://')) {
+      const path = view.path;
+      const refresh = action('Refresh file', 'Reload this file from disk; unsaved edits prompt before refreshing', () => {
+        this._dispatchPathEvent<MainPreviewPathDetail>(MAIN_PREVIEW_RELOAD_EVENT, { path });
+      }, view.kind === 'loading' || draftEditor?.saving === true);
+      refresh.classList.add('editor-refresh');
+      refresh.innerHTML = '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M13 6a5 5 0 1 0 .2 4M13 2v4H9"/></svg>';
+      refresh.style.display = 'inline-flex';
+      refresh.style.alignItems = 'center';
+    }
     if(view.kind==='git-diff'&&view.openSourcePath) {
       action('Open file','Open the current file with Preview and Edit controls',()=>{
         this._dispatchPathEvent<MainPreviewPathDetail>('cle-main-preview-open-source',{path:view.path});
@@ -2050,7 +2060,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       const path = active.dataset.closePath;
       return path ? { kind: "close", path } : null;
     }
-    if (active.matches(".preview-panel")) return { kind: "panel" };
+    if (active.matches(".preview-panel,.editor-refresh,.editor-reload")) return { kind: "panel" };
     return null;
   }
 

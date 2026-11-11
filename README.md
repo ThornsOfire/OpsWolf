@@ -12,7 +12,7 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
-The current source is **OpsWolf 0.1.0-alpha.15**, built on [Code-Codex v0.6.0](releases/README.md). The combined build passed its local checks, and Rain is much smoother in our hands-on testing. That is progress, not a promise that every setup works. [What we checked](docs/editor/upstream-integration.md#alpha15-qualification).
+The current source is **OpsWolf 0.1.0-alpha.16**, built on [Code-Codex v0.6.0](releases/README.md). This adds a Refresh button for the file you have open in the editor. The previous build passed its local checks, and Rain is much smoother in our hands-on testing. This new build still needs its own restart checks. [What we checked before this change](docs/editor/upstream-integration.md#alpha15-qualification).
 
 ### Read it, then work on it
 

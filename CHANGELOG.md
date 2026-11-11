@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Refresh the open editor file from disk with a toolbar button. Unsaved edits use Save and refresh, Discard and refresh, or Cancel; failed/conflicting saves keep the draft. Refresh returns to Preview and leaves other tabs and pins intact.
+
 - An offline startup-status helper summarizes one explicitly selected runtime log when the OpsWolf menu is unavailable. See the [startup status guide](docs/startup-status.md).
 
 - Background settings in the explorer header opens active Rain directly, with the existing panel, draft and Save controls. Other identified supported backgrounds open their existing Preview Market card; unknown, unverified custom or multiple states use an honest browse context. Keyboard/Close/Escape focus returns to the visible opener, and direct Rain settings stay open while resizing.

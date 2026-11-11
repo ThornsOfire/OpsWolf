@@ -3158,7 +3158,7 @@ export class CodeCodexElement extends HTMLElement {
         } else open();
     }
     #editorClosePending=false;
-    async #requestEditorClose(path?:string,switchAction?:()=>void):Promise<void> {
+    async #requestEditorClose(path?:string,switchAction?:()=>void,refreshing=false):Promise<void> {
         if(this.#editorClosePending)return;
         const editing=this.#previeweditingSettings;
         if(editing.drafts.saving){this.#announce('Wait for the current save to finish');return;}
@@ -3178,11 +3178,14 @@ export class CodeCodexElement extends HTMLElement {
         const context=this.#workspaceSession.context;
         const bridge=this.#workspaceSession.bridge;
         const preview=this.#mainPreview;
+        const previewSurface=this.#mainPreviewSurface;
         const editSession=editing.drafts.session;
         let released=false;
         const current=()=>this.#connected&&!this.#dismissed&&this.#workspaceSession.generation===generation&&
             this.#workspaceSession.context===context&&this.#workspaceSession.bridge===bridge&&this.#mainPreview===preview&&
             targets.every(tab=>this.#previewWorkspace.tabStore.items.includes(tab))&&
+            (!refreshing||(this.#activePreviewPath===path&&previewSurface?.isConnected===true&&
+                this.#mainPreviewSurface===previewSurface&&preview?.parentElement===previewSurface))&&
             (path!==undefined||(targets.length===this.#previewWorkspace.tabStore.items.filter(tab=>!this.#previewWorkspace.pinnedPaths.includes(tab.path)).length&&targets.every(tab=>!this.#previewWorkspace.pinnedPaths.includes(tab.path))))&&
             (!dirty||(released?editing.drafts.path===null:editing.drafts.path===draftPath&&editing.drafts.session===editSession));
         this.#editorClosePending=true;
@@ -3192,7 +3195,7 @@ export class CodeCodexElement extends HTMLElement {
                 if(choice==='discard'&&current())close();return;
             }
             await requestDirtyEditorClose({
-                document:this.ownerDocument,all:path===undefined,switching:Boolean(switchAction),pinned,
+                document:this.ownerDocument,all:path===undefined,switching:Boolean(switchAction),refreshing,pinned,
                 fileName:this.#previewWorkspace.tabStore.items.find(tab=>tab.path===draftPath)?.name??draftPath!,
                 isCurrent:current,
                 save:async()=>{
@@ -3206,7 +3209,7 @@ export class CodeCodexElement extends HTMLElement {
             });
         } catch(error) {
             recordCaughtRuntimeError("#requestEditorClose",error);
-            this.#announce("The close action could not finish. Your tabs have been kept open.");
+            this.#announce(refreshing ? "The refresh action could not finish. Your file has been kept open." : "The close action could not finish. Your tabs have been kept open.");
         } finally {this.#editorClosePending=false;}
     }
     #onMainPreviewCloseAll = (event: Event): void => {
@@ -3256,8 +3259,33 @@ export class CodeCodexElement extends HTMLElement {
         if (event.target !== this.#mainPreview)
             return;
         const detail = asRecord(event.detail);
-        if (detail?.path === this.#previeweditingSettings.drafts.path)
-            this.#previeweditingSettings.reloadEditedFile();
+        if (typeof detail?.path !== "string" || detail.path !== this.#activePreviewPath) return;
+        const tab = this.#previewWorkspace.previewTabs.find(candidate => candidate.path === detail.path);
+        // Historical/native comparison tabs are not current files, including
+        // their loading/error states. Their existing Open file action stays separate.
+        if (!tab || tab.path.includes("://") || tab.view.kind === "loading") return;
+        const editing = this.#previeweditingSettings;
+        if (editing.drafts.saving || (editing.drafts.path && editing.drafts.path !== tab.path)) return;
+        const context = this.#workspaceSession.context, bridge = this.#workspaceSession.bridge;
+        const generation = this.#workspaceSession.generation, preview = this.#mainPreview, surface = this.#mainPreviewSurface;
+        if (!bridge?.available || !context || !surface?.isConnected || preview?.parentElement !== surface) {
+            this.#showActionNotice("Refresh unavailable while disconnected. Your current file and draft have been kept.", "error");
+            return;
+        }
+        const current = () => this.#connected && !this.#dismissed &&
+            this.#workspaceSession.matches(bridge, context, generation) && this.#mainPreview === preview &&
+            surface.isConnected && this.#mainPreviewSurface === surface && preview?.parentElement === surface &&
+            this.#activePreviewPath === tab.path &&
+            this.#previewWorkspace.previewTabs.includes(tab);
+        const refresh = () => {
+            if (!current() || !bridge.available) return;
+            if (editing.drafts.path === tab.path) editing.clearEditing(false);
+            // Releasing a draft may apply a queued workspace/reconnect change.
+            if (!current()) return;
+            this.#previewWorkspace.schedulePreview(tab, 0);
+            this.#announce(`Refreshing ${tab.name} from disk`);
+        };
+        void this.#requestEditorClose(tab.path, refresh, true);
     };
     #onMainPreviewReorder = (event: CustomEvent<unknown>): void => {
         if (event.target !== this.#mainPreview) return;

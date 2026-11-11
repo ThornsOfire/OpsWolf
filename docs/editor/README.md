@@ -92,6 +92,8 @@ Word wrap is available from the editor tab row. It preserves the source, draft, 
 
 These are byte limits: 1 KiB is 1,024 bytes. Binary, sensitive, unsupported, or unavailable files have their own restrictions. A rendered preview or syntax-highlighting budget doesn't authorize saving incomplete content.
 
+**Refresh file** is the circular-arrow button beside Preview/Edit in the file row. Use it after another program or agent changes the file. It reloads the current file from disk into Preview; it does not refresh the tree, chat or recorded Changes. If you have unsaved edits, the existing dialog offers **Save and refresh**, **Discard and refresh**, or **Cancel**. A failed or conflicting save keeps your draft and stops the refresh. Cancel makes no disk changes. Missing or inaccessible files show an error, and Refresh remains available to retry. Pins and other tabs stay in place.
+
 When switching away from a dirty file, choose **Save and switch**, **Discard**, or **Cancel**. Individual close and close-all similarly offer save-and-close choices. A failed save retains the draft and prevents the dependent close or switch. Save-all currently handles the active dirty editor; this isn't a multi-document unsaved-draft system.
 
 Drafts belong to the running session. There is a short, 10-second in-memory recovery handoff for a native UI refresh, subject to matching chat/bootstrap identity. This isn't recovery after quitting or crashing the entire application. Save before restarting.

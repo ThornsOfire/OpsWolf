@@ -346,21 +346,6 @@ finishSuccessfulSave(tab: PreviewTab, preview: NormalizedTextPreview, operation:
             this.host.flushQueuedThreadSwitch();
         }
     }
-reloadEditedFile(): void {
-        if (!this.drafts.path)
-            return;
-        if (this.isEditDirty() && !this.confirmDiscardEditing("Reload this file and discard your unsaved changes?"))
-            return;
-        const tab = this.host.previewTabs.find((candidate) => candidate.path === this.drafts.path);
-        this.clearEditing(false);
-        if (tab) {
-            tab.dirty = true;
-            this.host.schedulePreview(tab, 0);
-        }
-        else {
-            this.host.syncMainPreview();
-        }
-    }
 activeEditableTab(): PreviewTab | undefined {
         if (!this.host.activePreviewPath)
             return undefined;

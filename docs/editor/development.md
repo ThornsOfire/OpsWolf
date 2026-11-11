@@ -59,6 +59,7 @@ These commands run from the repository root after UI dependencies are installed.
 | First chat selection, restored-chat startup, pointer/keyboard activation, delayed readiness and manual reopen | `node scripts/test-native-sidebar.mjs` |
 | Tab wheel/drag/dropdown/pins and close behavior | `node scripts/test-tab-navigation.mjs` |
 | Delayed own-save notifications, real external conflicts, retry baseline protection and stale verification | `node scripts/test-save-watch-reconciliation.mjs` |
+| Active-file Refresh, dirty Preview/Edit choices, failed/conflicting saves, stale pages/replies, retry and keyboard/narrow-toolbar behavior | `node scripts/test-editor-refresh.mjs`; also close-dialog and save-watch reconciliation |
 | Save/discard/cancel, failed/stale saves and switching | `node scripts/test-close-dialog.mjs` |
 | Complete inline Markdown/editor delivery and rejecting partial responses | `node scripts/test-complete-text.mjs` |
 | Large text and explicit large Markdown rendering | `node scripts/test-large-text.mjs` |
