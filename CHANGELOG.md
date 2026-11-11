@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Clear list in the editor’s native Changes tab hides accumulated entries for the running session. Show all restores them; new recorded patches bring changed files back. Filters stay separate by chat and project, reset on app reload, and release when history cannot establish what changed. Files, drafts, Git state and native history remain untouched.
+
 - Refresh the open editor file from disk with a toolbar button. Unsaved edits use Save and refresh, Discard and refresh, or Cancel; failed/conflicting saves keep the draft. Refresh returns to Preview and leaves other tabs and pins intact.
 
 - An offline startup-status helper summarizes one explicitly selected runtime log when the OpsWolf menu is unavailable. See the [startup status guide](docs/startup-status.md).

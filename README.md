@@ -12,7 +12,7 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
-The current source is **OpsWolf 0.1.0-alpha.16**, built on [Code-Codex v0.6.0](releases/README.md). This adds a Refresh button for the file you have open in the editor. The previous build passed its local checks, and Rain is much smoother in our hands-on testing. This new build still needs its own restart checks. [What we checked before this change](docs/editor/upstream-integration.md#alpha15-qualification).
+The current source is **OpsWolf 0.1.0-alpha.17**, built on [Code-Codex v0.6.0](releases/README.md). This adds Refresh for the file you have open and Clear list / Show all for the editor’s Changes tab. The previous build passed its local checks, and Rain is much smoother in our hands-on testing. This new build still needs its own restart checks. [What we checked before this change](docs/editor/upstream-integration.md#alpha15-qualification).
 
 ### Read it, then work on it
 
@@ -33,6 +33,8 @@ Tabs can scroll with your mouse wheel, move by dragging, and appear in an open-f
 ### See what changed without losing the conversation
 
 Click Codex's live **files changed** bubble and its comparison viewer opens in the editor's **Changes** tab. You keep Codex's review controls, with the comparison beside your chat. Clicking a file in the bubble's hover list takes you to that file's change.
+
+List getting long? **Clear list** tucks those entries away for this session. New recorded edits bring files back, and **Show all** brings the cleared entries back whenever you want. It doesn't undo your work. **Clear all unread** just clears the unread dots.
 
 ![The native Codex Changes viewer hosted inside an OpsWolf editor tab](docs/images/changes-native.png)
 

@@ -2,7 +2,7 @@ import { clearDocumentEditorVisibility } from "../features/preview/editor-visibi
 import { isNativeBrowserGeometryResize } from "../features/preview/native-browser-geometry";
 import {mountNovaRestore} from '../features/nova-restore';
 import { ChangeReviewController } from "../features/workspace/change-review";
-import { nativeReviewRevisions } from "../features/workspace/native-review-revisions";
+import { readNativeReviewRevisions } from "../features/workspace/native-review-revisions";
 import { RootRevalidation } from "../features/workspace/root-revalidation";
 import { CURSADEX_VERSION } from "../core/version";
 import { PRODUCT_NAME } from "../core/branding";
@@ -950,10 +950,15 @@ export class CodeCodexElement extends HTMLElement {
             setWordWrap:enabled=>owner.#mainPreview?.setNativeWordWrapState(enabled),
             openFile:path=>owner.#openNativeFileInEditor(path),
             announce:message=>owner.#announce(message),
-            readRevisions:async()=>{
-                const bridge=owner.#workspaceSession.bridge;
-                if(!bridge?.available)throw Error('Workspace bridge unavailable');
-                return nativeReviewRevisions(await bridge.request('explorer.changes.native',{cursor:null},30_000));
+            readRevisions:async(since)=>{
+                const {bridge,context,generation}=owner.#workspaceSession;
+                if(!bridge?.available||!context)throw Error('Workspace bridge unavailable');
+                return readNativeReviewRevisions(async(cursor,timeout)=>{
+                    if(!owner.#workspaceSession.matches(bridge,context,generation))throw Error('Workspace changed');
+                    const page=await bridge.request('explorer.changes.native',{cursor},timeout);
+                    if(!owner.#workspaceSession.matches(bridge,context,generation))throw Error('Workspace changed');
+                    return page;
+                },since);
             },
         });
         this.#nativeDiffHost.start();

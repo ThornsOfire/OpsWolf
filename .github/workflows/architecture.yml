@@ -84,6 +84,8 @@ jobs:
       - run: node --test scripts/test-refactor-contracts.mjs scripts/test-plugin-publication.mjs scripts/test-maintenance-isolation.mjs scripts/test-file-mutation-isolation.mjs
       - name: Browser fixture startup and cleanup
         run: node --test scripts/test-browser-fixture.mjs
+      - name: Native Changes reversible session filtering
+        run: node scripts/test-clear-changes.mjs
       - name: Editor Refresh and unsaved-work protection
         run: node scripts/test-editor-refresh.mjs
       - run: node scripts/test-background-surfaces.mjs

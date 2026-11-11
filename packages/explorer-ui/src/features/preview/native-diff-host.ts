@@ -15,7 +15,7 @@ export interface NativeDiffHostPorts {
  readonly setWordWrap:(enabled:boolean|undefined)=>void;
  readonly openFile:(path:string)=>Promise<boolean>;
  readonly announce:(message:string)=>void;
- readonly readRevisions:()=>Promise<ReviewRevisions>;
+ readonly readRevisions:(since?:string|null)=>Promise<ReviewRevisions>;
 }
 class StyleLease {
  private values=new Map<HTMLElement,Map<string,{value:string;priority:string;applied:string}>>();

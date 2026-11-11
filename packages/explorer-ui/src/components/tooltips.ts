@@ -1,5 +1,5 @@
 /** Opt-in tooltips for product controls. Native/user content is never scanned. */
-export function attachTooltips(root: ShadowRoot, palette: 'explorer' | 'editor' | 'native' = 'explorer'): () => void {
+export function attachTooltips(root: ShadowRoot, palette: 'explorer' | 'editor' | 'native' = 'explorer', behavior: {dismissOnActivate?: boolean} = {}): () => void {
   const doc = root.ownerDocument;
   const bubble = doc.createElement('div');
   if (typeof bubble.showPopover !== 'function') {
@@ -80,6 +80,8 @@ export function attachTooltips(root: ShadowRoot, palette: 'explorer' | 'editor' 
   root.addEventListener('focusout', () => { focused = undefined; if (!hovered) hide(); }, options);
   bubble.addEventListener('pointerleave', () => { if (!focused && !hovered) hide(); }, options);
   root.addEventListener('pointerdown', hide, options);
+  // Opt-in for actions that immediately rearrange content beneath their controls.
+  if (behavior.dismissOnActivate) root.addEventListener('click', hide, options);
   doc.addEventListener('keydown', event => { if (event.key === 'Escape') hide(); }, options);
   doc.addEventListener('scroll', hide, {...options, capture: true});
   root.addEventListener('scroll', hide, {...options, capture: true});
