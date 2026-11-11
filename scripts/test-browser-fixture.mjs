@@ -111,7 +111,7 @@ test('fixture rejects unsupported origins and cleans up after a simulated Chrome
   }
 });
 
-test('readiness failure retains only bounded fixture evidence after cleanup', async t => {
+test('startup races and readiness failures preserve bounded evidence and cleanup', async t => {
   const fixtureUrl = 'http://127.0.0.1:41234/case';
   const endpoint = 'ws://127.0.0.1:41235/devtools/page/synthetic-page';
   const methods = [];
@@ -127,6 +127,11 @@ test('readiness failure retains only bounded fixture evidence after cleanup', as
   const spawn = t.mock.method(childProcess, 'spawn', (_path, args) => {
     child = Object.assign(new EventEmitter(), {
       pid: 42, exitCode: null, signalCode: null, stderr: new PassThrough(),
+      kill() {
+        this.exitCode = 1;
+        this.emit('exit', 1, null);
+        this.stderr.end();
+      },
     });
     if (ready) child.stderr.write('Unclassified synthetic output');
     profile = args.find(arg => arg.startsWith('--user-data-dir=')).slice('--user-data-dir='.length);
@@ -275,6 +280,69 @@ test('readiness failure retains only bounded fixture evidence after cleanup', as
     assert.equal(browser.diagnostics().child.stderr.status, 'unclassified');
     assert.ok(!existsSync(profile));
     assert.equal(spawn.mock.callCount(), 4);
+
+    const read = fs.readFileSync;
+    const schedule = globalThis.setTimeout;
+    // Exercise the real launch/cleanup path with deterministic port publication races.
+    const fastPoll = t.mock.method(globalThis, 'setTimeout', (fn, ms, ...args) =>
+      schedule(fn, ms === 50 ? 0 : ms, ...args));
+    let reads;
+    let portReads;
+    const readMock = t.mock.method(fs, 'readFileSync', (path, encoding) => {
+      if (path !== join(profile, 'DevToolsActivePort')) return read(path, encoding);
+      assert.equal(encoding, 'utf8');
+      portReads++;
+      const value = reads[Math.min(portReads - 1, reads.length - 1)];
+      if (value instanceof Error) throw value;
+      if (typeof value === 'function') return value();
+      return value;
+    });
+    syncBuiltinESMExports();
+    const busy = Object.assign(Error('Synthetic sharing violation'), {code: 'EBUSY'});
+    const missing = Object.assign(Error('Synthetic unpublished file'), {code: 'ENOENT'});
+    const denied = Object.assign(Error('Synthetic access denial'), {code: 'EACCES'});
+    try {
+      reads = [missing, busy, '', '412', '41235', '41235\r\n/devtools/browser/synthetic'];
+      portReads = 0;
+      const resumed = await launchFixture(fixtureUrl);
+      assert.equal(portReads, reads.length);
+      await resumed.close();
+      assert.equal(resumed.diagnostics().cleanup, 'complete');
+      assert.ok(!existsSync(profile));
+
+      for (const [values, expected, attempts] of [
+        [[busy], /did not publish a readable DevTools port/, 200],
+        [['41235'], /did not publish a readable DevTools port/, 200],
+        [['65536\n'], /Invalid fixture DevTools port/, 1],
+        [['not-a-port\n'], /Invalid fixture DevTools port/, 1],
+        [[denied], /Synthetic access denial/, 1],
+        [[() => {
+          child.exitCode = 1;
+          child.emit('exit', 1, null);
+          child.stderr.end();
+          throw busy;
+        }], /Fixture Chrome exited during startup/, 1],
+        [[() => {
+          child.emit('error', denied);
+          throw busy;
+        }], /Synthetic access denial/, 1],
+      ]) {
+        reads = values;
+        portReads = 0;
+        await assert.rejects(launchFixture(fixtureUrl), error => {
+          assert.match(error.message, expected);
+          assert.equal(error.fixtureDiagnostics.stage, 'devtools-port');
+          assert.equal(error.fixtureDiagnostics.cleanup, 'complete');
+          return true;
+        });
+        assert.equal(portReads, attempts);
+        assert.ok(!existsSync(profile));
+      }
+    } finally {
+      readMock.mock.restore();
+      fastPoll.mock.restore();
+      syncBuiltinESMExports();
+    }
   } finally {
     globalThis.WebSocket = originalWebSocket;
     spawn.mock.restore();

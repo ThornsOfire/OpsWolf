@@ -1,5 +1,5 @@
 import {spawn} from 'node:child_process';
-import {existsSync, lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync} from 'node:fs';
+import {lstatSync, mkdtempSync, readFileSync, realpathSync, rmSync} from 'node:fs';
 import {createServer} from 'node:http';
 import {tmpdir} from 'node:os';
 import {dirname, join} from 'node:path';
@@ -289,18 +289,29 @@ export async function launchFixture(url) {
 
     diagnostics.stage = 'devtools-port';
     const portFile = join(profile, 'DevToolsActivePort');
+    let port;
     for (let attempt = 0; attempt < 200; attempt++) {
       if (spawnError) throw spawnError;
       if (stopped() && child.pid) throw Error('Fixture Chrome exited during startup.');
-      if (existsSync(portFile)) break;
+      try {
+        // File creation precedes a readable, complete first line on Windows.
+        // Retry only publication races; permission and other I/O errors still fail.
+        const contents = readFileSync(portFile, 'utf8');
+        if (contents.includes('\n')) {
+          const [publishedPort] = contents.split(/\r?\n/);
+          if (!/^[1-9]\d{0,4}$/.test(publishedPort) || Number(publishedPort) > 65535) {
+            throw Error('Invalid fixture DevTools port.');
+          }
+          port = publishedPort;
+          break;
+        }
+      } catch (error) {
+        if (!['ENOENT', 'EBUSY'].includes(error.code)) throw error;
+      }
       await delay(50);
     }
     if (spawnError) throw spawnError;
-    if (!existsSync(portFile)) throw Error('Sandboxed fixture Chrome did not publish a DevTools port.');
-    const [port] = readFileSync(portFile, 'utf8').split(/\r?\n/);
-    if (!/^[1-9]\d{0,4}$/.test(port) || Number(port) > 65535) {
-      throw Error('Invalid fixture DevTools port.');
-    }
+    if (!port) throw Error('Sandboxed fixture Chrome did not publish a readable DevTools port.');
 
     diagnostics.stage = 'target-discovery';
     let page;

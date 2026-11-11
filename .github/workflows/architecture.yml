@@ -82,6 +82,8 @@ jobs:
       - run: powershell -NoProfile -ExecutionPolicy Bypass -File scripts/test-login-startup-installer.ps1
       - run: powershell -NoProfile -NonInteractive -STA -ExecutionPolicy Bypass -File scripts/test-startup-conflict.ps1
       - run: node --test scripts/test-refactor-contracts.mjs scripts/test-plugin-publication.mjs scripts/test-maintenance-isolation.mjs scripts/test-file-mutation-isolation.mjs
+      - name: Browser fixture startup and cleanup
+        run: node --test scripts/test-browser-fixture.mjs
       - run: node scripts/test-background-surfaces.mjs
       - run: node scripts/test-login-startup.mjs
       - name: Build the full renderer used by menu-session integration

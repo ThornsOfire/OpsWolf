@@ -2631,7 +2631,28 @@ mod tests {
             .model_resource_info("scene.gltf", "first.bin", &model.version)
             .expect("resource");
 
-        fs::write(directory.path().join("first.bin"), b"other").expect("changed resource");
+        let resource_path = directory.path().join("first.bin");
+        let original_modified = fs::metadata(&resource_path)
+            .and_then(|metadata| metadata.modified())
+            .expect("original resource modified time");
+        fs::write(&resource_path, b"other").expect("changed resource");
+        // A same-size write can retain the same timestamp on a fast filesystem.
+        // Move the timestamp explicitly so this tests the media version contract.
+        let changed_modified = original_modified
+            .checked_sub(Duration::from_secs(60))
+            .expect("distinct resource modified time");
+        fs::OpenOptions::new()
+            .write(true)
+            .open(&resource_path)
+            .expect("resource timestamp handle")
+            .set_times(fs::FileTimes::new().set_modified(changed_modified))
+            .expect("set resource modified time");
+        assert_ne!(
+            fs::metadata(&resource_path)
+                .and_then(|metadata| metadata.modified())
+                .expect("changed resource modified time"),
+            original_modified
+        );
         assert_eq!(
             workspace
                 .model_resource_chunk(ModelResourceChunkRequest {

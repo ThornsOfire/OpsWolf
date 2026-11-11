@@ -40,6 +40,7 @@ These commands run from the repository root after UI dependencies are installed.
 
 | Change | Focused check |
 | --- | --- |
+| Shared headless-browser startup, port-file readiness and cleanup | `node --test scripts/test-browser-fixture.mjs`; `node scripts/test-login-startup.mjs` for the real Chrome/menu consumer |
 | Upstream update review, native install denial, connection-bound policy, keyboard and narrow layout | `node scripts/test-update-policy.mjs`; native `cargo test --offline --locked -p code-codex --bin code-codex update_ -- --test-threads=1`; see [manual updates](manual-updates.md) |
 | Shared semantic palettes, host theme changes, custom hooks, contrast and forced-color editing | `node scripts/test-appearance.mjs`; see [appearance contract](appearance.md); also editor, tooltips and background-surface fixtures |
 | Owned settings, legacy preference migration, reset boundaries, modal focus and persistence failures | `node scripts/test-preferences.mjs`; see [settings and scope](settings.md); also editor-pane, minimap, typing, sidebar and menu fixtures |
@@ -83,6 +84,8 @@ These commands run from the repository root after UI dependencies are installed.
 | Native source policy, complete transfer and file mutations | `cargo test -p workspace-service --locked -- --test-threads=1` |
 | Native renderer/transport boundary | `cargo test -p cdp-client --locked -- --test-threads=1` |
 | Native history protocol, patch projection and path filtering | `cargo test -p context-resolver --locked -- --test-threads=1` |
+
+Native media version tokens bind file identity, size and modification metadata; they are not full-content hashes. A same-size in-place write with unchanged observable metadata is not guaranteed to produce a new token. Stale-resource fixtures must establish a distinct modification time explicitly and verify that setup, rather than assume a rapid write advances the filesystem clock.
 
 Browser checks launch their own headless Chrome with a temporary profile and loopback fixture server. Chrome is expected at its default Windows installation path. The fixture closes its own browser; it must not close the user's Codex, another agent, or a personal browser profile. Some tests write ignored reports/screenshots into `artifacts/`.
 
