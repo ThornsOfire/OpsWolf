@@ -1,6 +1,6 @@
 # Upstream 0.6.0 integration
 
-OpsWolf alpha.14 is an integration candidate based on corrected Code-Codex **0.6.0**, commit `96d58788f8b90661095e33fe562d5f2e7149cf5c`. The upstream release was replaced under the same version, so the version label alone is insufficient to identify its source. The prior OpsWolf alpha.13 source, including its uncommitted fixes and offline startup-status helper, was preserved before integration.
+OpsWolf alpha.15 includes the alpha.14 integration of corrected Code-Codex **0.6.0**, commit `96d58788f8b90661095e33fe562d5f2e7149cf5c`. The upstream release was replaced under the same version, so the version label alone is insufficient to identify its source. The prior OpsWolf alpha.13 source, including its uncommitted fixes and offline startup-status helper, was preserved before integration.
 
 This source change does not update a running app. Use a matching rebuilt native companion and renderer, an exact artifact manifest, preserved rollback, and separately authorized activation. Source and synthetic test results do not establish compatibility with the currently installed official Codex host or its packaged AppServer.
 
@@ -24,7 +24,15 @@ A different renderer build must start in a fresh document. Hot replacement is de
 - Run source/type/architecture/localization checks, offline locked Rust checks, and affected synthetic regressions. A source test that launches browser/native processes, changes Windows state or provisions tools needs its actual execution boundary reviewed first.
 - Preserve the first failure logs. Missing dependencies, required unrun browser/native cases, runtime versions and live acceptance stay explicit in the handoff.
 
-The source version is reserved for this local candidate. No installer, release publication, live deployment or current-host restoration is established by these notes.
+## Alpha.15 qualification
+
+The combined alpha.15 build adds Rain plugin 0.1.4 worker rendering to this upstream integration. Its reviewed local qualification passed all 60 required gates. Native tests: 499 passed, 24 inherited explicit ignores, zero failed. The matching runtime imported all 29 locked plugins offline. Focused worker controls, startup cleanup, Appearance and rollback/selector checks passed. These are results for the qualified source and artifacts; this documentation refresh does not rerun or replace them.
+
+After the handoff, the owner reports markedly smoother Rain, working controls and no visible frame drops during heavy blending. Exact post-handoff running-build identity was not independently rechecked. Saved-setting persistence after another restart, broader native-account behavior and a fresh-machine install remain pending. Earlier alpha.14 failed/pending or waived evidence is retained as history, not presented as alpha.15 passes.
+
+The last independently observed official host on November 9 was Codex 26.1103.60933/build 25894, Windows package 26.1103.7773.0, with backend 0.167.0-alpha.3.2. That observation was made with alpha.14 before the alpha.15 handoff. It is not a claim that this is today's latest host or that version strings prove byte identity.
+
+Source publication is separate from a downloadable release or installer. Keep the exact build manifest, previous working build and local acceptance record when deploying; a Git checkout does not select a running application.
 
 ## New upstream startup effects and remaining qualification
 

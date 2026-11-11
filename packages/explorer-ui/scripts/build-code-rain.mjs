@@ -35,14 +35,28 @@ export async function buildCodeRain(root, options, outputRoot = resolve(root, 'd
   const directory = resolve(outputRoot, 'appearance/code-rain');
   await mkdir(directory, {recursive:true});
   const license = await readFile(resolve(root, 'vendor/opswolf-code-rain/LICENSE'), 'utf8');
+  const worker = definition.version === '0.1.2' ? undefined : await build({
+    ...options, entryPoints:[resolve(root,'src/effects/code-rain/worker-entry.mjs')],
+    format:'iife', minify:true, sourcemap:false, metafile:true, write:false,
+  });
+  const factory = worker ? `
+    import {createPackagedRain} from './src/effects/code-rain/worker-factory.mjs';
+    import {RENDER_BUDGET} from './vendor/opswolf-code-rain/renderer.mjs';
+    const createWorkerRain = (target, settings, options) =>
+      createPackagedRain(${JSON.stringify(worker.outputFiles[0].text)}, target, settings, options);
+  ` : `import {CodeRain, RENDER_BUDGET} from './vendor/opswolf-code-rain/renderer.mjs';`;
   const contents = `
-    import {CodeRain, RENDER_BUDGET} from './vendor/opswolf-code-rain/renderer.mjs';
+    ${factory}
     import {rainSettings, DEFAULT_RAIN, PRESETS, LIMITS, COLORS} from './vendor/opswolf-code-rain/state.mjs';
     const key = Symbol.for('code-codex:background-modules:v1');
     (window[key] ??= new Map()).set('code-rain', {
       id:'code-rain', api:1, version:${JSON.stringify(definition.version)},
-      exports:{CodeRain, RENDER_BUDGET, rainSettings, DEFAULT_RAIN, PRESETS, LIMITS, COLORS},
-      startup(target) { return new CodeRain(target, DEFAULT_RAIN); }
+      exports:{${worker?'createWorkerRain':'CodeRain'}, RENDER_BUDGET, rainSettings, DEFAULT_RAIN, PRESETS, LIMITS, COLORS},
+      startup(${worker ? 'target, onError' : 'target'}) {
+        ${worker ? `const effect = createWorkerRain(target, DEFAULT_RAIN, {requireFirstFrame: true, onError: error => onError?.(error.message)});
+        return {ready: effect.ready.then(() => undefined), dispose: effect.dispose};`
+        : 'return new CodeRain(target, DEFAULT_RAIN);'}
+      }
     });
   `;
   const result = await build({...options, format:'iife', minify:true, sourcemap:false, metafile:true,
@@ -53,7 +67,9 @@ export async function buildCodeRain(root, options, outputRoot = resolve(root, 'd
   if (bytes.length > 4 * 1024 * 1024) throw Error('Code Rain exceeds the bounded script channel');
   const descriptor = {...definition, asset, relativePath:asset, size:bytes.length, sha256:digest(bytes),
     resources:[], source:provenance.repository, sourceCommit:provenance.commit};
-  await writeFile(resolve(directory, 'code-rain.metafile.json'), JSON.stringify(result.metafile));
+  const metafile = result.metafile;
+  if (worker) metafile.inputs = {...metafile.inputs,...worker.metafile.inputs};
+  await writeFile(resolve(directory, 'code-rain.metafile.json'), JSON.stringify(metafile));
   await writeFile(resolve(directory, 'manifest.json'), JSON.stringify(descriptor, null, 2) + '\n');
   await writeFile(resolve(directory, 'THIRD_PARTY_NOTICES_EN.md'), license);
   await writeFile(resolve(directory, 'README.md'), '# Code Rain package candidate\n\nAPI 1 background module built from pinned local OpsWolf Code Rain sources. Loading registers factories only; it does not enable the background, write preferences or access the network. Host activation and settings remain separate.\n\nSource: ' + provenance.repository + '\nCommit: ' + provenance.commit + '\n');

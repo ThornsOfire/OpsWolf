@@ -27,7 +27,7 @@ export function codeRainPanelMarkup():string{return `${panelStyle}<section id="c
 
 export interface CodeRainSettingsPorts {
   readonly shadow:ShadowRoot;
-  readonly runtime:Pick<CodeRainBackgroundController,'enabled'|'pending'|'error'|'storageError'|'usesExistingDark'|'retainedAppearanceLease'|'settings'|'dirty'|'paused'|'transitionPhase'|'blendStatus'|'initialize'|'subscribe'|'updateSettings'|'reset'|'setPaused'|'startTransition'|'stopTransition'|'saveSettings'|'pauseWhenUnfocused'|'pausedForFocus'|'setPauseWhenUnfocused'>;
+  readonly runtime:Pick<CodeRainBackgroundController,'enabled'|'pending'|'saving'|'stoppingBlend'|'error'|'storageError'|'usesExistingDark'|'retainedAppearanceLease'|'settings'|'dirty'|'paused'|'transitionPhase'|'blendStatus'|'initialize'|'subscribe'|'updateSettings'|'reset'|'setPaused'|'startTransition'|'stopTransition'|'saveSettings'|'pauseWhenUnfocused'|'pausedForFocus'|'setPauseWhenUnfocused'>;
   readonly actions:BackgroundCommands;
   readonly enabled:()=>boolean;
   readonly closeOthers:()=>void;
@@ -75,7 +75,17 @@ export class CodeRainSettingsController {
         case 'apply':if(preset)runtime.updateSettings(preset.rain);break;
         case 'pause':runtime.setPaused(!runtime.paused);break;
         case 'reset':runtime.reset();break;
-        case 'save':if(runtime.saveSettings())this.#savedMessage=text('Saved','已保存');break;
+        case 'save':{
+          const result=runtime.saveSettings();
+          if(result instanceof Promise){
+            void result.then(saved=>{
+              if(scope.signal.aborted)return;
+              if(saved)this.#savedMessage=text('Saved','已保存');
+              this.render();
+            });
+          }else if(result)this.#savedMessage=text('Saved','已保存');
+          break;
+        }
         case 'stop':runtime.stopTransition();break;
         case 'blend':if(preset){const duration=this.#input<HTMLInputElement>('duration'),hold=this.#input<HTMLInputElement>('hold');if(!duration.reportValidity()||!hold.reportValidity()||!duration.value||!hold.value)return;runtime.startTransition(preset.rain,{duration:Number(duration.value),hold:Number(hold.value),loop:this.#input<HTMLInputElement>('loop').checked});}break;
       }
@@ -168,10 +178,10 @@ export class CodeRainSettingsController {
       input.disabled=runtime.pending;this.#panel.querySelector(`[data-rain-output="${key}"]`)!.textContent=input.type==='range'?String(Number(Number(settings[key]).toFixed(2))):'';
     }
     const actions:Record<string,readonly [string,string]>={apply:['Apply','应用'],pause:runtime.paused?['Resume','继续']:['Pause','暂停'],reset:['Reset current','重置当前'],save:['Save','保存'],blend:['Start blend','开始渐变'],stop:['Stop blend','停止渐变']};
-    for(const button of this.#panel.querySelectorAll<HTMLButtonElement>('[data-rain-action]')){const action=button.dataset.rainAction!;button.textContent=text(...actions[action]!);button.disabled=runtime.pending||(['blend','pause','stop'].includes(action)&&!runtime.enabled)||(action==='stop'&&!runtime.transitionPhase);if(action==='pause')button.setAttribute('aria-pressed',String(runtime.paused));}
+    for(const button of this.#panel.querySelectorAll<HTMLButtonElement>('[data-rain-action]')){const action=button.dataset.rainAction!;button.textContent=text(...actions[action]!);button.disabled=runtime.pending||(['blend','pause','stop'].includes(action)&&!runtime.enabled)||(action==='stop'&&(!runtime.transitionPhase||runtime.stoppingBlend))||(action==='save'&&runtime.saving);if(action==='pause')button.setAttribute('aria-pressed',String(runtime.paused));}
     const phase=this.#panel.querySelector('.code-rain-phase')!,message=this.#blendMessage();
     if(phase.textContent!==message)phase.textContent=message;
-    this.#panel.querySelector('.code-rain-saved')!.textContent=runtime.dirty?text('Unsaved settings','设置未保存'):this.#savedMessage;
+    this.#panel.querySelector('.code-rain-saved')!.textContent=runtime.saving?text('Reading current rain settings…','正在读取当前雨幕设置…'):runtime.dirty?text('Unsaved settings','设置未保存'):this.#savedMessage;
     const error=this.#panel.querySelector<HTMLElement>('.code-rain-error')!;error.textContent=runtime.error??runtime.storageError??'';error.hidden=!error.textContent;
     const appearanceNote = [
       runtime.usesExistingDark ? text('Uses the current Dark appearance. Rain does not change the Codex theme.','使用当前深色外观。代码雨不会更改 Codex 主题。') : '',

@@ -68,6 +68,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Changed
 
+- Code Rain draws the background and startup effect in dedicated workers. Stop Blend and Save use the worker's confirmed settings.
+
 - A different renderer build now waits for a fresh app session, preserving the existing document owner and unsaved drafts. Same-build reconnect remains supported. In-app Restart and its hidden worker entry are held until they can preserve the selected OpsWolf launcher and profile; use the reviewed launcher after closing normally.
 
 - The alpha.14 source candidate integrates corrected upstream Code-Codex 0.6.0 while retaining the OpsWolf editor, native changes, citations, settings and Code Rain. Source, plugin and live-host qualification remain separate; see the [integration notes](docs/editor/upstream-integration.md). Upstream installer execution remains blocked in the fork.

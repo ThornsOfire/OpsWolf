@@ -5,10 +5,18 @@ These rules apply inside this repository. They supplement workspace/user instruc
 ## Scope and ownership
 
 - Inspect the current branch and working-tree diff before editing. Preserve unrelated uncommitted changes, local experiments, and drafts. Stage explicit task files; don't sweep everything into a commit or discard changes you didn't make.
-- The current editor implementation lives on `candidate/planned-development`; `feature/right-editor-pane` is the historical baseline. `main` carries the fork's homepage documentation. Keep publication deliberate; don't merge all source into `main`, change the default branch, tag a release, or publish installers as a side effect of routine work.
+- Use the reviewed source checkout and branch named in the current task checkpoint; inspect the actual branch/diff before edits. `candidate/planned-development` is the public alpha source destination; `feature/right-editor-pane` is historical. A local integration branch may be newer than the public checkpoint. `main` carries the fork's homepage documentation. Keep publication deliberate; don't merge all source into `main`, change the default branch, tag a release, or publish installers as a side effect of routine work.
 - OpsWolf (formerly Cursadex) is the intended public product default. Keep this public fork portable: derive paths from the workspace/installation; don't bake in a maintainer's Desktop, username, personal artwork/branding, app-state paths, or project names. Product branding does not require a workspace folder named OpsWolf. Preserve existing technical names, storage/event keys, theme hooks, repository URLs and historical evidence unless a separate compatibility change is explicitly authorized.
 - Keep credentials, client documents, personal screenshots, native-source extracts, app state and developer probes out of public commits. Reviewed product screenshots may live under `docs/images/` with synthetic data, a clear caption and capture provenance; inspect them for private content before publication. Use synthetic examples in tests and reports. `artifacts/`, `dist/` and `target/` are local/generated areas.
 - Preserve upstream credit, license and third-party notices. Document which behavior belongs to this fork. Do not copy proprietary native-app source into the repository.
+
+## Everyday execution
+
+- One coordinator owns the result. Keep small fixes with one agent; delegate independent bounded work or a useful risk review without chains of relays. Preserve existing scoped authorization; a handoff or compaction alone does not require another approval.
+- Observe → reproduce where useful → make the smallest justified change → focused checks → live acceptance when relevant → record. Use an existing supported recovery path when it solves the problem without code changes.
+- Keep one current checkpoint for coordinated or long work; small tasks can use an existing issue/checkpoint. Archive obsolete status instead of stacking competing instructions. Read only relevant linked evidence after recovery.
+- Select verification using [the testing guide](docs/editor/testing.md). Reuse applicable unchanged-input evidence; expand checks for shared interfaces, new failures or release gates. Tool failure needs a diagnosis before another attempt. Do not weaken assertions or silently waive required checks.
+- Review actual diffs before handoff. Seek independent review for material data/security/contract/native uncertainty; mechanical documentation edits need proportionate content/link checks. Existing activation, publication and recovery gates remain in force.
 
 ## Completing a change
 

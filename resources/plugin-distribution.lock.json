@@ -2679,25 +2679,28 @@
         "name": "Code Rain Background",
         "category": "appearance",
         "api": 1,
-        "version": "0.1.2",
-        "releaseTag": "plugin-assets-2026-10-29",
+        "version": "0.1.4",
+        "releaseTag": "plugin-assets-2026-11-09",
         "capabilities": [
           "background",
           "startup",
           "preview"
         ],
-        "asset": "CodeCodex-background-code-rain-0.1.2.js",
-        "relativePath": "CodeCodex-background-code-rain-0.1.2.js",
-        "size": 10580,
-        "sha256": "8e2909de7967c0d1a8432833c45c71320d08a9f3220d0c29a42f2bd84977cdae",
+        "asset": "CodeCodex-background-code-rain-0.1.4.js",
+        "relativePath": "CodeCodex-background-code-rain-0.1.4.js",
+        "size": 21098,
+        "sha256": "f5f1a3de50d989dc80649d50d0e63038918c757ae190a46cae5a0427ce187efc",
         "resources": [],
         "source": "https://github.com/ThornsOfire/OpsWolf-Code-Rain",
         "sourceCommit": "c976189e3ec78d0f902a27e5aacf33470c38ebd8"
       },
       "inputs": {
         "vendor/opswolf-code-rain/state.mjs": "ad8ba514fa40f78daa3af9b33bfc431106c224810078078c93da240023c4fffd",
+        "src/effects/code-rain/worker-client.mjs": "8ae155f73592bc58c7b62a16376673cd6ea1ce4c74f273454eb0528031d3373e",
+        "src/effects/code-rain/worker-factory.mjs": "2a95aef617598736e20296e284425a613b7248b650ec9de57e2603c831302b54",
         "vendor/opswolf-code-rain/renderer.mjs": "cdb2918d07a442c8ede6157f0243a6afa5a188ca07348d184d62c20dc1004a83",
-        "scripts/build-code-rain.mjs": "96c0ffb989bdb21fbad1529d9cc5acf7055783b3daaa5c87dc64ad9856c8e86a",
+        "src/effects/code-rain/worker-entry.mjs": "1242bac5ff6bfe1b968cfd9b4528ff5a8e76b5f63605853c0481f2bea29ad1c6",
+        "scripts/build-code-rain.mjs": "9858b20a4b2e6f2f3504f4550274f5b5c1a876d2dad0225ea1cf792fd6bc744e",
         "scripts/build.mjs": "1eb1c684e7c323c12ab6050ab00a48e8a9a2f3abe7be992045578a8153041525",
         "scripts/rebuild-plugins.mjs": "b54ab37e64d97b8546593456bf62087d7bfeae9c028f32334dcb92f64a6ee6f8",
         "scripts/plugin-source-definition.mjs": "b4d240663c90507ea3074e705c8e640cc33921e3de4de6db8a067808f173d52c",
@@ -2710,7 +2713,7 @@
       },
       "inputFormat": "lf-v1",
       "buildMetadata": {
-        "definition": "477e1275cc138de2b48bc2850bb510bedbf7ee4dcf6517a9fd33893088c60370",
+        "definition": "5cb21ff6aaddbfe76456e44f215b2fddd7184321dcfdc87d3aaea7c301de49c5",
         "compiler": "0.25.12"
       },
       "artifactRoot": "releases/plugins/appearance/code-rain"
@@ -2730,6 +2733,13 @@
       "name": "CodeCodex-plugin-multi-account-1.0.97.js",
       "size": 210465,
       "sha256": "4f4a1a82bf44b4789a1bddfa90b806cc0945db0d2ce594234a448e1f00636900"
+    },
+    {
+      "id": "code-rain",
+      "tag": "plugin-assets-2026-11-09",
+      "name": "CodeCodex-background-code-rain-0.1.4.js",
+      "size": 21098,
+      "sha256": "f5f1a3de50d989dc80649d50d0e63038918c757ae190a46cae5a0427ce187efc"
     }
   ]
 }

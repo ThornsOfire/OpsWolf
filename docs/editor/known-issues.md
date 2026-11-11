@@ -1,16 +1,16 @@
 # Current limitations and pending work
 
-Updated 2026-10-30. OpsWolf development builds remain separate from a public installer. Current local app is OpsWolf 0.1.0-alpha.3 with Rain plugin 0.1.2; the matching source checkpoint is alpha.3. The owner accepts header-spacing/product-menu alignment across the reported checklist layouts and dev.9's red explanation where read-only text mode controls were silently unavailable. Passing fixtures alone does not close a reported live failure; other known limitations below remain open.
+Updated 2026-11-10. Current source: OpsWolf **0.1.0-alpha.15**, upstream **0.6.0**, Rain plugin **0.1.4**. The combined build passed local qualification and has positive owner observations for Rain smoothness and controls. Exact post-handoff running identity, a further settings restart check and fresh-machine installation are not independently established. [Qualification scope](upstream-integration.md#alpha15-qualification). Earlier owner-accepted header/menu/read-only warning fixes are retained; passing fixtures alone does not close every reported live failure.
 
 Mixed CRLF/LF text remains read-only under the existing native save policy. Normalize line endings consistently and reopen to edit; the warning does not bypass that protection. Editing above 512 KiB and unverified versions retain their existing restrictions.
 
 | Item | Observed behavior / status |
 | --- | --- |
-| BUG-017: host appearance discovery | Resolved for the tested Codex package 26.1027.3384.0 in alpha.3: guarded export inspection and intrinsic RPC invocation. All 33 combined commands pass, including 48 focused and 9 whole-explorer recovery cases. Owner confirms startup, Enable/Disable, retained saved settings and previous-theme restoration. A later restart check remains a follow-up. Alpha.2 is preserved failed evidence; renderer blend performance and blend-option persistence remain separate. |
-| BUG-001: activity expansion | Activity disclosures still need manual expansion in the owner's native layout. Following and scroll-to-pause work separately. |
+| BUG-017: host appearance discovery | Historical alpha.3 acceptance on Codex package 26.1027.3384.0: guarded export inspection and intrinsic RPC invocation. All 33 combined commands pass, including 48 focused and 9 whole-explorer recovery cases. Owner confirms startup, Enable/Disable, retained saved settings and previous-theme restoration. A later restart check remains a follow-up. Alpha.2 is preserved failed evidence; renderer blend performance and blend-option persistence remain separate. |
+| BUG-001: activity expansion | The source includes a current-composer detection repair, but the originally reported native layout still needs live confirmation. Following and scroll-to-pause work separately. |
 | BUG-009: native header spacing | Repaired from dev.8 and owner-accepted in the tested dev.9 layouts: tabs/Hide/Show, hosted Changes, resizing and zoom. 81 focused checks pass. Unknown future layouts and untested RTL remain compatibility limits. |
 | BUG-015: product menu alignment | Repaired from dev.8 and owner-accepted: the wolf sits beside the name. 45 menu checks pass. |
-| BUG-011: Rain blending | Playback generally improved after the cadence correction, but preset → Save → Start blend can drop frames until blending completes. Numeric timings and whether it predates dev.5 remain unverified. |
+| BUG-011: Rain blending | After the alpha.15 worker handoff, the owner reports no more frame drops and smooth heavy blending, including changing all sliders. Controls also pass owner checks. This is visual acceptance for that setup, not measured FPS or universal GPU/monitor coverage. |
 | BUG-004: empty editor backing | The reviewed Rain placeholder repair is included in the activated dev.6 baseline. Robbie reports editor transparency works with Code Rain; broader theme coverage remains separate. |
 | BUG-012: cross-theme editor transparency | Robbie reports transparency works with Code Rain but not other themes. Exact theme names/states and cause remain unconfirmed; recorded only, no fix claimed. |
 | Citation presentation | Core source citations work; the composer and hover tooltip can still expose the long encoded URL. Compact chips are future work. |
@@ -18,7 +18,7 @@ Mixed CRLF/LF text remains read-only under the existing native save policy. Norm
 
 Rain's steady-deadline change targets smoothness, not lower GPU usage. It keeps the 30 FPS and pixel/glyph limits; reaching the intended cadence can draw more frames. Fullscreen, zoom, focus/pause, native comparison controls and document readability need checks on the actual host. [Rain integration](code-rain-integration.md) separates current results from historical fixtures.
 
-Direct active-theme settings at the top of the explorer is a recorded request (F26). Settings currently open through Preview Market. Broader tab transfers, context usage, advanced editing and platform identity remain scoped future work in [development](development.md); they are not implicitly enabled by a roadmap entry.
+The active-background settings button is implemented at the top of the explorer (F26). Active Rain opens directly; other supported backgrounds use their Preview Market card. Unknown or ambiguous selections offer browsing instead. Preview Market remains the install/enable route. Broader tab transfers, context usage, advanced editing and platform identity remain scoped future work in [development](development.md); they are not implicitly enabled by a roadmap entry.
 
 The corrected Open GitHub Repository destination is included from dev.6, and the visible OpsWolf menu/settings/footer rebrand is included in owner-used dev.7. Dev.8 contains the qualified header/menu alignment follow-up; each distinct source build requires its own reviewed handoff.
 

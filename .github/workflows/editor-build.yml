@@ -1,9 +1,16 @@
 name: Build custom editor
 on:
   push:
-    branches: [feature/right-editor-pane]
+    branches: [candidate/planned-development, feature/right-editor-pane]
     paths:
       - 'crates/**'
+      - 'packages/explorer-ui/**'
+      - 'scripts/**'
+      - 'resources/**'
+      - 'releases/plugins/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'cursadex-version.json'
       - '.github/workflows/editor-build.yml'
 permissions:
   contents: read

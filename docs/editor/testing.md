@@ -2,6 +2,24 @@
 
 We need a quick way to catch mistakes, a proper check before publishing, and a deeper test before asking people to trust a release. Those are different jobs. Passing one does not pass the others.
 
+## Choose checks for this change
+
+Start with the reported behaviour and the boundary being changed. Decide what would demonstrate the correction before selecting commands.
+
+| Change | Useful verification |
+| --- | --- |
+| Documentation or mechanical text | Review content/diff, links, placeholders and uniform line endings; no application build or desktop smoke test solely for prose |
+| Bounded behaviour fix | Reproduce the relevant failure where practical, run the regression and affected source checks |
+| Shared interface or lifecycle | Add checks for affected consumers, cancellation, failure and preserved state |
+| Application candidate | Required source/build checks, exact artifact identity, rollback and authorized live acceptance |
+| Publication or release | The applicable broader CI/release gates below, including documented installation and compatibility limits |
+
+Link existing evidence when its source/dependencies/configuration still apply. A handoff, elapsed time or compaction alone is not a reason to repeat a suite. New code, an environment change relevant to the assertion, a failure or an unresolved concern can justify repeating or expanding checks. Explain the coverage, not just the number of passing assertions.
+
+A failed test environment is distinct from a failing product assertion. Diagnose the setup failure before another attempt; further attempts require a concrete changed condition or new evidence. Preserve the blocked result and continue independent work when useful. Do not bypass access/security controls, change accounts/tools/flags speculatively, weaken assertions or silently drop required tests. Required exceptions use the existing explicit review/waiver process.
+
+Use real-host feedback once the coherent checked candidate, preserved recovery and applicable activation approval permit it. Keep fixture, agent-live and owner-live evidence separate. Experimental activation with explicit qualification exceptions is not full release acceptance. Routine documentation and small fixes do not require a new plan/report hierarchy; use the existing issue/checkpoint and relevant evidence location.
+
 ## The plan
 
 | Tier | When | What it establishes | Gate |

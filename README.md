@@ -12,7 +12,7 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
-This source integration targets [upstream Code-Codex v0.6.0](releases/README.md). The combined OpsWolf candidate still needs build and live compatibility checks.
+The current source is **OpsWolf 0.1.0-alpha.15**, built on [Code-Codex v0.6.0](releases/README.md). The combined build passed its local checks, and Rain is much smoother in our hands-on testing. That is progress, not a promise that every setup works. [What we checked](docs/editor/upstream-integration.md#alpha15-qualification).
 
 ### Read it, then work on it
 
@@ -51,10 +51,10 @@ This uses Codex's recorded patches. It can include ordinary project files outsid
 - **Point at the actual lines.** Select text and right-click to cite it in chat, copy a citation, or collect several ranges. Clicking a reference opens and highlights its source. It works across supported text formats.
 - **Keep your reading position.** Scroll up to read without the feed constantly pulling you away. Sending your next message resumes following the conversation.
 - **Find the right file.** File links in chat open in the editor when they're inside the current project. Dragging a file from the explorer into chat supplies its full location.
-- **Make it comfortable.** Settings include source wrap, a minimap, an optional typing-speed counter and first-chat sidebar collapse. Our menu/settings name and logo can use your own saved identity profile; Windows identity aisn't changed by that (yet).
+- **Make it comfortable.** Settings include source wrap, a minimap, an optional typing-speed counter and first-chat sidebar collapse. Our menu/settings name and logo can use your own saved identity profile; Windows identity isn't changed by that (yet).
 - **Add some atmosphere.** Optional preview plugins and backgrounds live in Preview Market. [Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) adds configurable rain; [Nova Fox](https://github.com/ThornsOfire/nova-fox-companion) is a separate companion with optional OpsWolf integration.
 
-Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf → Preview Market** for preview plugins and backgrounds. If you've chosen your own app label, look under that menu name instead.
+Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf → Preview Market** to add or enable preview plugins and backgrounds. With Rain active, the background-settings button at the top of the explorer opens its controls directly. If you've chosen your own app label, look under that menu name instead.
 
 ![OpsWolf settings with the default wolf logo and shared preferences](docs/images/settings-demo.png)
 
@@ -64,10 +64,10 @@ Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf →
 
 - Text reading goes up to **10 MiB**; editing currently stops at **512 KiB**. Bigger Markdown starts as plain text with an explicit full-render option. Files we can't edit show a red explanation. Mixed Windows/Unix line endings are one reason a file stays read-only.
 - Citations work, but their long encoded links can still show in the message box and hover tooltip. The compact presentation is unfinished.
-- Automatic expansion of the agent's activity details still fails in a reported native layout. Following the latest activity and pausing to read are separate features.
-- Rain blending can drop frames, its blend options don't persist yet, and editor transparency isn't consistent across other themes. Saved Rain settings and previous-theme restoration work in the tested alpha.3 host setup.
+- Automatic expansion of the agent's activity details has a source repair, but the reported native layout still needs a live recheck. Following the latest activity and pausing to read are separate features.
+- Rain's new worker rendering has stopped the frame drops in our recent hands-on testing, including heavy blending. We still need feedback from other setups. Blend playback options don't persist yet, and editor transparency isn't consistent across other themes. Current colours can be saved; another restart check for the new build is still pending.
 - This is a basic source editor. Language servers, autocomplete, a debugger, a trustworthy context meter and broader editing support are future work.
-- Codex updates can change the layout or integrations we depend on. The new manual-update controls show upstream availability and block its installer from replacing OpsWolf. OpsWolf changes use a reviewed build and an explicit activation step. Windows/Store updates to Codex are **not frozen** by this control. See [manual updates](docs/editor/manual-updates.md); this source change needs the matching new build.
+- Codex updates can change the layout or integrations we depend on. **Review updates** shows upstream availability and blocks the stock Code-Codex installer from replacing OpsWolf. Windows/Store updates to Codex are **not frozen**. For an OpsWolf restart, save your work, close the app normally and reopen your OpsWolf launcher; the native in-app Restart action is held because it can lose our selected build. See [manual updates](docs/editor/manual-updates.md).
 
 See [known issues](docs/editor/known-issues.md) and the [user guide](docs/editor/README.md) for the details. No claim that every Codex version, theme or monitor setup works perfectly.
 
@@ -120,13 +120,13 @@ If something breaks in our additions, report it to this fork with your versions,
 | --- | --- |
 | Implementation | `candidate/planned-development`; [source branch](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development). `main` is a documentation landing page; `feature/right-editor-pane` is the historical baseline. |
 | Versions | See [fork metadata](cursadex-version.json) for the display version and [Cargo.toml](Cargo.toml) for the inherited package version. This integration targets upstream Code-Codex v0.6.0. [Rain has its own plugin version](releases/plugins/appearance/code-rain/manifest.json). The source revision, package version, local handoff and running build each have their own identity. |
-| Host qualification | Alpha.3 appearance repair passed owner startup, Enable/Disable, retained saved settings and previous-theme restoration on Windows Codex package `26.1027.3384.0`. Later restart retention is a follow-up; do not generalize to all hosts/themes. |
+| Qualification | Alpha.15: 60 combined local gates passed; native tests 499 passed / 24 inherited ignores / 0 failed; all 29 locked plugins imported offline. Owner reports smooth Rain and working controls, including heavy blending. Exact post-handoff running identity and another saved-settings restart check remain unverified. [Evidence scope](docs/editor/upstream-integration.md#alpha15-qualification); no fresh-machine or universal host certification. |
 | Legacy naming | Formerly Cursadex. Preserve `cursadex-*` metadata, event/storage keys, CSS hooks and technical launch names. Branding changes do not authorize migrations or identifier refactors. |
 | Portability | No maintainer Desktop layout, app-state paths, personal identity artwork or external workspace scripts required by a clone. No public installer/fresh-machine certification yet. |
 
 ### Build and launch
 
-These setup requirements come from the source manifests, scripts and upstream guidance. The combined candidate still needs fresh-machine and native host verification.
+These setup requirements come from the source manifests, scripts and upstream guidance. Local build checks and bounded owner observations are recorded separately; a fresh-machine install and broader native-host acceptance remain unverified.
 
 | Use | Dependencies / source of truth |
 | --- | --- |

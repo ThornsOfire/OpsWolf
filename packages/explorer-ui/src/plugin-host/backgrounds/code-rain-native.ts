@@ -4,7 +4,7 @@ import {CODE_RAIN_PLUGIN_ID as ID, type RainSettings} from '../../effects/code-r
 import {ensureBackgroundPackage} from '../../plugin-load-diagnostics';
 import {backgroundModule} from '../../background-plugin-runtime';
 import {isPluginPackageLoaded} from '../../plugin-runtime';
-import {requestBackgroundFrame,cancelBackgroundFrame,registerBackgroundOpening} from '../../background-startup-hold';
+import {requestBackgroundFrame,cancelBackgroundFrame,registerBackgroundOpening,backgroundStartupHeld} from '../../background-startup-hold';
 import {PARTICLE_BACKGROUND_ATTRIBUTE as ATTRIBUTE,PARTICLE_BACKGROUND_COLOR_PROPERTY as COLOR,CODEX_APPEARANCE_POLL_INTERVAL_MS} from '../../core/configuration/explorer';
 import {CodexAppearanceUnavailableError,readCodexAppearanceTheme,writeCodexAppearanceTheme,readParticleThemeLease,writeParticleThemeLease,clearParticleThemeLease} from '../../host/appearance/theme-lease';
 import {codexDarkThemeApplied,waitForCodexDarkTheme} from '../../host/appearance/theme-probe';
@@ -16,6 +16,12 @@ const APPEARANCE_READ_TIMEOUT_MS=5_000;
 const DARK_REQUIRED='Choose Dark in Codex Appearance, then enable Code Rain.';
 const DARK_UNAVAILABLE='Code Rain cannot use the current appearance while forced colors or reduced transparency is active.';
 type RainFactory=new(target:HTMLElement,settings:RainSettings,options:{onTransition:(event:{rain:RainSettings;done:boolean;phase:string})=>void;frameScheduler:{request:(callback:FrameRequestCallback)=>number;cancel:(ticket:number)=>void}})=>RainRenderer;
+type RainWorkerFactory=(target:HTMLElement,settings:RainSettings,options:{
+  onTransition:(event:{rain:RainSettings;done:boolean;phase:string})=>void;
+  onError:(error:unknown)=>void;
+  initiallyPaused:boolean;
+  isHeld:()=>boolean;
+})=>RainRenderer;
 
 /** Native bindings only; no sibling runtime objects or private app state. */
 export function getCodeRainBackgroundController():CodeRainBackgroundController {
@@ -165,16 +171,26 @@ export function getCodeRainBackgroundController():CodeRainBackgroundController {
       const target=document.createElement('div');target.dataset.codeCodexParticleLayer='v1';target.dataset.codeCodexRainLayer=token;target.setAttribute('aria-hidden','true');
       const style=document.createElement('style');style.textContent=`@media (forced-colors: active){[data-code-codex-rain-layer]{display:none !important}}`;
       target.append(style);document.body.prepend(target);root.setAttribute(OWNER,token);root.setAttribute(ATTRIBUTE,'');monitor(mode);
-      return {target,setColor:color=>{if(root.getAttribute(OWNER)===token)root.style.setProperty(COLOR,color);},release:()=>{
+      return {target,validate:()=>{
+        if(!target.isConnected||root.getAttribute(OWNER)!==token)throw Error('Code Rain lost ownership of its surface');
+        if(!codexDarkThemeApplied())throw Error(DARK_REQUIRED);
+        if(mode==='existing-dark'&&appearanceRestricted())throw Error(DARK_UNAVAILABLE);
+      },setColor:color=>{if(root.getAttribute(OWNER)===token&&root.style.getPropertyValue(COLOR)!==color)root.style.setProperty(COLOR,color);},release:()=>{
         stopMonitoring();target.remove();
         if(root.getAttribute(OWNER)!==token)return;
         root.removeAttribute(OWNER);if(oldAttribute===null)root.removeAttribute(ATTRIBUTE);else root.setAttribute(ATTRIBUTE,oldAttribute);
         if(oldColor)root.style.setProperty(COLOR,oldColor,oldPriority);else root.style.removeProperty(COLOR);
       }};
     },
-    createRenderer:(target,settings,onTransition)=>{
+    createRenderer:(target,settings,onTransition,onError,initiallyPaused)=>{
       if(!isPluginPackageLoaded('code-rain'))throw Error('Code Rain package is not verified');
-      const Factory=backgroundModule('code-rain').exports.CodeRain;
+      const module=backgroundModule('code-rain');
+      const workerFactory=module.exports.createWorkerRain;
+      if(typeof workerFactory==='function')return (workerFactory as RainWorkerFactory)(target,settings,{
+        onTransition,onError,initiallyPaused,isHeld:()=>backgroundStartupHeld(target),
+      });
+      if(module.version!=='0.1.2')throw Error('Verified Code Rain worker renderer is unavailable');
+      const Factory=module.exports.CodeRain;
       if(typeof Factory!=='function')throw Error('Code Rain renderer is unavailable');
       const renderer=new (Factory as RainFactory)(target,settings,{onTransition,frameScheduler:{request:callback=>requestBackgroundFrame(target,callback),cancel:cancelBackgroundFrame}});
       registerBackgroundOpening(target,renderer);return renderer;
