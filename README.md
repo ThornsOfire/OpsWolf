@@ -14,17 +14,19 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
+The current source is **OpsWolf 0.1.0-alpha.15**, built on [Code-Codex v0.6.0](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/releases/README.md). The combined build passed its local checks, and Rain is much smoother in our hands-on testing. That is progress, not a promise that every setup works. [What we checked](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/upstream-integration.md#alpha15-qualification).
+
 ### Read it, then work on it
 
 Open a file from the explorer and it appears beside chat. **Preview** is for reading; **Edit** lets you change supported text files. **Save**, or **Ctrl+S**, writes the file. Markdown Preview can show headings, links and tables; Edit shows the source that makes them.
 
-![Rendered Markdown and its table beside the conversation](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/images/editor-preview-demo.png)
+![Rendered Markdown and its table beside the conversation](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/images/editor-preview-demo.png)
 
 *Preview: the real explorer, editor and Markdown plugin with a disposable sample file. The surrounding chat is a demo, not a native Codex conversation.*
 
-![The same Markdown sample in Edit with word wrap and source line numbers](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/images/editor-edit-demo.png)
+![The same Markdown sample in Edit with word wrap and source line numbers](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/images/editor-edit-demo.png)
 
-*Edit: the same file as source text, with word wrap and line numbers. No personal files or chats are loaded in this demo.*
+*Edit: the same file as source text, with word wrap and line numbers.*
 
 The **E** button opens or hides the editor. Drag its left edge to resize it, or use its fullscreen button when you want more room. Hiding a fullscreen editor resets it, so the next E puts it beside chat again.
 
@@ -34,13 +36,13 @@ Tabs can scroll with your mouse wheel, move by dragging, and appear in an open-f
 
 Click Codex's live **files changed** bubble and its comparison viewer opens in the editor's **Changes** tab. You keep Codex's review controls, with the comparison beside your chat. Clicking a file in the bubble's hover list takes you to that file's change.
 
-![The native Codex Changes viewer hosted inside an OpsWolf editor tab](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/images/changes-native.png)
+![The native Codex Changes viewer hosted inside an OpsWolf editor tab](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/images/changes-native.png)
 
 *The actual native Changes viewer in OpsWolf alpha.3, showing public screenshot-tool changes. Captured from the live app and cropped to the editor area so chats and the project list stay out of the image.*
 
 There's also a persistent **Native changes** panel above the message box. It stays available after the live bubble has gone. Expand the file list, then open just the changes you want to read. **Open file** takes you from the recorded diff to the current file, where you can edit it.
 
-![The persistent Native changes panel above chat, with a recorded diff open on the right](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/images/native-changes-demo.png)
+![The persistent Native changes panel above chat, with a recorded diff open on the right](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/images/native-changes-demo.png)
 
 *Production review controls with a sample patch and demo conversation. The panel above the message box and the recorded diff are separate from the native Changes viewer shown above.*
 
@@ -54,22 +56,22 @@ This uses Codex's recorded patches. It can include ordinary project files outsid
 - **Make it comfortable.** Settings include source wrap, a minimap, an optional typing-speed counter and first-chat sidebar collapse. Our menu/settings name and logo can use your own saved identity profile; Windows identity aisn't changed by that (yet).
 - **Add some atmosphere.** Optional preview plugins and backgrounds live in Preview Market. [Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) adds configurable rain; [Nova Fox](https://github.com/ThornsOfire/nova-fox-companion) is a separate companion with optional OpsWolf integration.
 
-Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf → Preview Market** for preview plugins and backgrounds. If you've chosen your own app label, look under that menu name instead.
+Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf → Preview Market** to add or enable preview plugins and backgrounds. With Rain active, the background-settings button at the top of the explorer opens its controls directly. If you've chosen your own app label, look under that menu name instead.
 
-![OpsWolf settings with the default wolf logo and shared preferences](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/images/settings-demo.png)
+![OpsWolf settings with the default wolf logo and shared preferences](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/images/settings-demo.png)
 
-*The production settings panel with disposable default preferences. This is a synthetic capture; your personal profiles keep their own name and artwork. [Screenshot details](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/images/README.md).*
+*The production settings panel with disposable default preferences. This is a synthetic capture; your personal profiles keep their own name and artwork. [Screenshot details](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/images/README.md).*
 
 ### A few rough edges, because alpha means alpha
 
 - Text reading goes up to **10 MiB**; editing currently stops at **512 KiB**. Bigger Markdown starts as plain text with an explicit full-render option. Files we can't edit show a red explanation. Mixed Windows/Unix line endings are one reason a file stays read-only.
 - Citations work, but their long encoded links can still show in the message box and hover tooltip. The compact presentation is unfinished.
-- Automatic expansion of the agent's activity details still fails in a reported native layout. Following the latest activity and pausing to read are separate features.
-- Rain blending can drop frames, its blend options don't persist yet, and editor transparency isn't consistent across other themes. Saved Rain settings and previous-theme restoration work in the tested alpha.3 host setup.
+- Automatic expansion of the agent's activity details has a source repair, but the reported native layout still needs a live recheck. Following the latest activity and pausing to read are separate features.
+- Rain's new worker rendering has stopped the frame drops in our recent hands-on testing, including heavy blending. We still need feedback from other setups. Blend playback options don't persist yet, and editor transparency isn't consistent across other themes. Current colours can be saved; another restart check for the new build is still pending.
 - This is a basic source editor. Language servers, autocomplete, a debugger, a trustworthy context meter and broader editing support are future work.
-- Codex updates can change the layout or integrations we depend on. Updates are **not frozen**. The inherited updater follows upstream Code-Codex; it does not maintain this fork. Keep a working build before applying updates.
+- Codex updates can change the layout or integrations we depend on. **Review updates** shows upstream availability and blocks the stock Code-Codex installer from replacing OpsWolf. Windows/Store updates to Codex are **not frozen**. For an OpsWolf restart, save your work, close the app normally and reopen your OpsWolf launcher; the native in-app Restart action is held because it can lose our selected build. See [manual updates](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/manual-updates.md).
 
-See [known issues](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/known-issues.md) and the [user guide](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/README.md) for the details. No claim that every Codex version, theme or monitor setup works perfectly.
+See [known issues](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/known-issues.md) and the [user guide](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/README.md) for the details. No claim that every Codex version, theme or monitor setup works perfectly.
 
 <a id="getting-it-running"></a>
 
@@ -81,6 +83,24 @@ The current route is to build this fork's UI and matching native companion, clos
 
 Your local folder can be anywhere sensible. It doesn't need our workspace layout or a particular project name. Preview plugins such as Markdown and PDF are separate packages. Enable the ones you want in Preview Market. A format having a preview doesn't mean it can be edited.
 
+### What you actually need
+
+You don't need my whole tool shelf to use OpsWolf. Start with the app; add tools for the jobs you actually want it to do.
+
+- **To run a matching build:** Windows x64, the [official Codex desktop host](https://learn.chatgpt.com/docs/app), and this fork's matching built native companion and UI bundle. OpsWolf adds to the official host; it doesn't replace or redistribute it. There still isn't a published OpsWolf installer, so today's source route needs someone to build it first.
+- **To build from source:** [Git for Windows](https://git-scm.com/install/windows), a supported [Node.js LTS with npm](https://nodejs.org/en/download), [Rust through rustup](https://rust-lang.org/tools/install/) with the Windows MSVC toolchain, and [Visual Studio Build Tools with Desktop development with C++](https://learn.microsoft.com/en-us/cpp/build/vscpp-step-0-installation). These are build tools, not a shopping list for someone who already has a reviewed matching build. Exact minimums and packaging-only tools are below.
+- **For previews and atmosphere:** add only the Preview Market packages you want. Markdown, PDF and other previews, backgrounds such as Code Rain, and the standalone Nova Fox companion are optional. Install, load and enable are different steps; a preview package doesn't promise editing support. You don't need every plugin or our personal MCP connections.
+
+**A build can download things.** The build script runs `npm ci`, and Cargo may fetch missing locked dependencies. Packaging scripts can fetch tools too. Have your agent explain the needed downloads and get the required authorization before running them. Don't treat a command called “build” as automatically offline.
+
+### Optional: let an agent work with Windows
+
+For desktop automation, this project's preferred option is the independent [TaskKit Windows Computer MCP](https://github.com/Longtran2404/taskkit-windows-computer-mcp), using its [Windows quickstart](https://github.com/Longtran2404/taskkit-windows-computer-mcp/blob/main/docs/WINDOWS10_QUICKSTART.md). It needs Python 3.11+ with Tkinter and the Windows `py` launcher. Codex CLI registration is an optional setup route, not an OpsWolf requirement. Computer Use, when available, is the fallback if TaskKit cannot do the job. Neither is needed to run the editor.
+
+Start with only the target application allowed and explicitly authorize screenshots and control. Captures go to the connected AI service. TaskKit has its own session limits, fresh-capture and hit-target checks; physical Escape/F12 stops control. Finish with `end_control_session`. Its `type_text` accepts literal single-line text, not multiline scripts or key chords; use supported key actions separately. GPU/protected-window capture can still fail, so don't send blind clicks.
+
+Those tool controls are separate from [Codex sandbox and approval rules](https://learn.chatgpt.com/docs/agent-approvals-security). MCP/app calls may need another approval; [automatic review](https://learn.chatgpt.com/docs/sandboxing/auto-review) can reject requests outside the authorized scope or involving unsafe data transfer. Changing TaskKit's input mode doesn't grant Codex permission. Computer Use also has its own app approvals. Keep permissions narrow; don't disable protections to get past a refusal. See the [official MCP setup guide](https://learn.chatgpt.com/docs/extend/mcp) if you choose to connect a server.
+
 <a id="credit-and-contributing"></a>
 
 ### Credit, bugs and helping out
@@ -89,7 +109,7 @@ Big credit to [Rice-dog and the Code-Codex contributors](https://github.com/Rice
 
 If something breaks in our additions, report it to this fork with your versions, what you clicked, what happened and what you expected. A small sample helps a ton. Keep private documents, keys and chats out of public reports.
 
-[Changelog](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/CHANGELOG.md) · [Contributing](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/CONTRIBUTING.md) · [MIT license](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/LICENSE) · [Third-party notices](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/THIRD_PARTY_NOTICES_EN.md)
+[Changelog](CHANGELOG.md) · [Contributing](CONTRIBUTING.md) · [MIT license](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/LICENSE) · [Third-party notices](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/THIRD_PARTY_NOTICES_EN.md)
 
 ## For agents, from an agent
 
@@ -101,14 +121,28 @@ If something breaks in our additions, report it to this fork with your versions,
 | Item | Contract |
 | --- | --- |
 | Implementation | `candidate/planned-development`; [source branch](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development). `main` is a documentation landing page; `feature/right-editor-pane` is the historical baseline. |
-| Versions | Fork: `cursadex-version.json`, source checkpoint `0.1.0-alpha.3`. Upstream package/protocol `0.5.40`; Rain plugin `0.1.2`. Source, local handoff, activation and public release are separate identities. |
-| Host qualification | Alpha.3 appearance repair passed owner startup, Enable/Disable, retained saved settings and previous-theme restoration on Windows Codex package `26.1027.3384.0`. Later restart retention is a follow-up; do not generalize to all hosts/themes. |
+| Versions | See [fork metadata](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/cursadex-version.json) for the display version and [Cargo.toml](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/Cargo.toml) for the inherited package version. This integration targets upstream Code-Codex v0.6.0. [Rain has its own plugin version](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/releases/plugins/appearance/code-rain/manifest.json). The source revision, package version, local handoff and running build each have their own identity. |
+| Qualification | Alpha.15: 60 combined local gates passed; native tests 499 passed / 24 inherited ignores / 0 failed; all 29 locked plugins imported offline. Owner reports smooth Rain and working controls, including heavy blending. Exact post-handoff running identity and another saved-settings restart check remain unverified. [Evidence scope](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/upstream-integration.md#alpha15-qualification); no fresh-machine or universal host certification. |
 | Legacy naming | Formerly Cursadex. Preserve `cursadex-*` metadata, event/storage keys, CSS hooks and technical launch names. Branding changes do not authorize migrations or identifier refactors. |
 | Portability | No maintainer Desktop layout, app-state paths, personal identity artwork or external workspace scripts required by a clone. No public installer/fresh-machine certification yet. |
 
 ### Build and launch
 
-Requirements: Windows x64 (inherited baseline Windows 10 build 19041+), official Codex desktop host, Git, Node.js **20.19+**/npm, stable Rust MSVC and Visual Studio Desktop C++ Build Tools. Cargo declares Rust 1.85 minimum; use a compatible installed toolchain. MSI packaging additionally requires .NET SDK. Install/download prerequisites only with environment authorization.
+These setup requirements come from the source manifests, scripts and upstream guidance. Local build checks and bounded owner observations are recorded separately; a fresh-machine install and broader native-host acceptance remain unverified.
+
+| Use | Dependencies / source of truth |
+| --- | --- |
+| Run | Windows x64 (inherited launcher baseline Windows 10 build 19041+), separately installed official Codex host, matching built companion/UI. Build tools and MCP servers are not general runtime requirements. |
+| Build UI | Git and a supported Node LTS with npm satisfying [`engines.node >=20.19`](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/packages/explorer-ui/package.json). The minimum is not a recommendation to install EOL Node 20; check the [official release status](https://nodejs.org/en/about/previous-releases). |
+| Build native | Upstream documents Windows 11 x64 for source builds. Use the Windows MSVC Rust toolchain and Visual Studio Desktop C++ Build Tools/Windows SDK. [`Cargo.toml`](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/Cargo.toml) declares Rust 1.85 minimum; resolve the locked dependencies with a compatible installed stable toolchain. |
+| Package MSI only | [WiX](https://docs.firegiant.com/wix/using-wix/) and [.NET SDK](https://dotnet.microsoft.com/en-us/download) for the documented .NET-tool route; a separately supplied WiX distribution still needs its own prerequisites checked. [`build-msi.ps1`](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/scripts/build-msi.ps1) pins WiX 5.0.2 and restores it with `dotnet tool install` only if `-WixPath` is omitted and its cached tool is missing. MSI's three-number version rule is separate from the alpha display version. Neither tool is needed for ordinary editor use or the UI/native build. |
+| Selected browser fixtures only | Installed Chrome at the path used by [`browser-fixture.mjs`](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/scripts/browser-fixture.mjs). Chrome is not an additional normal OpsWolf runtime requirement. |
+| Optional desktop automation | TaskKit prerequisites and MCP registration follow its linked quickstart; Python is not required by OpsWolf itself. The reviewed local TaskKit release source is 0.5.1, also reported by a prior `bridge_status` observation with its session stopped. Exact source-to-running-server hash identity was not established; don't infer it from the version label. |
+| Optional features | Preview/background packages follow the pinned catalog/cache and explicit Preview Market actions. Nova Fox has its own standalone prerequisites; neither Nova nor a personal MCP stack is required by OpsWolf. |
+
+TaskKit's capture/session guards do not replace client sandbox, approval, auto-review or screenshot/data-transfer authorization. After cancellation, only a new owner-authorized task may start a new control session; read-only captures do not rearm input. Reinspect and capture the current target before further input, and never replay a cancelled action. Leave configuration and installation to an explicitly authorized setup task. The linked external guides can change after the check date.
+
+Install/download prerequisites only with environment authorization. [`build.ps1`](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/scripts/build.ps1) calls `npm ci` and `cargo build --workspace --locked`, **not** Cargo's `--offline` mode; inspect cache/dependency needs before execution. A reviewed runtime build and a new dependency installation are separate decisions.
 
 ```powershell
 git clone --branch candidate/planned-development https://github.com/ThornsOfire/OpsWolf.git
@@ -129,14 +163,14 @@ Pair UI/backend versions. This command uses mutable build outputs, not an immuta
 
 ### Runtime contracts
 
-- Modules: UI `packages/explorer-ui/src/`; native workspace/transport/context under `crates/`. [Architecture](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/architecture.md), [editor ownership/data flow](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/architecture.md), [development/check matrix](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/development.md).
+- Modules: UI `packages/explorer-ui/src/`; native workspace/transport/context under `crates/`. [Architecture](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/architecture.md), [editor ownership/data flow](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/architecture.md), [development/check matrix](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/development.md).
 - File I/O: authenticated workspace bridge, current-project path/type/sensitive-file policy, complete content, loaded-version conflict checks. Inline/edit limit 512 KiB; complete read limit 10 MiB; larger text virtualized; large Markdown rendering explicit. Preserve dirty drafts/caret through view changes and save failure/cancel.
 - Tabs: 64 open, 32 project pins; pins store normalized-root-relative paths/order, never draft contents. Recorded diffs read-only; **Open file** resolves current source through normal reader policy.
 - Review: native patch history, not filesystem snapshots; no permanent duplicate diff archive. Native comparison remains owned by Codex, positioned through qualified adapters without cloning/reparenting React nodes. Unknown layouts retain native behavior; English/observed-layout limits apply.
-- Citations: supported text, up to 32 grouped ranges, bounded quotes and explicit draft markers. [Routing/presentation limits](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/citations.md). No compact composer chips claimed.
-- Preferences/identity local to renderer storage. [Settings](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/settings.md), [identity/restart scope](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/identity.md), [link permissions/reset](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/links.md). No Windows/Discord identity claim; profiles, chat/auth and documents remain separate.
-- Rain: [integration/pins/provenance](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/code-rain-integration.md). Verified package cache/import; host controls enablement/settings/appearance lease, independent renderer controls work budgets. Guard uninspectable host exports, qualify unique same-origin capabilities, invoke RPC methods intrinsically. Missing capabilities fail explicitly; selected/off remains disableable. Blend-option persistence and manual updater controls are unimplemented.
-- Project relinking: [metadata refresh](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/workspace-root-refresh.md); follows reported chat cwd, defers dirty drafts, explicit workspace override wins. Does not rename folders or refactor absolute source paths.
+- Citations: supported text, up to 32 grouped ranges, bounded quotes and explicit draft markers. [Routing/presentation limits](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/citations.md). No compact composer chips claimed.
+- Preferences/identity local to renderer storage. [Settings](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/settings.md), [identity/restart scope](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/identity.md), [link permissions/reset](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/links.md). No Windows/Discord identity claim; profiles, chat/auth and documents remain separate.
+- Rain: [integration/pins/provenance](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/code-rain-integration.md). Verified package cache/import; host controls enablement/settings/appearance lease, independent renderer controls work budgets. Guard uninspectable host exports, qualify unique same-origin capabilities, invoke RPC methods intrinsically. Missing capabilities fail explicitly; selected/off remains disableable. Blend-option persistence remains unimplemented. F32 adds native enforcement against upstream setup plus footer review; no host/Store freeze or automatic fork feed is claimed.
+- Project relinking: [metadata refresh](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/workspace-root-refresh.md); follows reported chat cwd, defers dirty drafts, explicit workspace override wins. Does not rename folders or refactor absolute source paths.
 
 <a id="checking-a-change"></a>
 
@@ -150,12 +184,12 @@ node scripts/check-architecture.mjs
 node scripts/check-changelog.mjs
 ```
 
-Use installed locked dependencies; fresh dependency setup is `npm --prefix packages/explorer-ui ci`. Choose behavior checks from [development](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/development.md). Editor/review boundaries: `test-editor-pane`, `test-change-review`, `test-native-diff-host`, `test-diff-source` (`node scripts/<name>.mjs`). Appearance repair: `test-appearance-adapter`, `test-rain-host-recovery`, `test-code-rain-runtime`. Browser fixtures use installed Chrome, disposable profiles and synthetic data; fixture passes are not native certification. Historical counts are evidence for their exact source, not checks rerun by a docs edit.
+Use installed locked dependencies; fresh dependency setup is `npm --prefix packages/explorer-ui ci`. Choose behavior checks from [development](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/development.md). Editor/review boundaries: `test-editor-pane`, `test-change-review`, `test-native-diff-host`, `test-diff-source` (`node scripts/<name>.mjs`). Appearance repair: `test-appearance-adapter`, `test-rain-host-recovery`, `test-code-rain-runtime`. Browser fixtures use installed Chrome, disposable profiles and synthetic data; fixture passes are not native certification. Historical counts are evidence for their exact source, not checks rerun by a docs edit.
 
-Native boundaries: `cargo test -p workspace-service --locked -- --test-threads=1`; repeat for `cdp-client` / `context-resolver` when relevant. [Versioning](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/versioning.md), [tracker removal audit](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/docs/editor/tracker-cleanup.md).
+Native boundaries: `cargo test -p workspace-service --locked -- --test-threads=1`; repeat for `cdp-client` / `context-resolver` when relevant. [Versioning](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/versioning.md), [tracker removal audit](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/tracker-cleanup.md).
 
-Follow [AGENTS.md](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/AGENTS.md) / [CONTRIBUTING.md](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/CONTRIBUTING.md). Scoped change → relevant checks → exact commit/snapshot → immutable SHA-256/size inventory + runtime/dependency evidence → coordinator review → owner activation → live acceptance/rollback. Never rewrite a sealed/running build. Keep profiles, keys, chats, client data and probes out of commits. Documentation editing does not authorize downloads, activation, publication or upstream-update changes.
+Follow [AGENTS.md](AGENTS.md) / [CONTRIBUTING.md](CONTRIBUTING.md). Scoped change → relevant checks → exact commit/snapshot → immutable SHA-256/size inventory + runtime/dependency evidence → coordinator review → owner activation → live acceptance/rollback. Never rewrite a sealed/running build. Keep profiles, keys, chats, client data and probes out of commits. Documentation editing does not authorize downloads, activation, publication or upstream-update changes.
 
-Upstream [Chinese README](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/README.zh-CN.md) and [English translation](https://github.com/ThornsOfire/OpsWolf/blob/17a3494f5a241a223d560bba2c7e503d79e5ab6a/README.upstream.en.md) describe the inherited project, not guarantees about this fork. Preserve upstream copyright and third-party licenses.
+See the [upstream v0.6.0 release notes](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/releases/README.md) for the upstream changes and their verification scope. The archived [Chinese README](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/README.zh-CN.md) and [English translation](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/README.upstream.en.md) document earlier upstream behavior. Preserve upstream copyright and third-party licenses.
 
 </details>

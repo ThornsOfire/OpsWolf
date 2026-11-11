@@ -1,14 +1,22 @@
-# Editor-fork workflow rules
+# OpsWolf editor-fork workflow rules
 
-These rules apply inside this repository. They supplement workspace/user instructions; direct user instructions take precedence. Start with [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and the relevant [editor documentation](docs/editor/).
+These rules apply inside this repository. They supplement workspace/user instructions; direct user instructions take precedence. Start with [README.md](README.md), [CONTRIBUTING.md](CONTRIBUTING.md), and the relevant [editor documentation](https://github.com/ThornsOfire/OpsWolf/tree/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor).
 
 ## Scope and ownership
 
 - Inspect the current branch and working-tree diff before editing. Preserve unrelated uncommitted changes, local experiments, and drafts. Stage explicit task files; don't sweep everything into a commit or discard changes you didn't make.
-- The editor implementation lives on `feature/right-editor-pane`. `main` currently carries the fork's homepage documentation. Keep publication deliberate; don't merge all source into `main`, change the default branch, tag a release, or publish installers as a side effect of routine work.
-- Keep this public fork portable. Derive paths from the workspace/installation; don't bake in a maintainer's Desktop, username, OpsWolf branding, app-state paths, or project names.
-- Keep credentials, client documents, screenshots, native-source extracts, app state and developer probes out of public commits. Use synthetic examples in tests and reports. `artifacts/`, `dist/` and `target/` are local/generated areas.
+- Use the reviewed source checkout and branch named in the current task checkpoint; inspect the actual branch/diff before edits. `candidate/planned-development` is the public alpha source destination; `feature/right-editor-pane` is historical. A local integration branch may be newer than the public checkpoint. `main` carries the fork's homepage documentation. Keep publication deliberate; don't merge all source into `main`, change the default branch, tag a release, or publish installers as a side effect of routine work.
+- OpsWolf (formerly Cursadex) is the intended public product default. Keep this public fork portable: derive paths from the workspace/installation; don't bake in a maintainer's Desktop, username, personal artwork/branding, app-state paths, or project names. Product branding does not require a workspace folder named OpsWolf. Preserve existing technical names, storage/event keys, theme hooks, repository URLs and historical evidence unless a separate compatibility change is explicitly authorized.
+- Keep credentials, client documents, personal screenshots, native-source extracts, app state and developer probes out of public commits. Reviewed product screenshots may live under `docs/images/` with synthetic data, a clear caption and capture provenance; inspect them for private content before publication. Use synthetic examples in tests and reports. `artifacts/`, `dist/` and `target/` are local/generated areas.
 - Preserve upstream credit, license and third-party notices. Document which behavior belongs to this fork. Do not copy proprietary native-app source into the repository.
+
+## Everyday execution
+
+- One coordinator owns the result. Keep small fixes with one agent; delegate independent bounded work or a useful risk review without chains of relays. Preserve existing scoped authorization; a handoff or compaction alone does not require another approval.
+- Observe → reproduce where useful → make the smallest justified change → focused checks → live acceptance when relevant → record. Use an existing supported recovery path when it solves the problem without code changes.
+- Keep one current checkpoint for coordinated or long work; small tasks can use an existing issue/checkpoint. Archive obsolete status instead of stacking competing instructions. Read only relevant linked evidence after recovery.
+- Select verification using [the testing guide](https://github.com/ThornsOfire/OpsWolf/blob/c5224de0f8c6fbebbad6dc5d042598103fd35754/docs/editor/testing.md). Reuse applicable unchanged-input evidence; expand checks for shared interfaces, new failures or release gates. Tool failure needs a diagnosis before another attempt. Do not weaken assertions or silently waive required checks.
+- Review actual diffs before handoff. Seek independent review for material data/security/contract/native uncertainty; mechanical documentation edits need proportionate content/link checks. Existing activation, publication and recovery gates remain in force.
 
 ## Completing a change
 
@@ -21,7 +29,7 @@ These rules apply inside this repository. They supplement workspace/user instruc
 
 ## Editor and native layout
 
-- Keep chat, the explorer, editor visibility, editor fullscreen and native tabs as separate capabilities. E hides/shows; fullscreen changes layout; close-all keeps pins. Avoid broad overlay/CSS changes that steal native hit targets.
+- Keep chat, the explorer, editor visibility, editor fullscreen and native tabs as separate capabilities. E hides/shows; hiding or an accepted return to the editor's chat tab/Escape exits fullscreen so reopening is docked. Temporary suspension/reparenting and cancelled switches preserve layout; close-all keeps pins. Avoid broad overlay/CSS changes that steal native hit targets.
 - Measure app chrome using qualified app-shell markers. Nested file/diff/content headers must not contribute to the editor's top inset. Check repeated layout updates, zoom, docked/fullscreen transitions, narrow windows, 1080p and 4K when relevant.
 - Native DOM adapters must verify active-page and matching chat identity, preserve native handlers and ownership, restore leased styles/listeners on disposal, and leave unknown layouts in their native presentation. Don't access private React stores or reparent/clone native comparison nodes.
 - Publish the requested active tab before reopening a hidden editor. Check E, conversation state, native bubble/hover selection, recorded-review opening and fullscreen restore when changing activation.
@@ -37,8 +45,12 @@ These rules apply inside this repository. They supplement workspace/user instruc
 
 ## Build, installation and live verification
 
+- For a multi-project handoff, follow the workspace `WorkspaceSetup/Deployment/README.md` contract when available. Keep public builds portable: an outside clone must not require this maintainer's workspace. The portable requirements are exact source identity, an immutable artifact inventory with SHA-256/byte counts, test evidence and limits, dependency identities, settings preservation, and explicit activation/rollback instructions.
+- Component agents submit only owned changes as `integrate-only` handoffs under ignored `artifacts/handoffs/`; a source commit alone is not a staged app. One designated coordinator owns the combined fork version, build, activation manifests, launch helpers and rollback selection. Never overwrite a staged/running build or switch the shared launcher from a component task. Freeze submitted source or report a new superseding handoff. Owner review gates activation, hooks/installation and publication; no automatic restart or new downloads.
+
 - Pair backend changes with a matching native build and UI; an old native binary plus a new UI can be incompatible. Verify the source/artifact identity and installed hash, and keep a rollback copy when replacing installed assets.
+- Keep the fork display version in `cursadex-version.json`, separate from upstream package/protocol/plugin identity. Run `node scripts/check-version.mjs` before a build. Follow `docs/editor/versioning.md`; increment the development version for a new reviewed build handoff, record source/hashes, and never overwrite an immutable running candidate or publish/tag as a side effect of versioning.
 - Never restart/kill live Codex or relocate live app state as a routine test step. Other chats may be working. Install for the next launch and leave restarts to the user unless a restart is explicitly authorized.
 - Prefer TaskKit for Windows UI work where available. Use bounded inspection and synthetic test documents; preserve unsent chat and open files, and end control sessions/clean up temporary probes when finished.
 - A fixture pass isn't proof of every native app version, language or Windows/GPU configuration. State real-host and CI verification separately from local tests, and don't label checksum matching as a whole-program safety audit.
-- Upstream updater/plugin endpoints remain inherited. This project's previous decision to defer hardening still applies; don't silently change distribution trust, updater policy, plugin assets, or unrelated app settings during editor work.
+- F32 explicitly gates the inherited upstream installer in this fork; preserve its native fail-closed policy and truthful separate host/Store/plugin boundaries. Metadata checks are not installation authorization. Do not silently change distribution trust, plugin assets, unrelated updater paths or live settings during editor work; broader update controls require explicit scope.
