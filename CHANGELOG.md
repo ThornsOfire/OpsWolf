@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- Rain settings separate single-preset management from Position #1 / Position #2 blend choices. Create, overwrite, rename and delete up to eight personal presets, then explicitly Save the appearance, endpoint snapshots and timing/startup options. Saved blends restart at Position #1; existing appearance settings remain compatible.
+
 - Clear list in the editor’s native Changes tab hides accumulated entries for the running session. Show all restores them; new recorded patches bring changed files back. Filters stay separate by chat and project, reset on app reload, and release when history cannot establish what changed. Files, drafts, Git state and native history remain untouched.
 
 - Refresh the open editor file from disk with a toolbar button. Unsaved edits use Save and refresh, Discard and refresh, or Cancel; failed/conflicting saves keep the draft. Refresh returns to Preview and leaves other tabs and pins intact.
@@ -18,7 +20,7 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 - Background settings in the explorer header opens active Rain directly, with the existing panel, draft and Save controls. Other identified supported backgrounds open their existing Preview Market card; unknown, unverified custom or multiple states use an honest browse context. Keyboard/Close/Escape focus returns to the visible opener, and direct Rain settings stay open while resizing.
 
-- Rain blend status shows both captured endpoints, current direction and honest custom/finished/stopped states. Inactive-window/manual pause feedback stays visible, including outside an active blend; Save still stores the current appearance only.
+- Rain blend status shows both captured endpoints, current direction and honest custom/finished/stopped states. Inactive-window/manual pause feedback stays visible, including outside an active blend. Saved endpoint configuration is described in the new preset workflow above.
 
 - Qualified native middle tabs show the actual chat title, with compact ellipsis and the complete name in hover/accessibility/dropdown text. Title changes keep navigation and focus stable; ambiguous structures retain native presentation.
 

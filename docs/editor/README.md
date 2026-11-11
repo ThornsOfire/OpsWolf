@@ -68,7 +68,7 @@ Other identified supported backgrounds open their existing card in Preview Marke
 
 ## Rain blend status
 
-The blend status names the captured start and destination, including the return direction and holds. Changing the preset dropdown chooses the next destination without renaming a running blend. Unmatched edited settings say Current/custom settings. Finished, stopped and no-blend states remain explicit, alongside any pause reason. Save keeps the current appearance; it does not save blend playback/options. These are unreleased source changes pending a matching build and native checks.
+Single preset applies or manages personal presets. Position #1 and Position #2 separately select captured blend endpoints. Changing a selection leaves the running blend on its current route until Start blend is clicked again. Status shows that route, direction, holds and pause reason. Save keeps the current appearance, personal presets, both endpoints and playback options. A saved startup blend begins at Position #1 next time. See the [settings guide](code-rain-integration.md#presets-and-blend-settings) for snapshot and compatibility details. These source changes still require the matching combined build and native acceptance.
 
 ## Dot background
 

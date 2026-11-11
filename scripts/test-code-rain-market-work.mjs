@@ -154,7 +154,7 @@ try{
       await check('Existing language path refreshes direct panel without a runtime change',()=>fx.q('.code-rain-panel').lang==='zh-CN'&&fx.q('[data-rain-action=save]').textContent==='保存'&&fx.glyph.value==='UNFINISHED'&&fx.shadow.activeElement===fx.glyph&&fx.glyph.selectionStart===1&&fx.glyph.selectionEnd===5);
       await ev(()=>fx.applyLanguage({schema:1,locale:'en',revision:2,source:'menu'}));
       await ev(()=>{fx.q('[data-rain-action=save]').click();});
-      await check('Only explicit Save persists unchanged schema and current target once',()=>{const saved=JSON.parse(localStorage.getItem(fx.rainKey));return fx.rainWrites===fx.writesBefore+1&&!fx.runtime.dirty&&saved.schema===1&&Object.keys(saved).sort().join(',')==='pauseWhenUnfocused,rain,schema'&&JSON.stringify(saved.rain)===JSON.stringify(fx.presets[1].rain);});
+      await check('Only explicit Save persists current target, endpoint configuration and personal presets once',()=>{const saved=JSON.parse(localStorage.getItem(fx.rainKey));return fx.rainWrites===fx.writesBefore+1&&!fx.runtime.dirty&&saved.schema===1&&Object.keys(saved).sort().join(',')==='blend,pauseWhenUnfocused,presets,rain,schema'&&JSON.stringify(saved.rain)===JSON.stringify(fx.presets[1].rain);});
       await ev(()=>{fx.q('.code-rain-close').click();fx.owner.openPreviewMarket();});await delay(120);
       await check('Market reopening refreshes actual selected Rain state',()=>fx.marketOpen()&&fx.q('.code-rain-enable').getAttribute('aria-pressed')==='true'&&/Running/.test(fx.q('.code-rain-status').textContent));
       await ev(()=>{hostFixture.holdAscii=true;fx.q('.ascii-tiles-settings').click();});

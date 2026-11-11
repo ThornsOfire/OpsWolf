@@ -12,7 +12,7 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
-The current source is **OpsWolf 0.1.0-alpha.17**, built on [Code-Codex v0.6.0](releases/README.md). This adds Refresh for the file you have open and Clear list / Show all for the editor’s Changes tab. The previous build passed its local checks, and Rain is much smoother in our hands-on testing. This new build still needs its own restart checks. [What we checked before this change](docs/editor/upstream-integration.md#alpha15-qualification).
+The current source is **OpsWolf 0.1.0-alpha.18**, built on [Code-Codex v0.6.0](releases/README.md). Rain now has personal presets and separate Position #1 / Position #2 choices for blending. Save can keep those choices and start the blend next time. Refresh and Clear list / Show all are still there in the editor. All 62 combined local checks passed, including the matching native build. The new settings still need a restart test in the app. [Rain settings guide](docs/editor/code-rain-integration.md#presets-and-blend-settings).
 
 ### Read it, then work on it
 
@@ -67,7 +67,7 @@ Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf →
 - Text reading goes up to **10 MiB**; editing currently stops at **512 KiB**. Bigger Markdown starts as plain text with an explicit full-render option. Files we can't edit show a red explanation. Mixed Windows/Unix line endings are one reason a file stays read-only.
 - Citations work, but their long encoded links can still show in the message box and hover tooltip. The compact presentation is unfinished.
 - Automatic expansion of the agent's activity details has a source repair, but the reported native layout still needs a live recheck. Following the latest activity and pausing to read are separate features.
-- Rain's new worker rendering has stopped the frame drops in our recent hands-on testing, including heavy blending. We still need feedback from other setups. Blend playback options don't persist yet, and editor transparency isn't consistent across other themes. Current colours can be saved; another restart check for the new build is still pending.
+- Rain's worker rendering has stopped the frame drops in our recent hands-on testing, including heavy blending. We still need feedback from other setups. The new preset and saved-blend controls still need a restart check in the app. Editor transparency isn't consistent across other themes.
 - This is a basic source editor. Language servers, autocomplete, a debugger, a trustworthy context meter and broader editing support are future work.
 - Codex updates can change the layout or integrations we depend on. **Review updates** shows upstream availability and blocks the stock Code-Codex installer from replacing OpsWolf. Windows/Store updates to Codex are **not frozen**. For an OpsWolf restart, save your work, close the app normally and reopen your OpsWolf launcher; the native in-app Restart action is held because it can lose our selected build. See [manual updates](docs/editor/manual-updates.md).
 

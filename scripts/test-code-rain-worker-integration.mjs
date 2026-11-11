@@ -108,8 +108,21 @@ try{
   await wait(`shadow.querySelector('.code-rain-saved').textContent==='Saved'`,'Save button reports confirmed snapshot');
   await check('The real Save button writes the stopped snapshot with the existing schema',`(()=>{
     const saved=JSON.parse(localStorage.getItem('cursadex:code-rain:v1'));
-    return saved.schema===1&&Object.keys(saved).sort().join() === 'pauseWhenUnfocused,rain,schema'
+    return saved.schema===1&&Object.keys(saved).sort().join() === 'blend,pauseWhenUnfocused,presets,rain,schema'
       && JSON.stringify(saved.rain)===JSON.stringify(rain.settings);
+  })()`);
+  await ev(`(()=>{
+    const choose=(key,value)=>{const input=shadow.querySelector('#cle-rain-'+key);input.value=String(value);input.dispatchEvent(new Event('change',{bubbles:true}));};
+    choose('preset',3);shadow.querySelector('[data-rain-action="apply"]').click();
+    choose('from',1);choose('to',2);choose('duration',.5);
+    shadow.querySelector('[data-rain-action="blend"]').click();
+  })()`);
+  await wait(`rain.blendStatus?.state==='completed'`,'configured worker blend completes');
+  await check('Two independent settings selections drive the verified worker with exact named endpoints',`rain.settings.rainColor==='#efaa42'&&rain.blendStatus.fromPresetName==='Arctic relay'&&rain.blendStatus.toPresetName==='Amber terminal'&&shadow.querySelector('#cle-rain-preset').value==='3'`);
+  await check('Saving the completed worker blend preserves the chosen restart route',`(async()=>{
+    if(!await rain.saveSettings())return false;
+    const saved=JSON.parse(localStorage.getItem('cursadex:code-rain:v1'));
+    return saved.blend.enabled&&saved.blend.from.name==='Arctic relay'&&saved.blend.to.name==='Amber terminal'&&saved.blend.duration===.5;
   })()`);
   await check('An edit cancels a Save waiting on an older worker snapshot',`(async()=>{
     const key='cursadex:code-rain:v1',before=localStorage.getItem(key),saving=rain.saveSettings();

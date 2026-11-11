@@ -19,6 +19,7 @@ const inputPaths=[
   'packages/explorer-ui/src/plugin-host/backgrounds/code-rain.ts',
   'packages/explorer-ui/src/features/plugin-settings/code-rain.ts',
   'packages/explorer-ui/src/effects/code-rain/model.ts',
+  'packages/explorer-ui/src/effects/code-rain/preferences.ts',
   'packages/explorer-ui/vendor/opswolf-code-rain/state.mjs',
   'packages/explorer-ui/vendor/opswolf-code-rain/renderer.mjs',
 ];
@@ -31,13 +32,13 @@ import {CodeRain} from './vendor/opswolf-code-rain/renderer.mjs';
 window.PRESETS=PRESETS;window.rainSettings=rainSettings;window.instances=[];window.fixtureErrors=[];
 addEventListener('error',e=>fixtureErrors.push(e.message));
 addEventListener('unhandledrejection',e=>fixtureErrors.push(String(e.reason)));
-window.make=async()=>{
+window.make=async(raw=null)=>{
  const host=document.createElement('div');host.style.cssText='width:360px';document.querySelector('#controls').append(host);
  const shadow=host.attachShadow({mode:'open'});shadow.innerHTML='<style>.particle-settings-panel{width:340px}.code-rain-phase{overflow-wrap:anywhere}</style>'+codeRainCardMarkup()+codeRainPanelMarkup();
- const s={raw:null,writes:0,focused:true,focusListeners:new Set(),queue:new Map(),ticket:-1,clock:100,callbacks:[],renderers:[],starts:[],closed:false,throwStart:false};
+ const s={raw,writes:0,focused:true,focusListeners:new Set(),queue:new Map(),ticket:-1,clock:100,callbacks:[],renderers:[],starts:[],closed:false,throwStart:false};
  const runtime=new CodeRainBackgroundController({
   prepare:async()=>{},prepareAppearance:async()=>({mode:'managed',apply:async()=>{}}),releaseAppearance:async()=>{},
-  storage:()=>({getItem:()=>s.raw,setItem:(_,value)=>{s.raw=value;s.writes++}}),
+  storage:()=>({getItem:()=>s.raw,setItem:(_,value)=>{if(s.failSave)throw Error('Fixture storage full');s.raw=value;s.writes++}}),
   focus:{isFocused:()=>s.focused,subscribe:callback=>{s.focusListeners.add(callback);return()=>s.focusListeners.delete(callback)}},
   mountSurface:()=>{const target=document.createElement('div');target.style.cssText='width:400px;height:240px';document.querySelector('#stage').append(target);return{target,setColor:color=>target.style.backgroundColor=color,release:()=>target.remove()}},
   createRenderer:(target,settings,onTransition)=>{
@@ -61,7 +62,7 @@ window.make=async()=>{
   reopen:()=>{controller.stop();connect();controller.show()},
   close:async()=>{controller.stop();await runtime.dispose(true);host.remove();s.closed=true},
  };
- f.input('duration').value='0.5';f.input('hold').value='1';instances.push(f);return f;
+ instances.push(f);return f;
 };
 `,resolveDir:ui,loader:'ts'},bundle:true,write:false,format:'iife'});stop();
 const html='<!doctype html><html lang="en"><style>body{margin:0;color:#eee;background:#18232a}#controls{position:absolute;left:420px;top:0}#stage{width:400px}textarea{display:block}</style><textarea id="draft">Keep unsaved draft</textarea><div id="stage"></div><div id="controls"></div><script src="/fixture.js"></script></html>';
@@ -72,85 +73,61 @@ try{
  const evaluate=browser.evaluate;
  const e=expression=>evaluate('(async()=>{'+expression+';return undefined;})()');
  const check=async(name,expression)=>{try{const actual=await evaluate(expression);report.checks.push({name,passed:actual===true,actual});if(actual!==true)report.failures.push(name)}catch(error){report.checks.push({name,passed:false,error:String(error)});report.failures.push(name);report.harnessErrors.push({name,error:String(error)})}};
- await e(`window.f=await make()`);
- await check('Initial bottom status explicitly says no blend is running',`/no blend/i.test(f.phase())&&!f.r.blendStatus`);
- await e(`f.choose(1);f.action('blend')`);
- await check('Actual Start blend click passes original current and selected target to pinned renderer',`f.s.starts.length===1&&f.s.starts[0].from.rainColor===PRESETS[0].rain.rainColor&&f.s.starts[0].to.rainColor===PRESETS[1].rain.rainColor&&f.r.transitionPhase==='Transitioning'`);
- await check('Start captures exact Woodland and Arctic endpoint identities without dirtying or saving',`f.r.blendStatus?.fromPresetName==='Woodland signal'&&f.r.blendStatus?.toPresetName==='Arctic relay'&&f.r.blendStatus?.state==='active'&&!f.r.dirty&&f.s.writes===0`);
- await check('Bottom settings names both real endpoints in forward order',`f.phase().includes('Woodland signal')&&f.phase().includes('Arctic relay')&&f.phase().indexOf('Woodland signal')<f.phase().indexOf('Arctic relay')`);
- await e(`f.choose(2);f.ui.render()`);
- await check('Changing dropdown does not relabel the already-running blend',`f.input('preset').value==='2'&&f.r.blendStatus?.toPresetName==='Arctic relay'&&f.phase().includes('Arctic relay')&&!f.phase().includes('Amber terminal')`);
- await e(`f.s.midpointReached=f.until(()=>f.r.settings.rainColor!==PRESETS[0].rain.rainColor&&f.r.settings.rainColor!==PRESETS[1].rain.rainColor)`);
- await check('Pinned renderer reaches a genuine intermediate current configuration',`f.s.midpointReached&&f.r.dirty&&f.s.writes===0`);
- await e(`f.action('blend')`);
- await check('Replacement blend truthfully starts at Current/custom instead of inheriting old preset name',`f.r.blendStatus?.fromPresetName===null&&f.r.blendStatus?.toPresetName==='Amber terminal'&&f.phase().toLowerCase().includes('current/custom')&&f.s.starts.length===2`);
- await e(`f.action('stop')`);
- await check('Stop status retains endpoints while saying the current appearance was kept',`f.r.blendStatus?.state==='stopped'&&f.r.transitionPhase===''&&/stopped/i.test(f.phase())&&/current.*kept/i.test(f.phase())&&f.shadow.querySelector('[data-rain-action="stop"]').disabled`);
- await e(`f.action('reset')`);
- await check('Reset clears stale pair without changing explicit-save behavior',`!f.r.blendStatus&&f.r.transitionPhase===''&&f.s.writes===0&&!f.r.dirty`);
- await e(`f.choose(1);f.action('blend');f.s.finished=f.until(()=>f.r.transitionPhase==='')`);
- await check('Completed one-way blend uses actual final target and keeps completed status',`f.s.finished&&f.r.settings.rainColor===PRESETS[1].rain.rainColor&&f.r.blendStatus?.state==='completed'&&/finish|complete/i.test(f.phase())&&f.phase().includes('Arctic relay')&&f.shadow.querySelector('[data-rain-action="stop"]').disabled`);
- await e(`f.action('save');window.saved=JSON.parse(f.s.raw)`);
- await check('Save retains original schema/current snapshot only, with no blend metadata or option persistence',`f.s.writes===1&&!f.r.dirty&&saved.schema===1&&saved.rain.rainColor===PRESETS[1].rain.rainColor&&JSON.stringify(Object.keys(saved).sort())===JSON.stringify(['pauseWhenUnfocused','rain','schema'])`);
+ await e(`window.f=await make();window.choose=(key,index)=>{f.input(key).value=String(index);f.input(key).dispatchEvent(new Event('change',{bubbles:true}))};window.timing=()=>{f.input('duration').value='.5';f.input('hold').value='1';f.input('duration').dispatchEvent(new Event('change',{bubbles:true}))}`);
+ await check('Initial feedback directs users to two independent blend positions',`/no blend/i.test(f.phase())&&f.input('from').value==='0'&&f.input('to').value==='1'&&!f.r.dirty`);
  await e(`f.choose(2);f.action('apply')`);
- await check('Applying dropdown selection ends last blend status and reflects the newly applied rain',`!f.r.blendStatus&&f.r.transitionPhase===''&&f.r.settings.rainColor===PRESETS[2].rain.rainColor&&f.r.dirty&&f.s.writes===1`);
- await e(`f.r.updateSettings({...PRESETS[0].rain,speed:13});f.choose(1);f.action('blend')`);
- await check('One changed field prevents falsely naming an otherwise similar shipped preset',`f.r.blendStatus?.fromPresetName===null&&f.r.blendStatus?.toPresetName==='Arctic relay'&&f.phase().toLowerCase().includes('current/custom')`);
- await e(`f.r.startTransition({...PRESETS[1].rain,speed:8},{duration:.5,hold:0,loop:false})`);
- await check('Unmatched public runtime destination uses custom fallback without inventing a preset',`f.r.blendStatus?.toPresetName===null&&f.phase().toLowerCase().includes('current/custom')`);
- await e(`window.snapshot=f.r.blendStatus;try{if(snapshot)snapshot.toPresetName='Invented preset'}catch{}`);
- await check('Public status snapshot cannot mutate the runtime endpoint identity',`!!snapshot&&f.r.blendStatus?.toPresetName===null`);
- await e(`await f.close();f=await make();f.choose(1);f.input('loop').checked=true;f.action('blend');f.s.forward=f.until(()=>f.r.transitionPhase==='Forward')`);
- await check('Real loop Forward state shows source then target',`f.s.forward&&f.r.blendStatus?.state==='active'&&f.phase().indexOf('Woodland signal')>=0&&f.phase().indexOf('Arctic relay')>f.phase().indexOf('Woodland signal')`);
- await e(`f.s.holdTarget=f.until(()=>f.r.transitionPhase==='Holding target')`);
- await check('Holding target preserves both endpoints and identifies the hold',`f.s.holdTarget&&f.phase().includes('Woodland signal')&&f.phase().includes('Arctic relay')&&/hold/i.test(f.phase())`);
- await e(`f.s.returning=f.until(()=>f.r.transitionPhase==='Returning')`);
- await check('Returning reverses displayed direction without swapping captured endpoint identities',`f.s.returning&&f.r.blendStatus?.fromPresetName==='Woodland signal'&&f.r.blendStatus?.toPresetName==='Arctic relay'&&f.phase().indexOf('Arctic relay')>=0&&f.phase().indexOf('Woodland signal')>f.phase().indexOf('Arctic relay')&&/return/i.test(f.phase())`);
- await e(`f.action('pause');window.pausePhase=f.r.transitionPhase;window.pauseText=f.phase();window.pausedRain=JSON.stringify(f.r.settings);f.step(5)`);
- await check('Manual pause freezes actual renderer while retaining directional endpoint status',`f.r.paused&&f.s.renderer.state.paused&&f.r.transitionPhase===pausePhase&&JSON.stringify(f.r.settings)===pausedRain&&/paused/i.test(pauseText)&&pauseText.includes('Woodland signal')&&pauseText.includes('Arctic relay')`);
- await e(`f.action('pause');f.focus(false);window.focusText=f.phase();f.step(5)`);
- await check('Inactive focus pause keeps the same pair and reports its actual reason',`f.r.pausedForFocus&&!f.r.paused&&f.s.renderer.state.paused&&/inactive/i.test(focusText)&&focusText.includes('Woodland signal')&&focusText.includes('Arctic relay')`);
- await e(`f.focus(true);f.s.holdStart=f.until(()=>f.r.transitionPhase==='Holding start')`);
- await check('Holding start after focus resume stays in the same captured loop',`f.s.holdStart&&!f.r.pausedForFocus&&f.r.blendStatus?.fromPresetName==='Woodland signal'&&f.phase().includes('Woodland signal')&&f.phase().includes('Arctic relay')&&/hold/i.test(f.phase())`);
- await e(`window.beforeReopen=JSON.stringify(f.r.blendStatus);f.choose(2);f.reopen()`);
- await check('A new settings controller reads runtime-owned endpoints instead of its selected dropdown',`!!f.r.blendStatus&&JSON.stringify(f.r.blendStatus)===beforeReopen&&f.phase().includes('Arctic relay')&&!f.phase().includes('Amber terminal')&&f.input('preset').value==='2'`);
- await e(`window.glyph=f.input('glyphs');glyph.focus();glyph.value='DRAFT';glyph.setSelectionRange(1,3);glyph.dispatchEvent(new Event('input',{bubbles:true}));f.s.nextForward=f.until(()=>f.r.transitionPhase==='Forward')`);
- await check('Phase updates retain unfinished input, caret, focus and unsaved storage',`f.s.nextForward&&f.shadow.activeElement===glyph&&glyph.value==='DRAFT'&&glyph.selectionStart===1&&glyph.selectionEnd===3&&f.s.writes===0&&document.querySelector('#draft').value==='Keep unsaved draft'`);
- await check('Unchanged status render does not repeatedly mutate its accessible message',`(async()=>{let changes=0;const node=f.shadow.querySelector('.code-rain-phase'),observer=new MutationObserver(records=>changes+=records.length);observer.observe(node,{childList:true,characterData:true,subtree:true});f.ui.render();f.ui.render();await Promise.resolve();observer.disconnect();return changes===0})()`);
- await e(`f.input('speed').value='14';f.input('speed').dispatchEvent(new Event('input',{bubbles:true}))`);
- await check('Actual slider editing ends blend and clears stale names without autosaving',`f.r.settings.speed===14&&f.r.transitionPhase===''&&!f.r.blendStatus&&f.s.writes===0`);
- await e(`f.choose(1);f.action('blend');window.oldCallback=f.s.callbacks[0];await f.r.disable();window.disabledSettings=JSON.stringify(f.r.settings);oldCallback({rain:PRESETS[2].rain,done:false,phase:'Forward'})`);
- await check('Disable clears pair and stale generation callback cannot revive it or alter settings',`!f.r.enabled&&!f.r.blendStatus&&f.r.transitionPhase===''&&JSON.stringify(f.r.settings)===disabledSettings&&f.s.queue.size===0&&f.s.focusListeners.size===0`);
- await e(`f.r.startTransition(PRESETS[1].rain,{duration:.5,hold:0,loop:false})`);
- await check('Disabled Start cannot fabricate endpoint state',`!f.r.blendStatus&&f.r.transitionPhase===''&&f.s.queue.size===0`);
- await e(`await f.r.enable();oldCallback({rain:PRESETS[2].rain,done:true,phase:'Finished'})`);
- await check('Old enable-generation callback stays inert after reactivation',`!f.r.blendStatus&&JSON.stringify(f.r.settings)===disabledSettings`);
- await e(`f.s.throwStart=true;window.startFailed=false;try{f.r.startTransition(PRESETS[1].rain,{duration:.5,hold:0,loop:false})}catch{startFailed=true}`);
- await check('Renderer Start failure does not claim an active labelled blend',`startFailed&&f.r.blendStatus?.state!=='active'`);
- await e(`await f.close();f.r.startTransition(PRESETS[1].rain,{duration:.5,hold:0,loop:false})`);
- await check('Disposed runtime stays clear and owns no queued frame or focus listener',`f.r.disposed&&!f.r.blendStatus&&f.s.queue.size===0&&f.s.focusListeners.size===0`);
- await browser.command('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
- await e(`f=await make();f.choose(1);f.action('blend')`);
- await check('Synchronous reduced-motion completion retains correct endpoints and truthful finished status',`f.r.transitionPhase===''&&f.r.settings.rainColor===PRESETS[1].rain.rainColor&&f.r.blendStatus?.state==='completed'&&f.r.blendStatus?.fromPresetName==='Woodland signal'&&f.r.blendStatus?.toPresetName==='Arctic relay'&&/reduced motion|immediate/i.test(f.phase())&&f.s.queue.size===0`);
+ await check('Single Apply uses top selection without changing either endpoint',`f.r.settings.rainColor===PRESETS[2].rain.rainColor&&f.input('from').value==='0'&&f.input('to').value==='1'`);
+ await e(`timing();choose('from',1);choose('to',3);f.action('blend')`);
+ await check('Start uses exactly Position 1 and Position 2 instead of the visible single preset or current rain',`f.s.starts.length===1&&f.s.starts[0].from.rainColor===PRESETS[1].rain.rainColor&&f.s.starts[0].to.rainColor===PRESETS[3].rain.rainColor&&f.input('preset').value==='2'`);
+ await check('Active feedback names both captured endpoints and enables saved startup blending',`f.phase().includes('Arctic relay')&&f.phase().includes('Daylight circuit')&&f.input('autoblend').checked&&f.s.writes===0`);
+ await e(`choose('from',2);choose('to',0);f.choose(3)`);
+ await check('Changing any dropdown does not relabel or retarget the active blend',`f.phase().includes('Arctic relay')&&f.phase().includes('Daylight circuit')&&f.s.starts.length===1&&f.r.blendPreferences.from.name==='Amber terminal'`);
+ await e(`f.action('stop')`);
+ await check('Stop keeps intermediate appearance and disables automatic startup blend',`f.r.blendStatus?.state==='stopped'&&!f.input('autoblend').checked&&/kept/i.test(f.phase())`);
+ await e(`f.r.updateSettings({...PRESETS[1].rain,speed:17});f.input('preset-name').value='Ice break';f.action('new-preset')`);
+ await check('Create adds current custom values to top and endpoint menus without storing yet',`f.r.presets.length===1&&f.input('preset').value==='4'&&f.input('from').options.length===5&&f.r.presets[0].rain.speed===17&&f.s.writes===0`);
+ await e(`choose('from',4);f.r.updateSettings({...f.r.settings,trail:30});f.input('preset-name').value='Ice revised';f.action('overwrite-preset')`);
+ await check('Overwrite and rename update the personal preset while keeping selected endpoint snapshot explicit',`f.r.presets[0].name==='Ice revised'&&f.r.presets[0].rain.trail===30&&f.input('from').value==='-1'&&f.input('from').selectedOptions[0].textContent.includes('Snapshot')&&f.r.blendPreferences.from.name==='Ice break'`);
+ await e(`choose('from',4);choose('to',2);f.input('loop').checked=true;f.input('loop').dispatchEvent(new Event('change',{bubbles:true}));f.action('blend');f.step(12)`);
+ await check('Personal blend feedback retains exact chosen identity through actual renderer progress',`f.phase().includes('Ice revised')&&f.phase().includes('Amber terminal')&&f.r.blendPreferences.loop`);
+ await e(`f.action('save');window.saved=f.s.raw`);
+ await check('One explicit Save atomically stores appearance, personal presets, both endpoint snapshots and all timing/start options',`f.s.writes===1&&JSON.parse(saved).schema===1&&JSON.parse(saved).presets[0].name==='Ice revised'&&JSON.parse(saved).blend.from.name==='Ice revised'&&JSON.parse(saved).blend.to.name==='Amber terminal'&&JSON.parse(saved).blend.duration===.5&&JSON.parse(saved).blend.hold===1&&JSON.parse(saved).blend.loop&&JSON.parse(saved).blend.enabled`);
+ await e(`f.s.failSave=true;choose('to',3);f.action('save')`);
+ await check('Storage failure leaves previous snapshot and unsaved session choices intact',`f.s.raw===saved&&f.r.dirty&&f.r.storageError==='Fixture storage full'&&f.r.blendPreferences.to.name==='Daylight circuit'`);
+ await e(`await f.close();f=await make(saved)`);
+ await check('New runtime restores personal presets, both selections, timing and starts saved blend from Position 1',`f.input('from').selectedOptions[0].textContent.includes('Ice revised')&&f.input('to').value==='2'&&f.input('duration').value==='0.5'&&f.input('hold').value==='1'&&f.input('loop').checked&&f.s.starts[0].from.speed===17&&f.s.starts[0].to.rainColor===PRESETS[2].rain.rainColor`);
+ await e(`f.action('stop');f.choose(4);f.action('delete-preset')`);
+ await check('Delete keeps selected blend endpoint as a labelled snapshot and preserves factory presets',`f.r.presets.length===0&&f.input('from').value==='-1'&&f.r.blendPreferences.from.name==='Ice revised'&&f.input('preset').options.length===4`);
+ await e(`f.choose(0);f.ui.render()`);
+ await check('Factory presets cannot be overwritten or deleted',`f.shadow.querySelector('[data-rain-action="overwrite-preset"]').disabled&&f.shadow.querySelector('[data-rain-action="delete-preset"]').disabled`);
+ await e(`f.input('preset-name').value='Arctic relay';f.action('new-preset')`);
+ await check('Duplicate factory names are rejected without losing current work',`f.r.presets.length===0`);
+ await e(`fixtureErrors.length=0;for(let i=0;i<9;i++)f.r.savePreset('Personal '+i)`);
+ await check('Personal preset work and storage are bounded at eight',`f.r.presets.length===8`);
+ await e(`await f.close();f=await make(JSON.stringify({schema:1,rain:{speed:7},pauseWhenUnfocused:false}))`);
+ await check('Existing v1 appearance/focus snapshots load safely with default endpoint/timing options and no auto blend',`f.r.settings.speed===7&&!f.r.pauseWhenUnfocused&&!f.r.blendPreferences.enabled&&f.r.blendPreferences.duration===8&&f.s.starts.length===0&&!f.r.dirty`);
+ await e(`f.r.configureBlend({from:PRESETS[1],to:PRESETS[2],duration:1e9,hold:-10,loop:true});f.ui.render()`);
+ await check('Out-of-range saved/configured timing is bounded',`f.r.blendPreferences.duration===60&&f.r.blendPreferences.hold===0`);
+ await e(`const renderer=f.s.renderer,set=renderer.setSettings.bind(renderer);renderer.setSettings=value=>{set(value);renderer.setSettings=set;return new Promise(resolve=>{f.s.ack=resolve})};f.action('blend');f.r.updateSettings({...PRESETS[3].rain});f.s.ack();await Promise.resolve();renderer.setSettings=set`);
+ await check('Delayed Position 1 acknowledgement cannot restart a blend after a newer manual edit',`f.s.starts.length===0&&f.r.settings.rainColor===PRESETS[3].rain.rainColor&&!f.r.startingBlend&&!f.shadow.querySelector('[data-rain-action=blend]').disabled&&!f.shadow.querySelector('[data-rain-action=save]').disabled`);
+ await e(`f.s.renderer.snapshotSettings=()=>new Promise(resolve=>f.s.snapshot=resolve);window.waitingSave=f.r.saveSettings();f.r.configureBlend({...f.r.blendPreferences,hold:12});f.s.snapshot(f.r.settings);window.staleResult=await waitingSave`);
+ await check('Save waiting for worker snapshot rejects changed preferences without writing stale settings',`staleResult===false&&f.s.writes===0&&/changed while Save/.test(f.r.storageError)`);
+ await e(`delete f.s.renderer.snapshotSettings;f.r.setPauseWhenUnfocused(true);f.action('blend');f.focus(false);window.before=JSON.stringify(f.r.settings);f.step(4)`);
+ await check('Inactive-window pause preserves active pair, values and normal focus policy',`f.r.pausedForFocus&&JSON.stringify(f.r.settings)===before&&/inactive/i.test(f.phase())`);
+ await e(`f.focus(true);f.r.setPaused(true);f.step(4)`);
+ await check('Manual pause remains independent of endpoint controls',`f.r.paused&&f.s.renderer.state.paused`);
+ await e(`f.r.setPaused(false);f.reopen()`);
+ await check('Closing/reopening controller preserves unsaved endpoint settings and choices',`f.input('hold').value==='12'&&f.r.blendPreferences.from.name==='Arctic relay'`);
+ await e(`f.input('duration').value='';f.action('save')`);
+ await check('Empty timing is rejected by native validity without writing',`f.s.writes===0`);
+ await e(`await f.close();f=await make('{broken')`);
+ await check('Malformed storage uses defaults and reports the error without losing session controls',`!!f.r.storageError&&f.r.settings.speed===PRESETS[0].rain.speed&&f.input('from').options.length===4`);
  await e(`await f.close()`);
- await browser.command('Emulation.setEmulatedMedia',{features:[]});
- await check('Fixture cleanup preserves draft and leaves no canvas, held frame, focus listener or browser error',`instances.every(item=>item.s.closed&&item.s.queue.size===0&&item.s.focusListeners.size===0)&&document.querySelectorAll('#stage canvas').length===0&&fixtureErrors.length===0&&document.querySelector('#draft').value==='Keep unsaved draft'`);
- // Append-only review regressions: preserve all original 32 assertions/order.
- for(const state of ['no-blend','completed','stopped']){
-  await e(`f=await make()`);
-  if(state!=='no-blend'){
-   await e(`f.choose(1);f.action('blend')`);
-   if(state==='completed')await e(`f.s.finished=f.until(()=>f.r.transitionPhase==='')`);
-   else await e(`f.action('stop')`);
-  }
-  await e(`window.statusBeforeFocus=f.phase();window.rainBeforeFocus=JSON.stringify(f.r.settings);f.focus(false);f.step(5)`);
-  const stateCondition=state==='no-blend'?'!f.r.blendStatus':`f.r.blendStatus?.state==='${state}'`;
-  await check('Inactive window reports whole-Rain pause with '+state+' status',`f.r.pausedForFocus&&f.s.renderer.state.paused&&f.r.transitionPhase===''&&${stateCondition}&&/inactive/i.test(f.phase())&&f.phase().includes(statusBeforeFocus)&&JSON.stringify(f.r.settings)===rainBeforeFocus&&f.s.writes===0&&document.querySelector('#draft').value==='Keep unsaved draft'`);
-  await e(`f.focus(true)`);
-  await check('Returning focus clears pause reason and preserves '+state+' status',`!f.r.pausedForFocus&&!f.s.renderer.state.paused&&f.r.transitionPhase===''&&${stateCondition}&&f.phase()===statusBeforeFocus&&f.s.writes===0`);
-  await e(`await f.close()`);
- }
- await check('Appended pause regressions leave no frames, listeners, canvas, errors or draft loss',`instances.every(item=>item.s.closed&&item.s.queue.size===0&&item.s.focusListeners.size===0)&&document.querySelectorAll('#stage canvas').length===0&&fixtureErrors.length===0&&document.querySelector('#draft').value==='Keep unsaved draft'`);
+ await browser.command('Emulation.setEmulatedMedia',{features:[{name:'prefers-reduced-motion',value:'reduce'}]});
+ await e(`f=await make();choose('from',1);choose('to',2);f.action('blend')`);
+ await check('Reduced motion applies Position 2 immediately with truthful pair feedback and no animation work',`f.r.settings.rainColor===PRESETS[2].rain.rainColor&&f.r.blendStatus?.state==='completed'&&f.s.queue.size===0&&/reduced motion/i.test(f.phase())`);
+ await e(`await f.close()`);
+ await check('Cleanup releases canvases, focus listeners and frames, preserving unrelated draft and reporting no uncaught error',`instances.every(item=>item.s.closed&&item.s.queue.size===0&&item.s.focusListeners.size===0)&&document.querySelectorAll('#stage canvas').length===0&&fixtureErrors.length===0&&document.querySelector('#draft').value==='Keep unsaved draft'`);
 }catch(error){report.harnessErrors.push({stage:'setup or lifecycle',error:error.stack??String(error)});}
 finally{
  try{await browser?.evaluate(`Promise.all((window.instances??[]).filter(item=>!item.s.closed).map(item=>item.close()))`)}catch(error){report.harnessErrors.push({stage:'cleanup',error:String(error)})}
@@ -159,4 +136,4 @@ finally{
  writeFileSync(resolve(out,'results.json'),JSON.stringify(report,null,2)+'\n');
 }
 console.log(JSON.stringify(report,null,2));
-assert.equal(report.passed,true,'Blend endpoint/status behavior must satisfy all cases; missing old-source metadata is recorded per assertion.');
+assert.equal(report.passed,true,'Preset selection, persistence and blend lifecycle checks must pass.');

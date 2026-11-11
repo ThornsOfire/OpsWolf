@@ -1,4 +1,5 @@
 import {CODE_RAIN_PLUGIN_ID as ID, LIMITS, COLORS, PRESETS, rainSettings, type RainSettings} from '../../effects/code-rain/model';
+import type {RainPreset} from '../../effects/code-rain/preferences';
 import type {CodeRainBackgroundController} from '../../plugin-host/backgrounds/code-rain';
 import type {BackgroundCommands} from '../../contracts/appearance';
 import {getLocale,subscribeLanguage} from '../../i18n';
@@ -23,11 +24,11 @@ const panelStyle=String.raw`<style>
 @media(forced-colors:active){.code-rain-panel :is(button,input,select){forced-color-adjust:auto}}
 </style>`;
 export function codeRainCardMarkup():string{return `<article class="preview-extension appearance-extension" data-appearance-plugin="${ID}"><span class="preview-extension-icon" aria-hidden="true">${icons.preview}</span><div class="preview-extension-copy"><div class="preview-extension-title-row"><h4 data-plugin-name>Code Rain Background</h4><span class="preview-extension-status code-rain-status">Disabled</span></div><p id="cle-code-rain-appearance-hint" class="code-rain-appearance-hint" role="status" hidden></p></div><div class="preview-extension-actions"><button type="button" class="preview-extension-action code-rain-enable" aria-pressed="false" aria-describedby="cle-code-rain-appearance-hint">Enable</button><button type="button" class="particle-settings-trigger code-rain-settings" aria-label="Configure Code Rain" aria-haspopup="dialog" aria-controls="cle-code-rain-settings" aria-expanded="false">${icons.sliders}</button></div></article>`;}
-export function codeRainPanelMarkup():string{return `${panelStyle}<section id="cle-code-rain-settings" class="particle-settings-panel code-rain-panel" popover="manual" role="dialog" aria-modal="false" aria-labelledby="cle-code-rain-title"><header class="particle-settings-header"><div class="particle-settings-heading"><p data-rain-label="category">Appearance</p><h3 id="cle-code-rain-title" data-plugin-name>Code Rain Background</h3></div><button type="button" class="particle-settings-close code-rain-close" aria-label="Close settings">${icons.close}</button></header><div class="particle-settings-scroll"><p data-rain-label="hint">Changes apply to this session. Save keeps the current rain settings for next time.</p><p class="particle-settings-error code-rain-error" role="status" hidden></p><p class="code-rain-appearance-note" role="status" hidden></p><fieldset class="particle-settings-group"><legend data-rain-label="presetTitle">Presets and playback</legend><label for="cle-rain-preset" data-rain-label="preset">Rain preset</label><select id="cle-rain-preset">${PRESETS.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('')}</select><label><input id="cle-rain-inactive" type="checkbox" checked><span data-rain-label="inactive">Pause when window is inactive</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="apply">Apply</button><button type="button" data-rain-action="pause" aria-pressed="false">Pause</button></div></fieldset><fieldset class="particle-settings-group"><legend data-rain-label="motion">Rain controls</legend>${[...numericKeys,...COLORS,'glyphs' as const].map(key=>{const range=LIMITS[key as keyof typeof LIMITS];return `<div class="particle-control-row"><label for="cle-rain-${key}" data-rain-setting-label="${key}">${labels[key][0]}</label><input id="cle-rain-${key}" data-rain-control="${key}" type="${range?'range':key==='glyphs'?'text':'color'}" ${range?`min="${range[0]}" max="${range[1]}" step="${['density','brightness','opacity'].includes(key)?'.05':'1'}"`:key==='glyphs'?'maxlength="128"':''}><output for="cle-rain-${key}" data-rain-output="${key}"></output></div>`}).join('')}</fieldset><fieldset class="particle-settings-group"><legend data-rain-label="blendTitle">Blend to selected preset</legend><label for="cle-rain-duration" data-rain-label="duration">Duration (seconds)</label><input id="cle-rain-duration" type="number" min="0.5" max="60" step="0.5" value="8"><label for="cle-rain-hold" data-rain-label="hold">Hold (seconds)</label><input id="cle-rain-hold" type="number" min="0" max="120" step="1" value="3"><label><input id="cle-rain-loop" type="checkbox"><span data-rain-label="loop">Loop there and back</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="blend">Start blend</button><button type="button" data-rain-action="stop">Stop blend</button></div><p class="code-rain-phase" role="status"></p></fieldset><div class="particle-settings-header-actions"><button type="button" data-rain-action="reset">Reset current</button><button type="button" data-rain-action="save">Save</button><span class="code-rain-saved" role="status"></span></div></div></section>`;}
+export function codeRainPanelMarkup():string{return `${panelStyle}<section id="cle-code-rain-settings" class="particle-settings-panel code-rain-panel" popover="manual" role="dialog" aria-modal="false" aria-labelledby="cle-code-rain-title"><header class="particle-settings-header"><div class="particle-settings-heading"><p data-rain-label="category">Appearance</p><h3 id="cle-code-rain-title" data-plugin-name>Code Rain Background</h3></div><button type="button" class="particle-settings-close code-rain-close" aria-label="Close settings">${icons.close}</button></header><div class="particle-settings-scroll"><p data-rain-label="hint">Changes apply to this session. Save keeps the current rain settings for next time.</p><p class="particle-settings-error code-rain-error" role="status" hidden></p><p class="code-rain-appearance-note" role="status" hidden></p><fieldset class="particle-settings-group"><legend data-rain-label="presetTitle">Presets and playback</legend><label for="cle-rain-preset" data-rain-label="preset">Rain preset</label><select id="cle-rain-preset">${PRESETS.map((p,i)=>`<option value="${i}">${p.name}</option>`).join('')}</select><div class="particle-settings-header-actions"><button type="button" data-rain-action="apply">Apply</button><button type="button" data-rain-action="delete-preset">Delete personal preset</button></div><label for="cle-rain-preset-name" data-rain-label="name">Preset name</label><input id="cle-rain-preset-name" type="text" maxlength="32"><div class="particle-settings-header-actions"><button type="button" data-rain-action="new-preset">Save as new preset</button><button type="button" data-rain-action="overwrite-preset">Overwrite personal preset</button></div><p data-rain-label="presetHint">Adjust the controls, then create or overwrite a personal preset. Save below keeps your changes. Built-in presets stay available.</p><label><input id="cle-rain-inactive" type="checkbox" checked><span data-rain-label="inactive">Pause when window is inactive</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="pause" aria-pressed="false">Pause</button></div></fieldset><fieldset class="particle-settings-group"><legend data-rain-label="motion">Rain controls</legend>${[...numericKeys,...COLORS,'glyphs' as const].map(key=>{const range=LIMITS[key as keyof typeof LIMITS];return `<div class="particle-control-row"><label for="cle-rain-${key}" data-rain-setting-label="${key}">${labels[key][0]}</label><input id="cle-rain-${key}" data-rain-control="${key}" type="${range?'range':key==='glyphs'?'text':'color'}" ${range?`min="${range[0]}" max="${range[1]}" step="${['density','brightness','opacity'].includes(key)?'.05':'1'}"`:key==='glyphs'?'maxlength="128"':''}><output for="cle-rain-${key}" data-rain-output="${key}"></output></div>`}).join('')}</fieldset><fieldset class="particle-settings-group"><legend data-rain-label="blendTitle">Blend between presets</legend><label for="cle-rain-from" data-rain-label="from">Position #1</label><select id="cle-rain-from"></select><label for="cle-rain-to" data-rain-label="to">Position #2</label><select id="cle-rain-to"></select><p data-rain-label="blendHint">Choose both positions, set the timing, then Start blend and Save. Changing these choices leaves a running blend alone until you start again.</p><label for="cle-rain-duration" data-rain-label="duration">Duration (seconds)</label><input id="cle-rain-duration" type="number" required min="0.5" max="60" step="0.5" value="8"><label for="cle-rain-hold" data-rain-label="hold">Hold (seconds)</label><input id="cle-rain-hold" type="number" required min="0" max="120" step="1" value="3"><label><input id="cle-rain-loop" type="checkbox"><span data-rain-label="loop">Loop there and back</span></label><label><input id="cle-rain-autoblend" type="checkbox"><span data-rain-label="autoblend">Start saved blend when Rain starts</span></label><div class="particle-settings-header-actions"><button type="button" data-rain-action="blend">Start blend</button><button type="button" data-rain-action="stop">Stop blend</button></div><p class="code-rain-phase" role="status"></p></fieldset><div class="particle-settings-header-actions"><button type="button" data-rain-action="reset">Reset current</button><button type="button" data-rain-action="save">Save</button><span class="code-rain-saved" role="status"></span></div></div></section>`;}
 
 export interface CodeRainSettingsPorts {
   readonly shadow:ShadowRoot;
-  readonly runtime:Pick<CodeRainBackgroundController,'enabled'|'pending'|'saving'|'stoppingBlend'|'error'|'storageError'|'usesExistingDark'|'retainedAppearanceLease'|'settings'|'dirty'|'paused'|'transitionPhase'|'blendStatus'|'initialize'|'subscribe'|'updateSettings'|'reset'|'setPaused'|'startTransition'|'stopTransition'|'saveSettings'|'pauseWhenUnfocused'|'pausedForFocus'|'setPauseWhenUnfocused'>;
+  readonly runtime:Pick<CodeRainBackgroundController,'enabled'|'pending'|'saving'|'stoppingBlend'|'error'|'storageError'|'usesExistingDark'|'retainedAppearanceLease'|'settings'|'dirty'|'paused'|'transitionPhase'|'blendStatus'|'initialize'|'subscribe'|'updateSettings'|'reset'|'setPaused'|'startTransition'|'stopTransition'|'saveSettings'|'pauseWhenUnfocused'|'pausedForFocus'|'setPauseWhenUnfocused'|'presets'|'blendPreferences'|'configureBlend'|'savePreset'|'deletePreset'|'startConfiguredBlend'|'startingBlend'>;
   readonly actions:BackgroundCommands;
   readonly enabled:()=>boolean;
   readonly closeOthers:()=>void;
@@ -57,6 +58,8 @@ export class CodeRainSettingsController {
     this.#input<HTMLInputElement>('inactive').addEventListener('change',()=>{
       this.#savedMessage='';this.ports.runtime.setPauseWhenUnfocused(this.#input<HTMLInputElement>('inactive').checked);
     },options);
+    for(const key of ['from','to','duration','hold','loop','autoblend'])this.#input(key).addEventListener('change',()=>{this.#savedMessage='';this.#readBlend();},options);
+    this.#input('preset').addEventListener('change',()=>this.render(),options);
     this.#panel.addEventListener('input',event=>{
       const input=event.target as HTMLInputElement,key=input.dataset.rainControl as keyof RainSettings|undefined;
       if(!key||key==='glyphs')return;
@@ -69,13 +72,25 @@ export class CodeRainSettingsController {
     },options);
     this.#panel.addEventListener('click',event=>{
       const button=(event.target as Element).closest<HTMLButtonElement>('[data-rain-action]');if(!button||button.disabled)return;
-      const runtime=this.ports.runtime,preset=PRESETS[Number(this.#input<HTMLSelectElement>('preset').value)];
+      const runtime=this.ports.runtime,preset=this.#presets()[Number(this.#input<HTMLSelectElement>('preset').value)];
       this.#savedMessage='';
       switch(button.dataset.rainAction){
         case 'apply':if(preset)runtime.updateSettings(preset.rain);break;
         case 'pause':runtime.setPaused(!runtime.paused);break;
         case 'reset':runtime.reset();break;
+        case 'new-preset':case 'overwrite-preset':{
+          const index=Number(this.#input<HTMLSelectElement>('preset').value)-PRESETS.length;
+          const name=this.#input<HTMLInputElement>('preset-name');
+          if(button.dataset.rainAction==='overwrite-preset'&&index<0)break;
+          if(!runtime.savePreset(name.value|| (button.dataset.rainAction==='overwrite-preset'?preset?.name??'':''),button.dataset.rainAction==='overwrite-preset'?index:undefined)){
+            this.ports.notice(text('Use a unique preset name (up to 32 characters). Up to eight personal presets are available.','请输入唯一的预设名称（最多 32 个字符）。最多可保存八个个人预设。'));name.focus();break;
+          }
+          this.render();this.#input<HTMLSelectElement>('preset').value=String(button.dataset.rainAction==='overwrite-preset'?PRESETS.length+index:PRESETS.length+runtime.presets.length-1);
+          name.value='';this.#savedMessage=text('Preset changed in this session. Save below to keep it.','预设已在本次会话中更改。请点击下方保存。');break;
+        }
+        case 'delete-preset':runtime.deletePreset(Number(this.#input<HTMLSelectElement>('preset').value)-PRESETS.length);this.#savedMessage=text('Preset removed from this session. Save below to keep it.','预设已从本次会话移除。请点击下方保存。');break;
         case 'save':{
+          if(!this.#readBlend())return;
           const result=runtime.saveSettings();
           if(result instanceof Promise){
             void result.then(saved=>{
@@ -87,7 +102,7 @@ export class CodeRainSettingsController {
           break;
         }
         case 'stop':runtime.stopTransition();break;
-        case 'blend':if(preset){const duration=this.#input<HTMLInputElement>('duration'),hold=this.#input<HTMLInputElement>('hold');if(!duration.reportValidity()||!hold.reportValidity()||!duration.value||!hold.value)return;runtime.startTransition(preset.rain,{duration:Number(duration.value),hold:Number(hold.value),loop:this.#input<HTMLInputElement>('loop').checked});}break;
+        case 'blend':if(this.#readBlend())runtime.startConfiguredBlend();break;
       }
       this.render();
     },options);
@@ -97,6 +112,35 @@ export class CodeRainSettingsController {
     window.addEventListener('resize',()=>this.position(),options);this.ports.shadow.addEventListener('scroll',()=>this.position(),{...options,capture:true});this.render();
   }
   #input<T extends HTMLElement>(suffix:string):T{return this.#panel.querySelector<T>(`#cle-rain-${suffix}`)!;}
+  #presets():RainPreset[]{return [...PRESETS,...this.ports.runtime.presets];}
+  #readBlend():boolean{
+    const duration=this.#input<HTMLInputElement>('duration'),hold=this.#input<HTMLInputElement>('hold');
+    if(!duration.reportValidity()||!hold.reportValidity()||!duration.value||!hold.value)return false;
+    const previous=this.ports.runtime.blendPreferences,presets=this.#presets();
+    this.ports.runtime.configureBlend({from:presets[Number(this.#input<HTMLSelectElement>('from').value)]??previous.from,
+      to:presets[Number(this.#input<HTMLSelectElement>('to').value)]??previous.to,duration:Number(duration.value),hold:Number(hold.value),
+      loop:this.#input<HTMLInputElement>('loop').checked,enabled:this.#input<HTMLInputElement>('autoblend').checked});
+    return true;
+  }
+  #renderPresets():void{
+    const presets=this.#presets(),configuration=this.ports.runtime.blendPreferences;
+    for(const key of ['preset','from','to'] as const){
+      const select=this.#input<HTMLSelectElement>(key),endpoint=key==='preset'?undefined:configuration[key];
+      const index=endpoint?presets.findIndex(p=>p.name===endpoint.name&&JSON.stringify(rainSettings(p.rain))===JSON.stringify(endpoint.rain)):-1;
+      const choices=presets.map((p,i)=>({value:String(i),label:(i>=PRESETS.length?text('Personal · ','个人 · '):'')+p.name}));
+      if(endpoint&&index<0)choices.push({value:'-1',label:text('Snapshot · ','快照 · ')+endpoint.name});
+      const signature=JSON.stringify(choices);
+      if(select.dataset.choices!==signature){
+        const value=select.value;select.replaceChildren(...choices.map(p=>{const option=document.createElement('option');option.value=p.value;option.textContent=p.label;return option;}));
+        select.value=choices.some(p=>p.value===value)?value:'0';select.dataset.choices=signature;
+      }
+      if(endpoint)select.value=String(index);
+      select.disabled=this.ports.runtime.pending;
+    }
+    for(const key of ['duration','hold'] as const){const input=this.#input<HTMLInputElement>(key);if(this.ports.shadow.activeElement!==input)input.value=String(configuration[key]);input.disabled=this.ports.runtime.pending;}
+    this.#input<HTMLInputElement>('loop').checked=configuration.loop;
+    this.#input<HTMLInputElement>('autoblend').checked=configuration.enabled;
+  }
   #validOpener(value:unknown):value is HTMLButtonElement{
     if(!(value instanceof HTMLButtonElement)||value.ownerDocument!==this.#panel.ownerDocument||value.getRootNode()!==this.ports.shadow||!value.isConnected||value.matches(':disabled')||value.closest('[hidden],[inert]'))return false;
     const style=getComputedStyle(value),rect=value.getBoundingClientRect();
@@ -145,7 +189,7 @@ export class CodeRainSettingsController {
     const runtime=this.ports.runtime,blend=runtime.blendStatus;
     const pause=runtime.pausedForFocus?text('Rain paused while window is inactive','窗口不活动，雨幕已暂停'):runtime.paused?text('Paused','已暂停'):'';
     const prefix=pause?pause+' · ':'';
-    if(!blend)return prefix+text('No blend running. The selected preset is the next destination.','当前没有渐变。所选预设是下一次应用或渐变的目标。');
+    if(!blend)return prefix+text('No blend running. Choose Position #1 and Position #2 below, then Start blend.','当前没有渐变。请选择位置 #1 和位置 #2，然后开始渐变。');
     const from=blend.fromPresetName??text('Current/custom settings','当前/自定义设置');
     const to=blend.toPresetName??text('Current/custom settings','当前/自定义设置');
     const reverse=blend.phase==='Returning'||blend.phase==='Holding start';
@@ -167,21 +211,22 @@ export class CodeRainSettingsController {
     this.#button.textContent=runtime.pending?text('Applying…','正在应用…'):enabled?text('Disable','停用'):text('Enable','启用');this.#button.dataset.enabled=String(enabled);this.#button.setAttribute('aria-pressed',String(enabled));
     if(!this.#button.dataset.packageLoadingOwner)this.#button.disabled=this.ports.actions.busy;
     const status=this.ports.shadow.querySelector<HTMLElement>('.code-rain-status')!;status.textContent=runtime.pending?text('Applying…','正在应用…'):enabled?runtime.enabled?text('Running','运行中'):text('Selected · Not running','已选择 · 未运行'):text('Disabled','未启用');status.dataset.enabled=String(enabled&&runtime.enabled);status.dataset.pending=String(runtime.pending);
-    const phrases:Record<string,readonly [string,string]>={inactive:['Pause when window is inactive','窗口不活动时暂停'],category:['Appearance','外观'],hint:['Changes apply to this session. Save keeps the current rain settings for next time.','更改仅应用于当前会话。保存可在下次使用时恢复当前雨幕设置。'],presetTitle:['Presets and playback','预设与播放'],preset:['Rain preset','雨幕预设'],motion:['Rain controls','雨幕控制'],blendTitle:['Blend to selected preset','渐变至所选预设'],duration:['Duration (seconds)','时长（秒）'],hold:['Hold (seconds)','停留（秒）'],loop:['Loop there and back','往返循环']};
+    const phrases:Record<string,readonly [string,string]>={inactive:['Pause when window is inactive','窗口不活动时暂停'],category:['Appearance','外观'],hint:['Changes apply to this session. Save keeps the appearance, personal presets and blend choices for next time.','更改应用于本次会话。保存可保留外观、个人预设与渐变选项。'],presetTitle:['Single preset','单个预设'],name:['Preset name','预设名称'],presetHint:['Adjust the controls, then create or overwrite a personal preset. Save below keeps your changes. Built-in presets stay available.','调整控件后创建或覆盖个人预设。下方保存会保留更改。内置预设始终可用。'],from:['Position #1','位置 #1'],to:['Position #2','位置 #2'],blendHint:['Choose both positions, set the timing, then Start blend and Save. Changing these choices leaves a running blend alone until you start again.','选择两个位置与时长，然后开始渐变并保存。更改选项后，正在运行的渐变会保持原样，直到再次开始。'],autoblend:['Start saved blend when Rain starts','雨幕启动时开始已保存的渐变'],preset:['Rain preset','雨幕预设'],motion:['Rain controls','雨幕控制'],blendTitle:['Blend between presets','预设之间渐变'],duration:['Duration (seconds)','时长（秒）'],hold:['Hold (seconds)','停留（秒）'],loop:['Loop there and back','往返循环']};
     for(const [key,label] of Object.entries(phrases))this.#panel.querySelector(`[data-rain-label="${key}"]`)!.textContent=text(...label);
     this.#trigger.setAttribute('aria-label',text('Configure Code Rain','设置代码雨'));this.#panel.querySelector('.code-rain-close')!.setAttribute('aria-label',text('Close settings','关闭设置'));
     this.#input<HTMLInputElement>('inactive').checked=runtime.pauseWhenUnfocused;this.#input<HTMLInputElement>('inactive').disabled=runtime.pending;
+    this.#renderPresets();
     const settings=runtime.settings;
     for(const input of this.#panel.querySelectorAll<HTMLInputElement>('[data-rain-control]')){
       const key=input.dataset.rainControl as keyof RainSettings;this.#panel.querySelector(`[data-rain-setting-label="${key}"]`)!.textContent=text(...labels[key]);
       if(key!=='glyphs'||this.ports.shadow.activeElement!==input)input.value=String(settings[key]);
       input.disabled=runtime.pending;this.#panel.querySelector(`[data-rain-output="${key}"]`)!.textContent=input.type==='range'?String(Number(Number(settings[key]).toFixed(2))):'';
     }
-    const actions:Record<string,readonly [string,string]>={apply:['Apply','应用'],pause:runtime.paused?['Resume','继续']:['Pause','暂停'],reset:['Reset current','重置当前'],save:['Save','保存'],blend:['Start blend','开始渐变'],stop:['Stop blend','停止渐变']};
-    for(const button of this.#panel.querySelectorAll<HTMLButtonElement>('[data-rain-action]')){const action=button.dataset.rainAction!;button.textContent=text(...actions[action]!);button.disabled=runtime.pending||(['blend','pause','stop'].includes(action)&&!runtime.enabled)||(action==='stop'&&(!runtime.transitionPhase||runtime.stoppingBlend))||(action==='save'&&runtime.saving);if(action==='pause')button.setAttribute('aria-pressed',String(runtime.paused));}
+    const actions:Record<string,readonly [string,string]>={apply:['Apply','应用'],'new-preset':['Save as new preset','另存为新预设'],'overwrite-preset':['Overwrite personal preset','覆盖个人预设'],'delete-preset':['Delete personal preset','删除个人预设'],pause:runtime.paused?['Resume','继续']:['Pause','暂停'],reset:['Reset current','重置当前'],save:['Save','保存'],blend:['Start blend','开始渐变'],stop:['Stop blend','停止渐变']};
+    for(const button of this.#panel.querySelectorAll<HTMLButtonElement>('[data-rain-action]')){const action=button.dataset.rainAction!;button.textContent=text(...actions[action]!);button.disabled=runtime.pending||(['blend','pause','stop'].includes(action)&&!runtime.enabled)||(action==='stop'&&(!runtime.transitionPhase||runtime.stoppingBlend))||(action==='save'&&(runtime.saving||runtime.startingBlend))||(action==='blend'&&runtime.startingBlend)||(['overwrite-preset','delete-preset'].includes(action)&&Number(this.#input<HTMLSelectElement>('preset').value)<PRESETS.length);if(action==='pause')button.setAttribute('aria-pressed',String(runtime.paused));}
     const phase=this.#panel.querySelector('.code-rain-phase')!,message=this.#blendMessage();
     if(phase.textContent!==message)phase.textContent=message;
-    this.#panel.querySelector('.code-rain-saved')!.textContent=runtime.saving?text('Reading current rain settings…','正在读取当前雨幕设置…'):runtime.dirty?text('Unsaved settings','设置未保存'):this.#savedMessage;
+    this.#panel.querySelector('.code-rain-saved')!.textContent=runtime.saving?text('Reading current rain settings…','正在读取当前雨幕设置…'):this.#savedMessage||(runtime.dirty?text('Unsaved settings','设置未保存'):'');
     const error=this.#panel.querySelector<HTMLElement>('.code-rain-error')!;error.textContent=runtime.error??runtime.storageError??'';error.hidden=!error.textContent;
     const appearanceNote = [
       runtime.usesExistingDark ? text('Uses the current Dark appearance. Rain does not change the Codex theme.','使用当前深色外观。代码雨不会更改 Codex 主题。') : '',

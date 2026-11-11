@@ -1,4 +1,5 @@
 import {rainSettings, PRESETS, CODE_RAIN_SETTINGS_KEY, type RainSettings} from '../../effects/code-rain/model';
+import {blendPreferences,personalPresets,presetName as cleanName,type RainPreset,type RainBlendPreferences} from '../../effects/code-rain/preferences';
 import {recordCaughtRuntimeError} from '../../runtime-operations';
 
 export interface RainRenderer {
@@ -55,9 +56,12 @@ export class CodeRainBackgroundController {
   readonly #listeners=new Set<()=>void>();
   #settings=rainSettings();
   #pauseWhenUnfocused=true;
+  #presets:RainPreset[]=[];
+  #blend=blendPreferences();
+  #startingRevision:number|undefined;
   #focused=true;
   #releaseFocus:(()=>void)|undefined;
-  #saved=JSON.stringify({rain:this.#settings,pauseWhenUnfocused:true});
+  #saved=this.#snapshot();
   #initialized=false;
   #disposed=false;
   #stoppedForExternalThemeChange=false;
@@ -95,7 +99,53 @@ export class CodeRainBackgroundController {
   get dirty():boolean{return this.#snapshot()!==this.#saved;}
   get pauseWhenUnfocused():boolean{return this.#pauseWhenUnfocused;}
   get pausedForFocus():boolean{return this.#enabled&&this.#pauseWhenUnfocused&&!this.#focused;}
-  #snapshot():string{return JSON.stringify({rain:this.#settings,pauseWhenUnfocused:this.#pauseWhenUnfocused});}
+  get presets():RainPreset[]{return this.#presets.map(p=>({name:p.name,rain:{...p.rain}}));}
+  get blendPreferences():RainBlendPreferences{return blendPreferences(this.#blend);}
+  get startingBlend():boolean{return this.#startingRevision!==undefined;}
+  #preferences():object{return {pauseWhenUnfocused:this.#pauseWhenUnfocused,presets:this.#presets,blend:this.#blend};}
+  #snapshot():string{return JSON.stringify({rain:this.#settings,...this.#preferences()});}
+  configureBlend(value:unknown):void{
+    if(this.#disposed||this.#pending)return;
+    this.#blend=blendPreferences(value);this.#notify();
+  }
+  savePreset(name:string,index?:number):boolean{
+    if(this.#disposed||this.#pending)return false;
+    const cleaned=cleanName(name);
+    if(!cleaned||[...PRESETS,...this.#presets.filter((_,i)=>i!==index)].some(p=>p.name.toLowerCase()===cleaned.toLowerCase()))return false;
+    if(index===undefined){if(this.#presets.length>=8)return false;this.#presets.push({name:cleaned,rain:this.settings});}
+    else {if(!Number.isInteger(index)||!this.#presets[index])return false;this.#presets[index]={name:cleaned,rain:this.settings};}
+    this.#notify();return true;
+  }
+  deletePreset(index:number):void{
+    if(this.#disposed||this.#pending||!Number.isInteger(index)||!this.#presets[index])return;
+    this.#presets.splice(index,1);this.#notify();
+  }
+  startConfiguredBlend():void{
+    if(this.#disposed||this.#pending||!this.#renderer||this.startingBlend)return;
+    const configuration=this.blendPreferences,generation=this.#generation,revision=++this.#settingsRevision;
+    this.#startingRevision=revision;this.#blend={...configuration,enabled:true};
+    // One ordered worker command places Position #1 before Start. No renderer or
+    // package change is required, and later manual edits cancel this continuation.
+    const finish=()=>{
+      if(this.#startingRevision===revision)this.#startingRevision=undefined;
+      if(this.#generation!==generation||this.#settingsRevision!==revision){this.#notify();return;}
+      this.#settings=rainSettings(configuration.from.rain);this.#surface?.setColor(this.#settings.backgroundColor);
+      this.startTransition(configuration.to.rain,configuration,{from:configuration.from.name,to:configuration.to.name});
+    };
+    try{
+      const result=this.#renderer.setSettings(configuration.from.rain);
+      if(result)void result.then(finish,error=>{
+        if(this.#startingRevision===revision)this.#startingRevision=undefined;
+        if(this.#settingsRevision===revision)this.#rendererFailed(error,generation);
+        this.#notify();
+      });else finish();
+    }catch(error){this.#startingRevision=undefined;this.#rendererFailed(error,generation);}
+    this.#notify();
+  }
+  #presetName(settings:RainSettings):string|null{
+    const match=[...this.#presets,this.#blend.from,this.#blend.to].find(p=>Object.keys(settings).every(key=>settings[key as keyof RainSettings]===p.rain[key as keyof RainSettings]));
+    return match?.name??presetName(settings);
+  }
   #effectivePause():boolean{return this.#paused||(this.#pauseWhenUnfocused&&!this.#focused);}
   #applyPause():void{this.#observeCommand(this.#renderer?.setPaused(this.#effectivePause()));}
   #observeCommand(operation:void|Promise<void>):void{
@@ -123,12 +173,14 @@ export class CodeRainBackgroundController {
     try{
       const raw=this.ports.storage()?.getItem(CODE_RAIN_SETTINGS_KEY);
       if(raw){
-        if(raw.length>8192)throw Error('Saved Code Rain settings exceed their limit');
+        if(raw.length>32768)throw Error('Saved Code Rain settings exceed their limit');
         const saved:unknown=JSON.parse(raw);
         if(!saved||typeof saved!=='object'||!('schema' in saved)||saved.schema!==1||!('rain' in saved))throw Error('Unsupported Code Rain settings');
         if('pauseWhenUnfocused' in saved&&typeof saved.pauseWhenUnfocused!=='boolean')throw Error('Invalid inactive-window preference');
         this.#pauseWhenUnfocused='pauseWhenUnfocused' in saved?saved.pauseWhenUnfocused as boolean:true;
         this.#settings=rainSettings(saved.rain);
+        this.#presets=personalPresets('presets' in saved?saved.presets:undefined);
+        this.#blend=blendPreferences('blend' in saved?saved.blend:undefined);
       }
       this.#saved=this.#snapshot();
     }catch(error){this.#storageError=error instanceof Error?error.message:'Code Rain settings could not be read';}
@@ -196,7 +248,7 @@ export class CodeRainBackgroundController {
       throw error;
     }finally{
       if(!this.#enabled&&acquired){try{await this.ports.releaseAppearance(resuming||cancelled||(!current()&&this.#preserveOnCancel),this.#appearanceMode);}catch(error){recordCaughtRuntimeError('Code Rain appearance rollback',error);this.#error??='Previous appearance could not be restored';}}
-      this.#pending=Boolean(this.#disabling);this.#notify();
+      this.#pending=Boolean(this.#disabling);if(this.#enabled&&this.#blend.enabled&&!this.#pending)this.startConfiguredBlend();this.#notify();
     }
   }
   async disable(preserveTheme=false):Promise<void>{
@@ -226,6 +278,7 @@ export class CodeRainBackgroundController {
     this.#commandError=undefined;
     this.#settingsRevision++;
     this.#settings=settings;this.#phase='';this.#blendStatus=undefined;
+    this.#blend={...this.#blend,enabled:false};
     this.#surface?.setColor(this.#settings.backgroundColor);this.#notify();
   }
   reset():void{this.updateSettings(undefined);}
@@ -234,20 +287,20 @@ export class CodeRainBackgroundController {
     if(this.#disposed||this.#pending||typeof value!=='boolean')return;
     this.#pauseWhenUnfocused=value;this.#applyPause();this.#notify();
   }
-  startTransition(target:unknown,options:{duration:number;hold:number;loop:boolean}):void{
+  startTransition(target:unknown,options:{duration:number;hold:number;loop:boolean},names?:{from:string;to:string}):void{
     if(this.#disposed||this.#pending||!this.#renderer)return;
     const previousRevision=this.#settingsRevision,revision=++this.#settingsRevision,generation=this.#generation;
     const from=rainSettings(this.#settings),to=rainSettings(target);
     const previousPhase=this.#phase,previousStatus=this.#blendStatus;
     // Capture before invocation: reduced motion may complete synchronously.
-    this.#blendStatus={fromPresetName:presetName(from),toPresetName:presetName(to),phase:'Transitioning',state:'active'};
+    this.#blendStatus={fromPresetName:names?.from??this.#presetName(from),toPresetName:names?.to??this.#presetName(to),phase:'Transitioning',state:'active'};
     this.#phase='Transitioning';
     try{
       const started=this.#renderer.startTransition(to,options);
       this.#commandError=undefined;
       if(started)void started.then(actualFrom=>{
         if(this.#generation!==generation||this.#settingsRevision!==revision||!this.#blendStatus)return;
-        this.#blendStatus={...this.#blendStatus,fromPresetName:presetName(rainSettings(actualFrom))};
+        this.#blendStatus={...this.#blendStatus,fromPresetName:JSON.stringify(rainSettings(actualFrom))===JSON.stringify(from)?(names?.from??this.#presetName(from)):this.#presetName(rainSettings(actualFrom))};
         this.#notify();
       },error=>{if(this.#settingsRevision===revision)this.#rendererFailed(error,generation);});
     }
@@ -260,6 +313,7 @@ export class CodeRainBackgroundController {
   }
   stopTransition():void{
     if(this.stoppingBlend)return;
+    this.#blend={...this.#blend,enabled:false};
     const generation=this.#generation;
     let result:RainSettings|Promise<RainSettings>|undefined;
     try{result=this.#renderer?.stopTransition();}
@@ -286,15 +340,15 @@ export class CodeRainBackgroundController {
     this.#phase='';this.#notify();
   }
   saveSettings():boolean|Promise<boolean>{
-    if(this.#disposed||this.#pending||this.#saving)return false;
+    if(this.#disposed||this.#pending||this.#saving||this.startingBlend)return false;
     const renderer=this.#renderer;
     if(!renderer?.snapshotSettings)return this.#writeSnapshot(this.settings);
-    const generation=this.#generation,revision=this.#settingsRevision,pauseWhenUnfocused=this.#pauseWhenUnfocused;
+    const generation=this.#generation,revision=this.#settingsRevision,preferences=JSON.stringify(this.#preferences());
     this.#saving=true;
     this.#notify();
     return renderer.snapshotSettings().then(settings=>{
       if(this.#generation!==generation||this.#disposed)return false;
-      if(this.#settingsRevision!==revision||this.#pauseWhenUnfocused!==pauseWhenUnfocused){
+      if(this.#settingsRevision!==revision||JSON.stringify(this.#preferences())!==preferences){
         this.#storageError='Rain settings changed while Save was waiting. Save again to keep the current settings.';
         return false;
       }
@@ -307,7 +361,7 @@ export class CodeRainBackgroundController {
   #writeSnapshot(rain:RainSettings):boolean{
     try{
       const storage=this.ports.storage();if(!storage)throw Error('Settings storage is unavailable');
-      const snapshot={rain,pauseWhenUnfocused:this.#pauseWhenUnfocused};
+      const snapshot={rain,...this.#preferences()};
       storage.setItem(CODE_RAIN_SETTINGS_KEY,JSON.stringify({schema:1,...snapshot}));
       this.#saved=JSON.stringify(snapshot);this.#storageError=undefined;this.#notify();return true;
     }catch(error){this.#storageError=error instanceof Error?error.message:'Code Rain settings could not be saved';this.#notify();return false;}
@@ -323,7 +377,7 @@ export class CodeRainBackgroundController {
   #teardown():void{
     this.#releaseFocus?.();this.#releaseFocus=undefined;
     this.#enabled=false;this.#phase='';this.#blendStatus=undefined;
-    this.#stoppingRevision=undefined;this.#commandError=undefined;
+    this.#stoppingRevision=undefined;this.#startingRevision=undefined;this.#commandError=undefined;
     const renderer=this.#renderer,surface=this.#surface;this.#renderer=undefined;this.#surface=undefined;
     try{renderer?.dispose();}finally{surface?.release();}
   }
