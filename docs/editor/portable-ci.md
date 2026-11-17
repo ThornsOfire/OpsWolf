@@ -67,6 +67,8 @@ The relocation probe may create its own native logs and temporary files. Only th
 
 ## Reviewing the result
 
+An Actions artifact is a temporary test download, separate from a GitHub Release. Signed-in users with repository read access can download it. On this public repository it is not restricted to invited testers. Use a separately approved private transfer if a test must be private. [GitHub artifact access](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts).
+
 A successful run retains an artifact named `opswolf-portable-windows-x64-<full-commit>-<attempt>` for 14 days. It contains:
 
 - The portable ZIP, named with the app version, packaging revision, architecture and source prefix.

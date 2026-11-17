@@ -1,6 +1,6 @@
 # Trying the portable OpsWolf build
 
-This is the Windows x64 pilot route. A public download is not available yet. The package and its build workflow are being prepared for review; a fresh machine still needs to try the exact ZIP before we call that setup tested.
+This is the Windows x64 pilot route. The package and its build workflow are ready for testing, with no published OpsWolf alpha Release yet. A successful GitHub build keeps a temporary test download. A fresh machine still needs to try that exact ZIP before we call its setup tested.
 
 The idea is simple: you already have Codex, so you should not need a pile of developer tools just to try our editor :3
 
@@ -11,6 +11,15 @@ The idea is simple: you already have Codex, so you should not need a pile of dev
 - A local folder you can write to. Extract the whole ZIP; do not run it from inside the ZIP or copy just the launcher out of it.
 
 Git, Node, Rust and C++ build tools are for building the package. They are not needed to run the reviewed portable build. Official Codex supplies its own account and chat environment. The ZIP does not include Codex, an account, personal projects or anyone else's settings.
+
+## Getting a test copy
+
+1. Sign into GitHub and open the exact successful **Build custom editor** run supplied for your test. The repository's **Actions** tab lists the runs.
+2. Scroll to **Artifacts** and download the OpsWolf Windows x64 bundle. These temporary bundles expire after 14 days.
+3. Extract that download. Inside it is the actual **OpsWolf-...-windows-x64-....zip**, plus checksum and build-review files. Keep those together until the package has been reviewed.
+4. Extract the inner OpsWolf ZIP into a new folder. Once its source/checksum is verified, the file to open is **Launch OpsWolf.cmd**.
+
+This is a test download, not a published Release. Because the repository is public, any signed-in reader can download its Actions artifacts; they are not private invitations. See [GitHub's download guide](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/download-workflow-artifacts). Share only the pristine reviewed ZIP, never a folder that has already been used to run OpsWolf.
 
 ## Start and stop
 
