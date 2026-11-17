@@ -12,9 +12,9 @@ I wanted a file tree on the left, chat in the middle, and somewhere on the right
 
 So yeah, that escalated pretty quickly lol.
 
-**This is still a developer alpha, with no normal setup wizard yet.** You'll need Windows and the official Codex desktop app. A reviewed portable test ZIP can run without development tools; building from source still needs them, or an agent to help with that setup. A fresh-machine installation hasn't been verified yet.
+**This is still an alpha, so expect a few rough edges.** There's no setup wizard yet. You'll need Windows and the official Codex desktop app. We have a ZIP you can unpack and run without installing coding tools, but we're still testing it before putting out a public release. Testing it on another PC is next.
 
-The current source is **OpsWolf 0.1.0-alpha.18**, built on [Code-Codex v0.6.0](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/releases/README.md). Rain now has personal presets and separate Position #1 / Position #2 choices for blending. Save can keep those choices and start the blend next time. Refresh and Clear list / Show all are still there in the editor. All 62 combined local checks passed, including the matching native build. Local owner checks confirm the new menu controls and saved blend presets after a restart; broader clean-machine checks are still pending. [Rain settings guide](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/code-rain-integration.md#presets-and-blend-settings).
+We're on **OpsWolf 0.1.0-alpha.18**, built on [Code-Codex v0.6.0](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/releases/README.md). Rain now lets you save your own presets, choose two looks to blend between, and keep those choices for next time. The new controls and saved blend choices have worked on my setup, including after a restart. The editor also has **Refresh**, **Clear list** and **Show all**. [More about Rain's settings](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/code-rain-integration.md#presets-and-blend-settings).
 
 ### Read it, then work on it
 
@@ -22,7 +22,7 @@ Open a file from the explorer and it appears beside chat. **Preview** is for rea
 
 ![Rendered Markdown and its table beside the conversation](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/4086462403b642627005cd039a1be32e1564d22b/docs/images/editor-preview-demo.png)
 
-*Preview: the real explorer, editor and Markdown plugin with a disposable sample file. The surrounding chat is a demo, not a native Codex conversation.*
+*Preview: a sample Markdown file in the real editor. The chat beside it is a demo.*
 
 ![The same Markdown sample in Edit with word wrap and source line numbers](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/4086462403b642627005cd039a1be32e1564d22b/docs/images/editor-edit-demo.png)
 
@@ -40,15 +40,15 @@ List getting long? **Clear list** tucks those entries away for this session. New
 
 ![The native Codex Changes viewer hosted inside an OpsWolf editor tab](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/4086462403b642627005cd039a1be32e1564d22b/docs/images/changes-native.png)
 
-*The actual native Changes viewer in OpsWolf alpha.3, showing public screenshot-tool changes. Captured from the live app and cropped to the editor area so chats and the project list stay out of the image.*
+*Codex's Changes viewer inside our editor, captured in alpha.3. This shows changes to our public screenshot tool.*
 
 There's also a persistent **Native changes** panel above the message box. It stays available after the live bubble has gone. Expand the file list, then open just the changes you want to read. **Open file** takes you from the recorded diff to the current file, where you can edit it.
 
 ![The persistent Native changes panel above chat, with a recorded diff open on the right](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/4086462403b642627005cd039a1be32e1564d22b/docs/images/native-changes-demo.png)
 
-*Production review controls with a sample patch and demo conversation. The panel above the message box and the recorded diff are separate from the native Changes viewer shown above.*
+*The panel above chat, with a sample change open on the right. The conversation is a demo. This is a second way to review changes, separate from the Changes tab above.*
 
-This uses Codex's recorded patches. It can include ordinary project files outside Git, but it won't catch every shell command or manual edit. It's a way to review work, not a backup or a complete activity log.
+This shows changes Codex has recorded, even for project files that aren't in Git. It can miss edits made by hand or through commands, so keep your own backups too.
 
 ### The other little things that help
 
@@ -62,46 +62,44 @@ Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf →
 
 ![OpsWolf settings with the default wolf logo and shared preferences](https://raw.githubusercontent.com/ThornsOfire/OpsWolf/4086462403b642627005cd039a1be32e1564d22b/docs/images/settings-demo.png)
 
-*The production settings panel with disposable default preferences. This is a synthetic capture; your personal profiles keep their own name and artwork. [Screenshot details](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/images/README.md).*
+*Our settings panel using a demo profile. Yours can have its own name and artwork. [About these screenshots](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/images/README.md).*
 
 ### A few rough edges, because alpha means alpha
 
-- Text reading goes up to **10 MiB**; editing currently stops at **512 KiB**. Bigger Markdown starts as plain text with an explicit full-render option. Files we can't edit show a red explanation. Mixed Windows/Unix line endings are one reason a file stays read-only.
-- Citations work, but their long encoded links can still show in the message box and hover tooltip. The compact presentation is unfinished.
-- Automatic expansion of the agent's activity details has a source repair, but the reported native layout still needs a live recheck. Following the latest activity and pausing to read are separate features.
-- Rain's worker rendering has stopped the frame drops in our recent hands-on testing, including heavy blending. We still need feedback from other setups. Saved blend choices have survived a normal restart in local testing; the personal preset library and other setups still need more testing. Editor transparency isn't consistent across other themes.
-- This is a basic source editor. Language servers, autocomplete, a debugger, a trustworthy context meter and broader editing support are future work.
-- Codex updates can change the layout or integrations we depend on. **Review updates** shows upstream availability and blocks the stock Code-Codex installer from replacing OpsWolf. Windows/Store updates to Codex are **not frozen**. For an OpsWolf restart, save your work, close the app normally and reopen your OpsWolf launcher; the native in-app Restart action is held because it can lose our selected build. See [manual updates](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/manual-updates.md).
+- Big files have limits: you can read up to **10 MiB**, but editing stops at **512 KiB**. Large Markdown files open as plain text first; you can choose to load the formatted view. If a file can't be edited, a red message explains why.
+- Citations work, but you might still see a huge ugly link while typing or hovering over one. Making those look tidy is still on the list.
+- The agent's activity details are meant to open automatically so you can see what it's doing. We've made a fix, but still need to check the screen where it was failing. This is separate from following new messages or scrolling up to read.
+- Rain is much smoother on my setup now, even while blending between looks. Saved blend choices also survived a restart. The personal preset library needs more testing, and we'd love feedback from other PCs. The editor's transparency still doesn't work with every theme.
+- This is a basic text and code editor for now. Code suggestions, debugging tools, a reliable AI context meter and support for more file types are still on the wishlist.
+- Updates can break things we rely on. **Review updates** tells you when a new Code-Codex version is available, and we stop its installer from replacing OpsWolf. Codex itself can still update through Windows or the Store. To restart OpsWolf, save your work, close it normally and use your OpsWolf launcher again. The built-in Restart button is blocked because it can reopen without our additions. [How updates work](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/manual-updates.md).
 
-See [known issues](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/known-issues.md) and the [user guide](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/README.md) for the details. No claim that every Codex version, theme or monitor setup works perfectly.
+The [user guide](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/README.md) has more help, and [known issues](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/known-issues.md) covers the bugs we're tracking. We haven't tested every Codex version, theme or monitor setup yet.
 
 <a id="getting-it-running"></a>
 
 ### Getting started today
 
-A portable ZIP is ready for testing so you can extract a folder and launch OpsWolf without installing the build tools. Successful GitHub builds keep temporary test downloads under Actions. There is no published OpsWolf alpha Release yet; a first-machine trial still comes before that. See the [portable pilot guide](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/portable.md) for the download and click-to-start steps. Existing upstream installers and files in `releases/` aren't releases of these editor additions.
+The test download is on GitHub under **Actions**. You'll need to sign in to download it. There isn't a public alpha Release yet, and these test downloads expire. The [download and launch guide](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/docs/editor/portable.md) walks you through it.
 
-For a test package, extract it and use **Launch OpsWolf.cmd** after saving your work and closing Codex normally. Opening the normal Codex shortcut won't load the custom editor. If you're building it yourself instead, the source commands are in the agent section below; you can give that section to your coding agent.
+1. Download the test package and unpack the outer ZIP. There's an OpsWolf ZIP inside; unpack that one too.
+2. Save your work and close Codex normally.
+3. Open the extracted OpsWolf folder and double-click **Launch OpsWolf.cmd**.
 
-Your local folder can be anywhere sensible. It doesn't need our workspace layout or a particular project name. Preview plugins such as Markdown and PDF are separate packages. Enable the ones you want in Preview Market. A format having a preview doesn't mean it can be edited.
+Use that launcher whenever you want OpsWolf. Your usual Codex shortcut still opens regular Codex. The folder doesn't need a special name or a copy of my workspace. Older Code-Codex installers aren't installers for these additions.
 
 ### What you actually need
 
-You don't need my whole tool shelf to use OpsWolf. Start with the app; add tools for the jobs you actually want it to do.
+- **Windows on an Intel or AMD PC, plus the [official Codex desktop app](https://learn.chatgpt.com/docs/app).** OpsWolf runs alongside it, so get Codex installed and signed in first.
+- **The OpsWolf test package.** It contains our built app files. You don't need Git, Rust or Node just to run it. If you want to build your own copy, give your coding agent the [setup section below](#build-and-launch); it lists the tools and commands.
+- **Whatever extras you like.** Open **OpsWolf → Preview Market** to enable previews for things like Markdown and PDF, or a background such as Code Rain. [Nova Fox](https://github.com/ThornsOfire/nova-fox-companion) is a separate, optional companion. You don't need all of them, and being able to preview a file doesn't always mean you can edit it.
 
-- **To run a matching build:** Windows x64, the [official Codex desktop host](https://learn.chatgpt.com/docs/app), and this fork's matching built native companion and UI bundle. OpsWolf adds to the official host; it doesn't replace or redistribute it. There isn't a published OpsWolf installer yet. A reviewed portable test ZIP contains the built pieces; the source route needs someone to build them first.
-- **To build from source:** [Git for Windows](https://git-scm.com/install/windows), a supported [Node.js LTS with npm](https://nodejs.org/en/download), [Rust through rustup](https://rust-lang.org/tools/install/) with the Windows MSVC toolchain, and [Visual Studio Build Tools with Desktop development with C++](https://learn.microsoft.com/en-us/cpp/build/vscpp-step-0-installation). These are build tools, not a shopping list for someone who already has a reviewed matching build. Exact minimums and packaging-only tools are below.
-- **For previews and atmosphere:** add only the Preview Market packages you want. Markdown, PDF and other previews, backgrounds such as Code Rain, and the standalone Nova Fox companion are optional. Install, load and enable are different steps; a preview package doesn't promise editing support. You don't need every plugin or our personal MCP connections.
-
-**A build can download things.** The build script runs `npm ci`, and Cargo may fetch missing locked dependencies. Packaging scripts can fetch tools too. Have your agent explain the needed downloads and get the required authorization before running them. Don't treat a command called “build” as automatically offline.
+Building your own copy can mean downloading extra tools and libraries. Have your agent explain what it needs before it starts installing things.
 
 ### Optional: let an agent work with Windows
 
-For desktop automation, this project's preferred option is the independent [TaskKit Windows Computer MCP](https://github.com/Longtran2404/taskkit-windows-computer-mcp), using its [Windows quickstart](https://github.com/Longtran2404/taskkit-windows-computer-mcp/blob/main/docs/WINDOWS10_QUICKSTART.md). It needs Python 3.11+ with Tkinter and the Windows `py` launcher. Codex CLI registration is an optional setup route, not an OpsWolf requirement. Computer Use, when available, is the fallback if TaskKit cannot do the job. Neither is needed to run the editor.
+Want your agent to help test a window or click through something with you? We use [TaskKit](https://github.com/Longtran2404/taskkit-windows-computer-mcp) for that. It lets the agent see screenshots and use the mouse and keyboard in apps you allow. You don't need it to use OpsWolf.
 
-Start with only the target application allowed and explicitly authorize screenshots and control. Captures go to the connected AI service. TaskKit has its own session limits, fresh-capture and hit-target checks; physical Escape/F12 stops control. Finish with `end_control_session`. Its `type_text` accepts literal single-line text, not multiline scripts or key chords; use supported key actions separately. GPU/protected-window capture can still fail, so don't send blind clicks.
-
-Those tool controls are separate from [Codex sandbox and approval rules](https://learn.chatgpt.com/docs/agent-approvals-security). MCP/app calls may need another approval; [automatic review](https://learn.chatgpt.com/docs/sandboxing/auto-review) can reject requests outside the authorized scope or involving unsafe data transfer. Changing TaskKit's input mode doesn't grant Codex permission. Computer Use also has its own app approvals. Keep permissions narrow; don't disable protections to get past a refusal. See the [official MCP setup guide](https://learn.chatgpt.com/docs/extend/mcp) if you choose to connect a server.
+Give your agent the [TaskKit setup guide](https://github.com/Longtran2404/taskkit-windows-computer-mcp/blob/main/docs/WINDOWS10_QUICKSTART.md) if you'd like to try it. Start with one app and tell the agent what it's allowed to do. Screenshots are sent to the AI service you're using, so keep anything private out of view. You can press **Escape** or **F12** yourself to stop TaskKit's control.
 
 <a id="credit-and-contributing"></a>
 
@@ -135,14 +133,12 @@ These setup requirements come from the source manifests, scripts and upstream gu
 | Use | Dependencies / source of truth |
 | --- | --- |
 | Run | Windows x64 (inherited launcher baseline Windows 10 build 19041+), separately installed official Codex host, matching built companion/UI. Build tools and MCP servers are not general runtime requirements. |
-| Build UI | Git and a supported Node LTS with npm satisfying [`engines.node >=20.19`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/packages/explorer-ui/package.json). The minimum is not a recommendation to install EOL Node 20; check the [official release status](https://nodejs.org/en/about/previous-releases). |
-| Build native | Upstream documents Windows 11 x64 for source builds. Use the Windows MSVC Rust toolchain and Visual Studio Desktop C++ Build Tools/Windows SDK. [`Cargo.toml`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/Cargo.toml) declares Rust 1.85 minimum; resolve the locked dependencies with a compatible installed stable toolchain. |
+| Build UI | [Git for Windows](https://git-scm.com/install/windows) and a supported [Node LTS with npm](https://nodejs.org/en/download) satisfying [`engines.node >=20.19`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/packages/explorer-ui/package.json). The minimum is not a recommendation to install EOL Node 20; check the [official release status](https://nodejs.org/en/about/previous-releases). |
+| Build native | Upstream documents Windows 11 x64 for source builds. Use [Rust through rustup](https://rust-lang.org/tools/install/) with the Windows MSVC toolchain and [Visual Studio Desktop C++ Build Tools/Windows SDK](https://learn.microsoft.com/en-us/cpp/build/vscpp-step-0-installation). [`Cargo.toml`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/Cargo.toml) declares Rust 1.85 minimum; resolve the locked dependencies with a compatible installed stable toolchain. |
 | Package MSI only | [WiX](https://docs.firegiant.com/wix/using-wix/) and [.NET SDK](https://dotnet.microsoft.com/en-us/download) for the documented .NET-tool route; a separately supplied WiX distribution still needs its own prerequisites checked. [`build-msi.ps1`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/scripts/build-msi.ps1) pins WiX 5.0.2 and restores it with `dotnet tool install` only if `-WixPath` is omitted and its cached tool is missing. MSI's three-number version rule is separate from the alpha display version. Neither tool is needed for ordinary editor use or the UI/native build. |
 | Selected browser fixtures only | Installed Chrome at the path used by [`browser-fixture.mjs`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/scripts/browser-fixture.mjs). Chrome is not an additional normal OpsWolf runtime requirement. |
-| Optional desktop automation | TaskKit prerequisites and MCP registration follow its linked quickstart; Python is not required by OpsWolf itself. The reviewed local TaskKit release source is 0.5.1, also reported by a prior `bridge_status` observation with its session stopped. Exact source-to-running-server hash identity was not established; don't infer it from the version label. |
+| Optional desktop automation | Prefer independent TaskKit; Python 3.11+, Tkinter, Windows `py` launcher, MCP registration per its [quickstart](https://github.com/Longtran2404/taskkit-windows-computer-mcp/blob/main/docs/WINDOWS10_QUICKSTART.md). Codex CLI registration is optional, not an OpsWolf prerequisite. Computer Use is a fallback when available. Neither is required by OpsWolf. Reviewed TaskKit source: 0.5.1, matching an earlier `bridge_status` version report; exact source/running-server hash identity unverified. |
 | Optional features | Preview/background packages follow the pinned catalog/cache and explicit Preview Market actions. Nova Fox has its own standalone prerequisites; neither Nova nor a personal MCP stack is required by OpsWolf. |
-
-TaskKit's capture/session guards do not replace client sandbox, approval, auto-review or screenshot/data-transfer authorization. After cancellation, only a new owner-authorized task may start a new control session; read-only captures do not rearm input. Reinspect and capture the current target before further input, and never replay a cancelled action. Leave configuration and installation to an explicitly authorized setup task. The linked external guides can change after the check date.
 
 Install/download prerequisites only with environment authorization. [`build.ps1`](https://github.com/ThornsOfire/OpsWolf/blob/4086462403b642627005cd039a1be32e1564d22b/scripts/build.ps1) calls `npm ci` and `cargo build --workspace --locked`, **not** Cargo's `--offline` mode; inspect cache/dependency needs before execution. A reviewed runtime build and a new dependency installation are separate decisions.
 
@@ -162,6 +158,13 @@ $uiBundle = (Resolve-Path .\packages\explorer-ui\dist\explorer.js).Path
 ```
 
 Pair UI/backend versions. This command uses mutable build outputs, not an immutable reviewed deployment. Do not kill the live host, relocate profiles or register hooks as a setup side effect.
+
+### Desktop automation (optional)
+
+- Setup: use the linked TaskKit quickstart and [official MCP guide](https://learn.chatgpt.com/docs/extend/mcp). Install/configure only within authorized scope. External guides may change.
+- Scope/data: allow only target apps; obtain screenshot/control authorization. Captures reach the connected AI service. TaskKit guards are separate from [Codex sandbox/approvals](https://learn.chatgpt.com/docs/agent-approvals-security), [automatic review](https://learn.chatgpt.com/docs/sandboxing/auto-review) and Computer Use app approvals. Changing input mode grants no client permission; don't bypass a refusal.
+- Input: respect session limits, fresh-capture and hit-target checks. GPU/protected-window captures can fail; never click blind. Inspect/capture the current target before input. `type_text` is literal single-line text, not scripts/key chords; use supported key actions separately.
+- Stop/cleanup: physical Escape/F12 stops control. After cancellation, only a new owner-authorized task can start a new session; read-only captures don't rearm input. Never replay a cancelled action. Finish with `end_control_session`.
 
 ### Runtime contracts
 
