@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "excludedPlugins": [
+    {"id": "heavenly-cloud", "reason": "Conditional original shader redistribution permission remains unqualified."},
+    {"id": "aurora-ionosphere", "reason": "Conditional original shader redistribution permission remains unqualified."},
+    {"id": "cloud-train", "reason": "Original shader redistribution permission remains unverified."},
+    {"id": "milky-way", "reason": "Original shader redistribution permission remains unverified."}
+  ]
+}

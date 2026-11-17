@@ -10,6 +10,8 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- A reusable Windows x64 portable packaging recipe and matching Actions review-artifact workflow prepare the native launcher, editor and locked offline plugins without bundling personal profiles or requiring developer tools on the recipient PC. Distribution remains a pilot pending exact-package review, hosted checks and first-recipient acceptance; no public release or automatic updater is implied. [Portable setup and checks](docs/editor/portable.md).
+
 - Rain settings separate single-preset management from Position #1 / Position #2 blend choices. Create, overwrite, rename and delete up to eight personal presets, then explicitly Save the appearance, endpoint snapshots and timing/startup options. Saved blends restart at Position #1; existing appearance settings remain compatible.
 
 - Clear list in the editor’s native Changes tab hides accumulated entries for the running session. Show all restores them; new recorded patches bring changed files back. Filters stay separate by chat and project, reset on app reload, and release when history cannot establish what changed. Files, drafts, Git state and native history remain untouched.

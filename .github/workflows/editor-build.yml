@@ -1,5 +1,12 @@
 name: Build custom editor
 on:
+  workflow_dispatch:
+    inputs:
+      package_revision:
+        description: 'Portable packaging revision (positive integer; does not change the app version)'
+        required: true
+        default: '1'
+        type: string
   push:
     branches: [candidate/planned-development, feature/right-editor-pane]
     paths:
@@ -11,27 +18,61 @@ on:
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'cursadex-version.json'
+      - 'LICENSE'
+      - 'THIRD_PARTY_LICENSES.txt'
+      - 'THIRD_PARTY_NOTICES_EN.md'
       - '.github/workflows/editor-build.yml'
 permissions:
   contents: read
 jobs:
   windows-editor:
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    defaults:
+      run:
+        shell: pwsh
     env:
       CARGO_TARGET_X86_64_PC_WINDOWS_MSVC_RUSTFLAGS: -C target-feature=+crt-static
       CARGO_PROFILE_RELEASE_LTO: 'false'
       CARGO_PROFILE_RELEASE_CODEGEN_UNITS: 16
+      CARGO_PROFILE_RELEASE_DEBUG: '0'
+      PORTABLE_REVISION: ${{ inputs.package_revision || '1' }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: npm
           cache-dependency-path: packages/explorer-ui/package-lock.json
+      - name: Confirm source and package identity
+        id: identity
+        run: |
+          if ($env:PORTABLE_REVISION -notmatch '^[1-9][0-9]{0,5}$') { throw 'Package revision must be a positive integer of at most six digits.' }
+          $sourceCommit = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $sourceCommit -cne $env:GITHUB_SHA) { throw 'Checkout does not match the triggering commit.' }
+          if (git status --porcelain) { throw 'Fresh source checkout is not clean.' }
+          node scripts/check-version.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node scripts/check-changelog.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $version = (Get-Content -LiteralPath cursadex-version.json -Raw | ConvertFrom-Json).version
+          if ($version -notmatch '^[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?$') { throw 'Invalid fork version.' }
+          $zipName = "OpsWolf-$version-portable.$env:PORTABLE_REVISION-windows-x64-$($sourceCommit.Substring(0,12)).zip"
+          "zip-name=$zipName" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+      - name: Portable builder regression checks
+        run: node --test scripts/test-build-portable.mjs scripts/test-portable-runtime.mjs
+      - name: Set portable native compilation policy
+        run: |
+          # Encoded flags apply to this host build too; do not rely only on a target override.
+          $flags = @('-C', 'target-feature=+crt-static', "--remap-path-prefix=$env:USERPROFILE=/build-home", "--remap-path-prefix=$env:GITHUB_WORKSPACE=/opswolf")
+          "CARGO_ENCODED_RUSTFLAGS=$($flags -join [char]0x1f)" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - run: rustup update stable --no-self-update
       - run: npm --prefix packages/explorer-ui ci
-      - run: npm --prefix packages/explorer-ui run build
+      - name: Build renderer and verify locked plugin inputs
+        run: npm --prefix packages/explorer-ui run build
       - name: Use an unambiguous native test temp directory
         shell: pwsh
         run: |
@@ -48,17 +89,90 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           cargo test -p context-resolver --locked -- --test-threads=1
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - name: Compile native reader and windowless launcher
+      - name: Compile matching native reader and windowless launcher
         run: cargo build --release --locked -p code-codex --bin code-codex --bin code-codex-launcher
-      - name: Artifact checksums
-        shell: pwsh
+      - name: Check native runtime dependencies and package privacy
         run: |
-          Get-FileHash target/release/code-codex.exe,target/release/code-codex-launcher.exe -Algorithm SHA256 | Format-List | Out-File target/release/SHA256SUMS.txt
-      - uses: actions/upload-artifact@v4
+          New-Item -ItemType Directory -Path artifacts/portable -ErrorAction Stop | Out-Null
+          node scripts/check-portable-runtime.mjs --runtime-dir target/release --ui-dir packages/explorer-ui/dist --report artifacts/portable/runtime-review.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Build the portable review package
+        env:
+          PORTABLE_ZIP_NAME: ${{ steps.identity.outputs.zip-name }}
+        run: |
+          node scripts/build-portable.mjs --runtime-dir target/release --ui-dir packages/explorer-ui/dist --plugins-dir packages/explorer-ui/dist/plugins --repo-root . --source-commit $env:GITHUB_SHA --package-revision $env:PORTABLE_REVISION --output-dir artifacts/portable/package --zip "artifacts/portable/$env:PORTABLE_ZIP_NAME"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (git status --porcelain) { throw 'Tracked source or nonignored output changed during the build.' }
+      - name: Check relocated package without developer tools on PATH
+        timeout-minutes: 5
+        env:
+          PORTABLE_ZIP_NAME: ${{ steps.identity.outputs.zip-name }}
+        run: |
+          $zipPath = (Resolve-Path -LiteralPath "artifacts/portable/$env:PORTABLE_ZIP_NAME").Path
+          $probe = Join-Path $env:RUNNER_TEMP 'OpsWolf portable check - Unicode 雨'
+          if (Test-Path -LiteralPath $probe) { throw 'Relocation probe already exists.' }
+          Expand-Archive -LiteralPath $zipPath -DestinationPath $probe
+          $manifestPath = Join-Path $probe 'portable-manifest.json'
+          $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+          foreach ($file in $manifest.files) {
+            $path = Join-Path $probe $file.path
+            if ((Get-Item -LiteralPath $path).Length -ne $file.size -or (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant() -cne $file.sha256) {
+              throw "Relocated package failed integrity: $($file.path)"
+            }
+          }
+          $originalPath = $env:PATH
+          try {
+            $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot"
+            & (Join-Path $probe 'Launch OpsWolf.cmd') --check
+            if ($LASTEXITCODE -ne 0) { throw 'Relocated launcher integrity check failed.' }
+            $native = Join-Path $probe 'code-codex.exe'
+            $nativeVersion = & $native --version
+            if ($LASTEXITCODE -ne 0) { throw 'Relocated native version check failed.' }
+            if ("$nativeVersion" -cne "code-codex $($manifest.upstreamVersion)") { throw 'Native version differs from the portable manifest.' }
+            $pluginJson = & $native plugins
+            if ($LASTEXITCODE -ne 0) { throw 'Offline plugin inspection failed.' }
+            $plugins = @($pluginJson | ConvertFrom-Json)
+            if ($plugins.Count -ne $manifest.catalogCount -or $plugins.Count -ne ($manifest.plugins.Count + $manifest.excludedPlugins.Count)) { throw 'Native and portable plugin catalogs differ in size.' }
+            foreach ($expected in $manifest.plugins) {
+              $matches = @($plugins | Where-Object { $_.id -ceq $expected.id -and $_.category -ceq $expected.category -and $_.version -ceq $expected.version })
+              if ($matches.Count -ne 1 -or $matches[0].installed -ne $true) { throw "Offline plugin missing or mismatched: $($expected.id)" }
+            }
+            foreach ($excluded in $manifest.excludedPlugins) {
+              $matches = @($plugins | Where-Object { $_.id -ceq $excluded.id -and $_.category -ceq $excluded.category -and $_.version -ceq $excluded.version })
+              if ($matches.Count -ne 1 -or $matches[0].installed -ne $false) { throw "Excluded plugin unexpectedly cached or mismatched: $($excluded.id)" }
+            }
+          } finally { $env:PATH = $originalPath }
+          # Only the disposable probe may acquire logs/temp. Keep its data out of the artifact.
+          Copy-Item -LiteralPath artifacts/portable/package/portable-manifest.json -Destination artifacts/portable/portable-manifest.json
+          $receipt = [ordered]@{
+            schemaVersion = 1; sourceCommit = $env:GITHUB_SHA
+            workflowRun = "$env:GITHUB_SERVER_URL/$env:GITHUB_REPOSITORY/actions/runs/$env:GITHUB_RUN_ID"
+            attempt = $env:GITHUB_RUN_ATTEMPT; runnerImage = $env:ImageOS; runnerImageVersion = $env:ImageVersion
+            node = (node --version); rustc = (rustc --version); cargo = (cargo --version)
+            nativeBuildPolicy = @('static C runtime', 'release debug=0', 'profile prefix remapped to /build-home', 'repository prefix remapped to /opswolf')
+            packageRevision = [int]$env:PORTABLE_REVISION; nativeVersion = "$nativeVersion"
+            forkVersion = $manifest.version; upstreamVersion = $manifest.upstreamVersion
+            offlinePlugins = $manifest.plugins.Count; excludedPlugins = $manifest.excludedPlugins.Count
+            relocationIntegrity = 'passed'; developerToolsOnProbePath = $false
+            checks = @('version/changelog structure', 'portable builder regression', 'locked UI/plugins build', 'workspace-service/cdp-client/context-resolver tests', 'matching native build', 'runtime dependencies/privacy', 'ZIP extraction and file hashes', 'relocated launcher integrity, native version and offline plugin catalog')
+            limits = @('Hosted build is not Codex live acceptance.', 'Official Codex is not included or launched.', 'First recipient trial and release approval remain pending.', 'Runner/toolchain updates can change output bytes; use this exact ZIP hash.')
+          }
+          $receipt | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath artifacts/portable/build-review.json -Encoding utf8NoBOM
+          $hashLines = @($env:PORTABLE_ZIP_NAME, 'portable-manifest.json', 'build-review.json', 'runtime-review.json') | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath (Join-Path artifacts/portable $_) -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $_"
+          }
+          $hashLines | Set-Content -LiteralPath artifacts/portable/SHA256SUMS.txt -Encoding utf8NoBOM
+      - name: Retain the exact package for review
+        uses: actions/upload-artifact@v4
         with:
-          name: code-codex-editor-windows
+          name: opswolf-portable-windows-x64-${{ github.sha }}-${{ github.run_attempt }}
           path: |
-            target/release/code-codex.exe
-            target/release/code-codex-launcher.exe
-            target/release/SHA256SUMS.txt
-          retention-days: 7
+            artifacts/portable/*.zip
+            artifacts/portable/portable-manifest.json
+            artifacts/portable/build-review.json
+            artifacts/portable/runtime-review.json
+            artifacts/portable/SHA256SUMS.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14

@@ -12,7 +12,7 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still a developer alpha. There isn't a ready-to-download OpsWolf installer yet.** If you're looking for a download button and a normal setup wizard, we're not there. You'll need Windows, the official Codex desktop app and some development tools, or an agent to walk you through the source setup below. A fresh-machine installation hasn't been verified yet.
 
-The current source is **OpsWolf 0.1.0-alpha.18**, built on [Code-Codex v0.6.0](releases/README.md). Rain now has personal presets and separate Position #1 / Position #2 choices for blending. Save can keep those choices and start the blend next time. Refresh and Clear list / Show all are still there in the editor. All 62 combined local checks passed, including the matching native build. The new settings still need a restart test in the app. [Rain settings guide](docs/editor/code-rain-integration.md#presets-and-blend-settings).
+The current source is **OpsWolf 0.1.0-alpha.18**, built on [Code-Codex v0.6.0](releases/README.md). Rain now has personal presets and separate Position #1 / Position #2 choices for blending. Save can keep those choices and start the blend next time. Refresh and Clear list / Show all are still there in the editor. All 62 combined local checks passed, including the matching native build. Local owner checks confirm the new menu controls and saved blend presets after a restart; broader clean-machine checks are still pending. [Rain settings guide](docs/editor/code-rain-integration.md#presets-and-blend-settings).
 
 ### Read it, then work on it
 
@@ -77,7 +77,7 @@ See [known issues](docs/editor/known-issues.md) and the [user guide](docs/editor
 
 ### Getting started today
 
-There is no click-only installation path yet. Existing upstream installers and files in `releases/` aren't releases of these editor additions.
+A portable ZIP is being prepared so you can extract a folder and launch OpsWolf without installing the build tools. It still needs package review and a first-machine trial, so there is no public download yet. See the [portable pilot guide](docs/editor/portable.md). Existing upstream installers and files in `releases/` aren't releases of these editor additions.
 
 The current route is to build this fork's UI and matching native companion, close Codex after saving your work, then launch through that companion. Opening the normal Codex shortcut won't load the custom editor. The exact source commands are in the agent section below; you can give that section to your coding agent.
 
