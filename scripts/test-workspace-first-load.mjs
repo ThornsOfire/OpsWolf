@@ -250,11 +250,16 @@ try {
   await evaluate("mode('Edit').click()");
   assert.ok(await waitFor('!!editor()'));
   await evaluate("editor().value = 'Keep this edit'; editor().dispatchEvent(new Event('input', {bubbles:true})); select('new_fixture_b')");
-  assert.ok(await waitFor('confirmed.length === 1'));
-  assert.equal(await evaluate("loaded('project-a') && editor()?.value === 'Keep this edit'"), true);
-  checks.push('A declined switch preserves the existing tree and editor draft');
+  assert.ok(await waitFor("loaded('project-b')"));
+  assert.equal(await evaluate("confirmed.length === 0 && saveRequest === null && !viewer()?.state.editor && !viewer()?.state.tabs.some(tab => tab.path === 'project-a.md')"), true);
+  checks.push('A cross-root chat switch parks the dirty document without prompting, saving or exposing it in the other root');
 
-  await evaluate("select('new_fixture_a'); mode('Save').click()");
+  await evaluate("select('new_fixture_a')");
+  assert.ok(await waitFor("loaded('project-a') && editor()?.value === 'Keep this edit'"));
+  assert.equal(await evaluate("confirmed.length === 0 && saveRequest === null && viewer()?.state.activePath === 'project-a.md' && viewer()?.state.editor?.draft === 'Keep this edit' && bound?.threadId === 'new_fixture_a'"), true);
+  checks.push('Returning to the original qualified root restores its active tab and unsaved draft without a write');
+
+  await evaluate("mode('Save').click()");
   assert.ok(await waitFor('typeof releaseSave === "function"'));
   const beforeSaveSwitch = await evaluate("attempts('new_fixture_b')");
   await evaluate("select('new_fixture_b')");

@@ -12,7 +12,15 @@ export function editorPaneWidth(requested: number, available: number): number {
   return Math.max(160, Math.min(requested, Math.max(160, available - 280)));
 }
 
+function sharedShellPage(parent: HTMLElement): HTMLElement | null {
+  return parent.matches('main[data-app-shell-main-surface="default"]')
+    ? parent.closest('[data-app-shell-shared-local-frame] > [data-app-shell-page-surface="true"]')
+    : null;
+}
+
 function nativeHeaders(parent: HTMLElement): HTMLElement[] {
+  const page = sharedShellPage(parent);
+  if (page) return [...page.querySelectorAll<HTMLElement>(':scope > header[data-app-shell-titlebar]')];
   const scope = parent.closest('[data-app-shell-active-page="true"]') ?? parent.parentElement ?? parent;
   const headers=[...scope.querySelectorAll<HTMLElement>('header')].filter(header =>
     !header.closest('[data-app-shell-active-page="false"]') && !header.closest('[data-code-codex-owned]'));
@@ -27,7 +35,9 @@ export function nativeHeaderInset(parent: HTMLElement): number {
   const bottoms = nativeHeaders(parent).map(header => header.getBoundingClientRect()).filter(rect =>
     rect.width > 0 && rect.height > 0 && rect.right > bounds.left && rect.left < bounds.right &&
     rect.top <= bounds.top + 80 && rect.bottom > bounds.top && rect.bottom <= bounds.top + 120);
-  return bottoms.length ? Math.ceil(Math.max(...bottoms.map(rect => rect.bottom)) - bounds.top) : 48;
+  if (!bottoms.length) return 48;
+  const scale = sharedShellPage(parent) ? bounds.width / parseFloat(getComputedStyle(parent).width) : 1;
+  return Math.ceil((Math.max(...bottoms.map(rect => rect.bottom)) - bounds.top) / (scale || 1));
 }
 
 export class EditorPaneLayout {
@@ -51,7 +61,7 @@ export class EditorPaneLayout {
         if (!records.some(record => record.type === 'childList' || this.originals.has(record.target as HTMLElement))) return;
         this.schedule();
       });
-      const scope = parent.closest('[data-app-shell-active-page="true"]') ?? parent;
+      const scope = sharedShellPage(parent) ?? parent.closest('[data-app-shell-active-page="true"]') ?? parent;
       this.childrenObserver.observe(scope, { childList: true, subtree: true, attributes: true, attributeFilter: ['style'] });
     }
     this.width = width;
@@ -80,7 +90,7 @@ export class EditorPaneLayout {
     const bounds = this.parent.getBoundingClientRect();
     const cssWidth = Number.parseFloat(getComputedStyle(this.parent).width);
     const scale = cssWidth > 0 ? bounds.width / cssWidth : 1;
-    const scope = this.parent.closest('[data-app-shell-active-page="true"]');
+    const scope = sharedShellPage(this.parent) ?? this.parent.closest('[data-app-shell-active-page="true"]');
     const headers = scope ? nativeHeaders(this.parent).filter(header =>
       header.matches('header[data-app-shell-titlebar]') && !this.parent!.contains(header) &&
       header.closest('[data-app-shell-page-surface]') === this.parent!.closest('[data-app-shell-page-surface]') &&

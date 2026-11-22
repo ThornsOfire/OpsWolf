@@ -98,6 +98,17 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Fixed
 
+- The docked editor tabs line up with the compact native chat toolbar on the shared Windows page layout. The new-chat pencil clears the file tree’s Editing label.
+
+- On the Codex 26.1117 page layout, the chat title accounts for the open file tree. Code Rain can show through the workspace behind the tree and conversation again.
+- The sidebar chat list keeps its native background when you hover over the collapsed rail, so file names underneath stay hidden.
+
+- Restore startup and file-tree placement on the Codex 26.1117 workspace layout. The launcher and explorer recognize the page surface inside its workspace and keep unrelated layouts in their native presentation.
+
+- Keep unpinned editor documents and drafts through chat switches in the running session. Chats sharing a project share documents; other projects and chat-specific comparisons remain separate. Retain close/save protections, warn about parked unsaved drafts before teardown, and refuse a new tab at the limit instead of silently closing an existing one.
+
+- Sending while reading older chat messages retains its follow request when Codex briefly hides or disables the same composer. Following resumes only after that composer returns empty and a new user message appears; chat switches, replacement editors, later scrolling and the original timeout still cancel the request.
+
 - The explorer retries the initial workspace lookup when a new local chat appears before its folder metadata is ready.
 
 - Code Rain can run on the Dark appearance already applied by Codex when automatic appearance control is unavailable. Choose Dark in Codex first, then Enable Rain. Rain leaves the native setting and any earlier restoration record intact. Its card explains when Dark is needed and when it is using the existing appearance.

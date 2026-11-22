@@ -130,6 +130,9 @@ export class CodeCodexElement extends HTMLElement {
     #previewWorkspaceValue: PreviewWorkspaceController | undefined;
     get #previewWorkspace(): PreviewWorkspaceController {
       if(!this.#previewWorkspaceValue){const owner=this;this.#previewWorkspaceValue=new PreviewWorkspaceController({element:owner,collapse:collapsed=>owner.collapse(collapsed),reconcileEditingModification:tab=>{void owner.#previeweditingSettings.reconcileModifiedPreview(tab);},
+        get sessionAuthority(){return owner.#nativeReconnectMarker;},
+        captureSessionDraft:()=>owner.#previeweditingSettings.captureSessionDraft(),
+        restoreSessionDraft:draft=>owner.#previeweditingSettings.restoreSessionDraft(draft),
         get state(){return owner.#state;},
         get context(){return owner.#workspaceSession.context;},
         get bridge(){return owner.#workspaceSession.bridge;},
@@ -1488,8 +1491,12 @@ export class CodeCodexElement extends HTMLElement {
         this.#fileactionsSettings.closeContextMenu(false);
         this.#closePreviewMarket(false);
         this.#updatesSettings.closeUpdateDialog(false);
+        if (this.#previewWorkspace.hasParkedDirtyDrafts() &&
+            !this.#previeweditingSettings.confirmDiscardEditing("Hide Code-Codex and discard unsaved changes parked in other projects?"))
+            return;
         if (!this.#previeweditingSettings.leaveEditing("Hide Code-Codex and discard your unsaved changes?"))
             return;
+        this.#previewWorkspace.discardSessionMemory();
         this.#enabledAppearancePlugins.delete(CODE_RAIN_PLUGIN_ID);
         await this.#codeRainRuntime.disable();
         this.#enabledAppearancePlugins.delete(ASCII_TILES_BACKGROUND_PLUGIN_ID);
@@ -1676,8 +1683,12 @@ export class CodeCodexElement extends HTMLElement {
             this.#announce("Code-Codex will reconnect after the current save finishes");
             return;
         }
-        if (this.#previeweditingSettings.drafts.path && this.#previeweditingSettings.isEditDirty() &&
-            !this.#previeweditingSettings.confirmDiscardEditing("Reconnect Code-Codex and discard your unsaved changes?")) {
+        const authorityChanged=this.#nativeReconnectMarker!==bootstrap;
+        const parkedDirty=authorityChanged&&this.#previewWorkspace.hasParkedDirtyDrafts();
+        if ((this.#previeweditingSettings.isEditDirty()||parkedDirty) &&
+            !this.#previeweditingSettings.confirmDiscardEditing(parkedDirty
+                ? "Reconnect Code-Codex and discard unsaved changes in this and other parked projects?"
+                : "Reconnect Code-Codex and discard your unsaved changes?")) {
             this.#queuedNativeReconnect = bootstrap;
             return;
         }
@@ -1685,10 +1696,14 @@ export class CodeCodexElement extends HTMLElement {
         this.#queuedThreadSwitch = undefined;
         if (this.#previeweditingSettings.drafts.path)
             this.#previeweditingSettings.clearEditing(false);
+        // Refresh the snapshot before a same-authority retry; stale cached
+        // drafts or explicitly closed tabs must never replace current work.
+        if(authorityChanged)this.#previewWorkspace.discardSessionMemory();
+        else this.#previewWorkspace.suspendSession();
         this.#flushQueuedMainPreviewReconcile();
         // A changed native bridge authority starts a new UI-intent scope, only
         // after the existing save/discard gates accept the reconnect.
-        if (this.#nativeReconnectMarker !== bootstrap) clearDocumentEditorVisibility(this.ownerDocument);
+        if (authorityChanged) clearDocumentEditorVisibility(this.ownerDocument);
         this.#nativeReconnectMarker = bootstrap;
         const compatibility = assessBootstrapCompatibility(bootstrap);
         this.#workspaceSession.generation += 1;
@@ -2300,7 +2315,7 @@ export class CodeCodexElement extends HTMLElement {
         if (!isNativeBrowserGeometryResize(event)) this.#treeinteractionSettings.renderVisible();
     };
     #onBeforeUnload = (event: BeforeUnloadEvent): void => {
-        if (!this.#previeweditingSettings.isEditDirty())
+        if (!this.#previeweditingSettings.isEditDirty()&&!this.#previewWorkspace.hasParkedDirtyDrafts())
             return;
         event.preventDefault();
         event.returnValue = "";
@@ -2573,12 +2588,12 @@ export class CodeCodexElement extends HTMLElement {
                 this.#announce("Task switch queued until the current save finishes");
                 return;
             }
-            if (!this.#previeweditingSettings.leaveEditing("Switch tasks and discard your unsaved changes?")) {
-                this.#queuedThreadSwitch = { threadId, force };
-                diagnostic.finish('deferred', { reason: 'Unsaved edits retained' });
+            this.#queuedThreadSwitch = undefined;
+            if(!this.#previewWorkspace.suspendSession()){
+                this.#queuedThreadSwitch={threadId,force};
+                diagnostic.finish('deferred',{reason:'Unidentified workspace retains unsaved edits'});
                 return;
             }
-            this.#previewWorkspace.purgePreviewTabs(false);
             const selectionChanged = threadId !== this.#workspaceSession.threadId;
             if (selectionChanged || force) {
                 this.#treeinteractionSettings.clearFileFilter(false);
@@ -2634,9 +2649,10 @@ export class CodeCodexElement extends HTMLElement {
                 diagnostic.event('root listing', 'applied', { entryCount: list.entries.length, hasNextPage: !!list.nextCursor, generation });
                 this.#setState("ready");
                 this.#ensureMainPreview();
-                this.#previewWorkspace.syncMainPreview();
+                const restoredSession=this.#previewWorkspace.restoreSession();
+                if(!restoredSession)this.#previewWorkspace.syncMainPreview();
                 this.#treeinteractionSettings.renderTree();
-                if (!this.#previeweditingSettings.restoreDetachedDraft(context))
+                if (restoredSession || !this.#previeweditingSettings.restoreDetachedDraft(context))
                     this.#announce(`${context.projectName} loaded`);
                 this.#previewWorkspace.restorePinnedFiles();
                 if (this.#githistorySettings.gitHistoryOpen)

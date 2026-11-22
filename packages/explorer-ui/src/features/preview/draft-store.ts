@@ -1,4 +1,9 @@
 /** Draft state survives view replacement; it is never a module-global DOM owner. */
+export interface EditDraftSnapshot {
+  readonly path: string;
+  readonly text: string;
+  readonly error?: string;
+}
 export class DraftStore {
   path: string|null=null;
   text='';

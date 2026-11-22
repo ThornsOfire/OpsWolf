@@ -210,6 +210,19 @@ try {
   await ev(`dockedReplacement.remove()`);await delay(60);
   await ev(`viewer.remove()`); await delay(60);
   await check('Disposal restores original native styles', `document.querySelector('#chat').style.maxWidth==='98%'&&document.querySelector('#chat').style.width===''`);
+  // Current Windows shell: the fixed header and the wrapped main share a page
+  // without an active-page marker. The page gutter and toolbar height differ.
+  await ev(`document.body.insertAdjacentHTML('beforeend',
+    '<div id="shared" data-app-shell-shared-local-frame style="zoom:1.3;--app-shell-titlebar-height:8px"><div data-app-shell-page-surface="true" style="display:contents"><header data-app-shell-titlebar style="position:fixed;top:8px;left:0;width:100%;height:46px"><div data-app-shell-header-toolbar><span></span><span></span></div></header><div style="position:fixed;inset:0;display:flex;overflow:hidden"><main data-app-shell-main-surface="default" style="flex:1;margin-top:var(--app-shell-titlebar-height)"></main></div></div></div>');
+    document.querySelector('body > main')?.remove();
+    window.sharedHeader=shared.querySelector('header');
+    window.sharedViewer=document.createElement(fixtureTag);
+    shared.querySelector('main').append(sharedViewer);
+    sharedViewer.setState(state);sharedViewer.showEditor()`);await delay(100);
+  await check('Shared page preserves native gutter and compact header', `getComputedStyle(shared.querySelector('main')).marginTop==='8px' && Math.abs(parseFloat(getComputedStyle(sharedHeader).height)-32)<0.1`);
+  await check('Docked editor meets native titlebar on both axes at zoom', `Math.abs(sharedHeader.getBoundingClientRect().top-sharedViewer.getBoundingClientRect().top)<1 && Math.abs(sharedHeader.getBoundingClientRect().right-sharedViewer.getBoundingClientRect().left)<1`);
+  await ev(`sharedViewer.shadowRoot.querySelector('.editor-fullscreen-toggle').click()`);await delay(80);
+  await check('Shared fullscreen preserves the native toolbar at zoom', `Math.abs(sharedHeader.getBoundingClientRect().bottom-sharedViewer.getBoundingClientRect().top)<2`);
   await check('No unhandled errors', `errors.length===0`);
   console.log(JSON.stringify({passed:true,checks:results},null,2));
 } finally { await browser.close();await new Promise(r=>server.close(r));await stop(); }

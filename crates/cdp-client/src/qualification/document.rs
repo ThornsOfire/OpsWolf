@@ -36,6 +36,7 @@ pub(super) fn layout_observation(value: &Value) -> Value {
         "outerDirectRailCount",
         "rowMainCount",
         "mainContentClip",
+        "ownedPageSurface",
         "directRailCount",
         "workspaceCount",
         "railBeforeWorkspace",

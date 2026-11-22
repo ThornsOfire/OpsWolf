@@ -42,6 +42,8 @@ The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, t
 
 Click a file in the explorer to open it. **E** can also open an empty editor before you've chosen a file.
 
+In the unreleased session-retention fix, switching chats keeps your unpinned document tabs and drafts. Chats using the same project folder share those files. Switching to another project keeps its tabs separate; return to the first project to pick up its files and unsaved work. Native Changes and response comparisons stay with their original chat. Explicitly closed tabs stay closed. Full app shutdown/reload ends this temporary session; pins still reopen filenames, but never restore unsaved contents. Local alpha.19 acceptance passed regular chat switches, disposable drafts, project separation and the existing document controls.
+
 | Control | Behavior |
 | --- | --- |
 | Mouse wheel over tabs | Scrolls through tabs when they overflow |
@@ -52,7 +54,7 @@ Click a file in the explorer to open it. **E** can also open an empty editor bef
 | Editor row's X | Closes unpinned tabs; keeps pinned files open |
 | E | Hides or reopens the editor without closing its tabs |
 
-The tab budget is 64; when opening more files, the controller attempts to evict an eligible unpinned tab. Up to 32 files can be pinned for each project. Pins use the project's normalized absolute root as their key and keep relative file paths in reopening order. Moving the project to another root gives it a different pin identity.
+The tab budget is 64 per active workspace view. At the limit, opening another tab asks you to close one first; existing unpinned tabs are kept. Up to 32 files can be pinned for each project. Pins use the project's normalized absolute root as their key and keep relative file paths in reopening order. Moving the project to another root gives it a different pin identity.
 
 Recorded and native comparison tabs are read-only and can't be pinned. Ordinary source files opened from those comparisons can be pinned normally.
 

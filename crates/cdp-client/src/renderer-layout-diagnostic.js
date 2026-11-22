@@ -38,6 +38,10 @@
   const owner = owners.length === 1 ? owners[0] : null;
   const railBeforeOwner = rails.length === 1 && !!owner && children.indexOf(rails[0]) < children.indexOf(owner);
   const clip = !!parent?.className.includes('MainContentClip');
+  const page = parent?.parentElement;
+  const ownedPageSurface = workspaceContainerMatch && !!owner &&
+    main.matches('main[data-app-shell-main-surface="default"]') &&
+    page?.matches('[data-app-shell-page-surface="true"]') === true && page.parentElement === owner;
   const rowMainCount = row ? active(row).length : 0;
   const ownerMainCount = owner ? active(owner).length : 0;
   const tag = element => ['DIV', 'ASIDE', 'MAIN', 'SECTION', 'ARTICLE', 'HEADER', 'NAV'].includes(element.tagName) ? element.tagName : 'OTHER';
@@ -79,7 +83,7 @@
   if (row && !legacy) checks.push(
     { name: 'row_unique_main', expected: 1, actual: rowMainCount },
     { name: 'row_unique_rail', expected: 1, actual: row.querySelectorAll('aside.app-shell-left-panel').length },
-    { name: 'main_content_clip', expected: true, actual: clip },
+    { name: 'main_surface_structure', expected: true, actual: clip || ownedPageSurface },
     { name: 'one_direct_rail', expected: 1, actual: rails.length },
     { name: 'one_main_owner_child', expected: 1, actual: owners.length },
     { name: 'rail_before_main_owner', expected: true, actual: railBeforeOwner },
@@ -88,7 +92,7 @@
   const explorer = document.querySelector('[data-code-codex-owned="true"]');
   const explorerStyle = explorer ? getComputedStyle(explorer) : null;
   return {
-    diagnosticVersion: 5,
+    diagnosticVersion: 6,
     topFrame: window === window.top,
     appOrigin: location.protocol === 'app:' && location.host === '-',
     readyState: document.readyState,
@@ -105,6 +109,7 @@
     outerDirectRailCount: outerRails.length,
     rowMainCount,
     mainContentClip: clip,
+    ownedPageSurface,
     directRailCount: rails.length,
     workspaceCount: owners.length,
     unifiedTabStripCount: children.filter(child => child.hasAttribute('data-app-shell-unified-tab-strip')).length,

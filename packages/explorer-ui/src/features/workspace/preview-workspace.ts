@@ -2,7 +2,7 @@ import { BridgeUnavailableError,WorkspaceBridge } from "../../bridge";
 import { mediaPreviewRoute } from "../../components/plugin-templates";
 import { type ExplorerContext,type ExplorerSettings,type ExplorerViewState,type FlatTreeRow } from "../../contracts/bridge";
 import { type NormalizedPreview,type PreviewTab } from "../../contracts/explorer-model";
-import type { MainPreviewPort } from "../../contracts/main-preview";
+import type { MainPreviewPort,MainPreviewViewport } from "../../contracts/main-preview";
 import { errorCode,isPathWithin } from "../../core/bridge/response-validation";
 import { MAX_PREVIEW_TABS,PREVIEW_SELECTION_DELAY_MS } from "../../core/configuration/explorer";
 import { GLTF_BINARY_PREVIEW_MIME,GLTF_JSON_PREVIEW_MIME } from "../../core/preview/configuration";
@@ -14,7 +14,25 @@ import { TabStore } from "../preview/tab-store";
 import { PinnedFiles, projectPinKey } from "../preview/pinned-files";
 import type {CitationState,FileCitation} from '../../contracts/citations';
 import {citationRelativePath} from '../preview/citation-model';
+import type {EditDraftSnapshot} from '../preview/draft-store';
+import {normalizeTextareaText,previewText} from '../preview/responses';
+interface ChatPreviewSession {
+ readonly tabs: {tab:PreviewTab;index:number}[];
+ readonly activePath:string|null;
+ readonly viewport:MainPreviewViewport|undefined;
+}
+interface WorkspacePreviewSession {
+ tabs:PreviewTab[];
+ activePath:string|null;
+ draft:EditDraftSnapshot|undefined;
+ viewport:MainPreviewViewport|undefined;
+ readonly chats:Map<string,ChatPreviewSession>;
+}
+const isChatPreview=(tab:PreviewTab):boolean=>tab.path.startsWith('native-diff://')||tab.path.startsWith('review-diff://');
 export interface PreviewWorkspaceControllerPorts {
+ readonly sessionAuthority?:object|undefined;
+ readonly captureSessionDraft?:()=>EditDraftSnapshot|undefined;
+ readonly restoreSessionDraft?:(draft:EditDraftSnapshot|undefined)=>void;
  readonly element:HTMLElement;
  readonly collapse:(collapsed?:boolean)=>void;
  readonly reconcileEditingModification:(tab:PreviewTab)=>void;
@@ -40,6 +58,90 @@ export interface PreviewWorkspaceControllerPorts {
   readonly syncEditModeButton: () => void;
 }
 export class PreviewWorkspaceController {
+ // Authority-object scope prevents another account/bootstrap from inheriting
+ // relative paths or drafts. These maps are never written to disk/preferences.
+ private readonly sessions=new WeakMap<object,Map<string,WorkspacePreviewSession>>();
+ private pendingViewport:MainPreviewViewport|undefined;
+ private sessionSuspended=false;
+
+ hasParkedDirtyDrafts():boolean {
+  const authority=this.host.sessionAuthority;
+  if(!authority)return false;
+  const activeRoot=!this.sessionSuspended&&this.host.context?projectPinKey(this.host.context.rootPath):undefined;
+  for(const [root,session] of this.sessions.get(authority)??[]){
+   if(root===activeRoot||!session.draft)continue;
+   const tab=session.tabs.find(tab=>tab.path===session.draft?.path);
+   if(tab&&session.draft.text!==normalizeTextareaText(previewText(tab.view)))return true;
+  }
+  return false;
+ }
+
+ discardSessionMemory():void {
+  const authority=this.host.sessionAuthority;
+  if(authority)this.sessions.delete(authority);
+ }
+
+ suspendSession():boolean {
+  if(this.sessionSuspended)return true;
+  const context=this.host.context,authority=this.host.sessionAuthority;
+  if(!context?.rootPath||!authority||!this.host.restoreSessionDraft){
+   // Legacy contexts without a root cannot safely share a relative-path cache.
+   // Keep their existing discard/cancel protection instead of guessing a root.
+   if(!this.host.leaveEditing('Switch tasks and discard your unsaved changes?'))return false;
+   this.purgePreviewTabs(false);return true;
+  }
+  let roots=this.sessions.get(authority);
+  if(!roots){roots=new Map();this.sessions.set(authority,roots);}
+  const key=projectPinKey(context.rootPath),previous=roots.get(key);
+  const active=this.previewTabs.find(tab=>tab.path===this.activePreviewPath);
+  const viewport=active?.view.kind==='loading'?this.pendingViewport:this.host.mainPreview?.captureSessionViewport?.();
+  const tabs=this.previewTabs.filter(tab=>!isChatPreview(tab));
+  const sharedActive=active&&!isChatPreview(active)?active.path:
+   tabs.find(tab=>tab.path===previous?.activePath)?.path??tabs[0]?.path??null;
+  const session:WorkspacePreviewSession={tabs,activePath:sharedActive,draft:this.host.captureSessionDraft?.(),
+   viewport:active&&!isChatPreview(active)?viewport:previous?.viewport,chats:previous?.chats??new Map()};
+  session.chats.set(context.threadId,{tabs:this.previewTabs.flatMap((tab,index)=>isChatPreview(tab)?[{tab,index}]:[]),
+   activePath:active&&isChatPreview(active)?active.path:null,viewport:active&&isChatPreview(active)?viewport:undefined});
+  for(const tab of this.previewTabs){
+   if(tab.timer)clearTimeout(tab.timer);
+   tab.timer=undefined;tab.revision+=1;tab.modifiedDuringSave=false;
+   // Reload saved files through the destination's authenticated bridge. Keep
+   // only the draft's baseline (needed for conflict detection), not heavy media.
+   if(!tab.path.includes('://')&&tab.path!==session.draft?.path){
+    tab.view={kind:'loading',path:tab.path,name:tab.name};tab.dirty=true;
+   }
+  }
+  roots.set(key,session);
+  this.sessionSuspended=true;
+  this.previewSessionRevision+=1;this.pendingViewport=undefined;this.citations=undefined;this.restoredProject=undefined;
+  this.host.restoreSessionDraft(undefined);
+  this.tabStore.clear();this.syncMainPreview();this.host.detachMainPreview(false);
+  return true;
+ }
+
+ restoreSession():boolean {
+  const context=this.host.context,authority=this.host.sessionAuthority;
+  if(context)this.sessionSuspended=false;
+  if(!context?.rootPath||!authority||this.previewTabs.length||!this.host.restoreSessionDraft)return false;
+  const key=projectPinKey(context.rootPath),session=this.sessions.get(authority)?.get(key);
+  if(!session)return false;
+  const tabs=[...session.tabs],chat=session.chats.get(context.threadId);
+  for(const item of chat?.tabs??[])tabs.splice(Math.min(item.index,tabs.length),0,item.tab);
+  for(const tab of tabs)this.tabStore.append(tab);
+  this.activePreviewPath=chat?.activePath??session.activePath;
+  if(!tabs.some(tab=>tab.path===this.activePreviewPath))this.activePreviewPath=tabs[0]?.path??null;
+  this.host.restoreSessionDraft(session.draft);
+  this.restoredProject=key;
+  this.pendingViewport=chat?.activePath?chat.viewport:session.viewport;
+  if(this.pendingViewport?.path!==this.activePreviewPath)this.pendingViewport=undefined;
+  this.syncMainPreview();
+  const active=tabs.find(tab=>tab.path===this.activePreviewPath);
+  if(active?.dirty&&active.path!==session.draft?.path&&!active.path.includes('://'))this.schedulePreview(active,0);
+  const draft=tabs.find(tab=>tab.path===session.draft?.path);
+  if(draft)this.host.reconcileEditingModification(draft);
+  return true;
+ }
+
  private citations:CitationState|undefined;
  private citationRevision=0;
  openCitations(ranges:readonly FileCitation[]):void {
@@ -55,7 +157,7 @@ export class PreviewWorkspaceController {
   const threadId=this.host.context?.threadId,preview=this.host.ensureMainPreview();if(!threadId||!preview)return;
   const path=`native-diff://${threadId}`;
   if(!this.previewTabs.some(tab=>tab.path===path)){
-   if(this.previewTabs.length>=MAX_PREVIEW_TABS)this.evictUnpinnedTab();
+   if(!this.canOpenPreviewTab())return;
    this.tabStore.append({path,name:'Changes',view:{kind:'native-diff',path,name:'Changes',threadId},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false});
   }
   // Publish the requested tab before reopening: a hidden conversation may
@@ -77,7 +179,7 @@ export class PreviewWorkspaceController {
     const tabPath=`review-diff://${recordId}/${path}`;
     let tab=this.previewTabs.find(tab=>tab.path===tabPath);
     if(!tab){
-      if(this.previewTabs.length>=MAX_PREVIEW_TABS)this.evictUnpinnedTab();
+      if(!this.canOpenPreviewTab())return;
       tab={path:tabPath,name:path.split('/').at(-1)||path,view:{kind:'git-diff',path:tabPath,name:path.split('/').at(-1)||path,sourcePath:path,openSourcePath,content,truncated:false,shortHash:'Last response'},instanceId:this.tabStore.nextInstanceId(),revision:1,timer:undefined,modifiedDuringSave:false,dirty:false};
       this.tabStore.append(tab);
     }
@@ -100,9 +202,7 @@ export class PreviewWorkspaceController {
 
     let tab=this.previewTabs.find((candidate) => candidate.path===tabPath);
     if(!tab) {
-      if(this.previewTabs.length>=MAX_PREVIEW_TABS) {
-        this.evictUnpinnedTab();
-      }
+      if(!this.canOpenPreviewTab())return;
       tab={
         instanceId: this.tabStore.nextInstanceId(),
         path: tabPath,
@@ -182,10 +282,10 @@ export class PreviewWorkspaceController {
     for (const path of paths) this.openPreviewPath(path, path.split(/[\\/]/).at(-1) ?? path, false);
     if (paths.length) { this.activePreviewPath = active ?? paths[0]!; this.syncMainPreview(); }
   }
-  private evictUnpinnedTab(): void {
-    const pins = this.pinnedPaths;
-    const index = this.previewTabs.findIndex(tab => !pins.includes(tab.path) && tab.path !== this.host.editingPath);
-    if (index >= 0) { const tab = this.tabStore.remove(index); if (tab) this.disposePreviewTab(tab); }
+  private canOpenPreviewTab(): boolean {
+    if(this.previewTabs.length<MAX_PREVIEW_TABS)return true;
+    this.host.announce(`Close a tab before opening another (limit ${MAX_PREVIEW_TABS}). Your existing tabs have been kept.`);
+    return false;
   }
 readonly tabStore = new TabStore<PreviewTab>();
 previewSessionRevision = 0;
@@ -228,9 +328,7 @@ openPreviewPath(relativePath: string, name: string, reveal=true): void {
         if (!preview) return;
         let tab = this.previewTabs.find((candidate) => candidate.path === relativePath);
         if (!tab) {
-            if (this.previewTabs.length >= MAX_PREVIEW_TABS) {
-                this.evictUnpinnedTab();
-            }
+            if(!this.canOpenPreviewTab())return;
             tab = {
                 instanceId: this.tabStore.nextInstanceId(),
                 path: relativePath,
@@ -411,6 +509,8 @@ closeAllPreviewTabs(): boolean {
         this.host.announce('Unpinned tabs closed; pinned tabs kept open');return true;
     }
 purgePreviewTabs(renderRows = true): void {
+        this.sessionSuspended=true;
+        this.pendingViewport=undefined;
         this.citations=undefined;
         this.restoredProject = undefined;
         this.previewSessionRevision += 1;
@@ -444,6 +544,11 @@ syncMainPreview(): void {
             pinnedPaths: this.pinnedPaths,
             ...(editor ? { editor } : {}),
         });
+        if(this.pendingViewport&&this.pendingViewport.path===this.activePreviewPath&&
+           this.previewTabs.find(tab=>tab.path===this.activePreviewPath)?.view.kind!=='loading'){
+            this.host.mainPreview?.restoreSessionViewport?.(this.pendingViewport);
+            this.pendingViewport=undefined;
+        }
         this.host.syncEditModeButton();
     }
 releaseInactiveMediaPreviews(): void {

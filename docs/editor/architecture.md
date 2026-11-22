@@ -8,7 +8,7 @@ Paths below are relative to the repository root.
 
 | Responsibility | Owner |
 | --- | --- |
-| Native-page qualification, injection and remount | `packages/explorer-ui/src/inject.ts`, `packages/explorer-ui/src/adapters/codex-26.715.ts` |
+| Native-page qualification, injection and remount | `packages/explorer-ui/src/inject.ts`, `packages/explorer-ui/src/adapters/editor-workspace.ts`, `packages/explorer-ui/src/adapters/codex-26.715.ts` |
 | Native sidebar's one-time collapse after first user chat selection | `packages/explorer-ui/src/native-sidebar.ts` |
 | Application wiring, authenticated workspace lifecycle, dirty-switch orchestration | `packages/explorer-ui/src/app/explorer-element.ts` |
 | Editor DOM, tabs, metadata controls, source/preview switching | `packages/explorer-ui/src/app/main-preview-element.ts` |
@@ -53,6 +53,16 @@ The inline/edit limit is 512 KiB. The complete text-read limit is 10 MiB. The la
 Textarea drafts use normalized LF line endings. Saving restores CRLF when that convention was recorded in the loaded preview metadata; mixed line endings normalize through the source-editing path.
 
 Dirty close/switch actions capture the current workspace, bridge, editor session and target tabs. The deferred action proceeds only if those identities still match after the user's choice and any save. The same path is used by file-tree selection, tab changes, and diff-to-source opening where applicable.
+
+## Session tab retention
+
+`PreviewWorkspaceController` parks document tabs under the current bootstrap authority object and normalized absolute root, in memory only. Same-root chats share documents; native Changes and response-review tabs are partitioned by chat. A destination receives its parked state only after context compatibility and root listing succeed. Unknown roots do not share a cache key. Full reload/shutdown does not persist these snapshots.
+
+Suspension cancels timers and increments tab/session revisions before detaching the viewer. Saved file bodies are released and read again through the qualified destination bridge; an edited file retains its original version baseline and draft for conflict detection. Late preview/save/reconciliation replies retain their existing identity checks. The preview capability carries source selection and scroll state without reaching into the application element from a feature controller.
+
+A same-authority retry records current state before teardown so closed tabs and discarded edits cannot return from an older snapshot. Changed-authority reconnect and explorer disable include parked dirty drafts in their confirmation; unload warnings include them too. Explicit close/save/cancel behavior and project pin storage remain separate. The 64-tab limit refuses another opening rather than silently evicting an existing tab.
+
+The production-composition regression is `scripts/test-editor-session-tabs.mjs`; its `--bundle` option also exercises a sealed renderer. This is isolated browser evidence, not native-app acceptance.
 
 ## Persistent native patch reviews
 
@@ -140,6 +150,10 @@ The fork's normal installation/settings/plugin/log storage follows the inherited
 The removed snapshot tracker's old retention settings are not current feature policy. See the [cleanup audit](tracker-cleanup.md).
 
 ## Compatibility and scope
+
+On the Codex 26.1117 layout, startup and inline explorer placement recognize the default main inside a marked page surface. Its direct holder must belong to the marked workspace beside a single preceding rail. Earlier clip-based layouts keep their existing checks. The layout fixture suite checks both interpretations against the native predicate and the explorer adapter.
+
+The main titlebar can span the inline explorer even when the conversation body starts beside it. The renderer measures that overlap from the conversation edge and insets the title contents. With Code Rain active, the frame, page fill and decorative workspace backing let the underlying animation show through. Run `node scripts/test-page-shell-panels.mjs` after building the renderer to check both behaviors in a synthetic chat.
 
 Wrapped gutters measure row height and line-height in CSS units. Viewport bounding rectangles include ancestor CSS zoom and must not be divided by an unscaled line-height; that creates extra/missing gutter rows. Fixtures compare actual source/gutter line positions at 80%, 120%, 150% and 225% zoom in both editable and read-only source, plus 1080p/4K viewport cases with fractional zoom and device scaling. These synthetic checks don't imply every monitor/font/driver combination has been tested.
 

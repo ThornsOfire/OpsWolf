@@ -7,10 +7,13 @@ import { createRequire } from "node:module";
 const root = resolve(import.meta.dirname, "..");
 const requireUi = createRequire(join(root, "packages/explorer-ui/package.json"));
 const ts = requireUi("typescript");
-const adapter = ts.transpileModule(
-  readFileSync(join(root, "packages/explorer-ui/src/adapters/codex-26.715.ts"), "utf8"),
-  { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } },
-).outputText.replaceAll(/^export /gm, "");
+const adapter = requireUi("esbuild").buildSync({
+  stdin: {
+    contents: 'export { activePageElements, MAIN_SURFACE_SELECTOR, qualifiedAppShellForMain, annotationConsensusThreadId } from "./codex-26.715"; export { qualifiedEditorWorkspace } from "./editor-workspace";',
+    resolveDir: join(root, "packages/explorer-ui/src/adapters"),
+  },
+  bundle: true, write: false, format: "iife", globalName: "layoutApi",
+}).outputFiles[0].text;
 const versions = ts.transpileModule(
   readFileSync(join(root, "packages/explorer-ui/src/adapters/codex-layout-version.ts"), "utf8"),
   { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } },
@@ -45,6 +48,18 @@ const nestedShell = (content, marker = 'data-app-shell-workspace="true"') => `<b
 const nestedRail = '<aside class="app-shell-left-panel"></aside>';
 fixtures.currentNested = nestedShell(`<div style="position:absolute;pointer-events:none"></div>${nestedRail}${page(true, 'thread_current_001')}`);
 fixtures.currentNestedCached = nestedShell(`${nestedRail}${page(true, 'thread_current_001')}${page(false, 'thread_cached_002')}`);
+// Observed replacement: the direct rail's sibling owns a marked page surface,
+// then one plain wrapper owns main. Neither wrapper has MainContentClip.
+const replacementSurface = '<div data-app-shell-page-surface="true" style="display:flex;flex:1;flex-direction:column"><header>Fixture</header><div style="display:flex;flex:1"><main data-app-shell-main-surface="default"></main></div></div>';
+const replacementHolder = content => `<div style="display:flex;flex:1">${content}</div>`;
+fixtures.currentNestedPageSurface = nestedShell(`<div style="position:absolute;pointer-events:none"></div>${nestedRail}${replacementHolder(replacementSurface)}`);
+const cachedSurface = (active, id) => {
+  const annotations = `<div data-above-composer-conversation-id="${id}"></div><div data-response-annotation-conversation="${id}"></div>`;
+  return `<div data-app-shell-active-page="${active}">${replacementSurface.replace('</main>', annotations + '</main>')}</div>`;
+};
+fixtures.currentNestedPageSurfaceCached = nestedShell(nestedRail + cachedSurface(true, 'thread_current_001') + cachedSurface(false, 'thread_cached_002'));
+fixtures.nestedPageSurfaceMissing = nestedShell(`${nestedRail}${replacementHolder(replacementSurface.replace('data-app-shell-page-surface="true"', ''))}`);
+fixtures.nestedPageSurfaceOutsideOwner = nestedShell(`${nestedRail}<div data-app-shell-page-surface="true" style="display:flex;flex:1">${replacementSurface.replace('data-app-shell-page-surface="true"', '')}</div>`);
 fixtures.nestedNoMarker = nestedShell(`${nestedRail}${page(true, 'thread_current_001')}`, '');
 fixtures.nestedTooDeep = nestedShell(`<div>${nestedRail}${page(true, 'thread_current_001')}</div>`);
 fixtures.nestedWrongOrder = nestedShell(`${page(true, 'thread_current_001')}${nestedRail}`);
@@ -85,10 +100,11 @@ for (const [name, markup] of Object.entries(fixtures)) {
   </style></head><body>${markup}<div data-app-shell-page-surface="true"><div class="sidebar-navigation" id="mask-sidebar"></div><div data-thread-scroll-footer="true"><div class="pointer-events-none bg-surface" id="mask-footer"></div></div><div data-app-shell-main-content-top-fade="visible"><div class="_MainContentTopFade_new" id="mask-fade"></div></div></div><p>private-conversation-text-must-not-leak</p><script>
     window.exports = {};
     ${adapter}\n${versions}
-    const mains = activePageElements(document, exports.MAIN_SURFACE_SELECTOR);
+    const { activePageElements, MAIN_SURFACE_SELECTOR, qualifiedAppShellForMain, qualifiedEditorWorkspace, annotationConsensusThreadId } = layoutApi;
+    const mains = activePageElements(document, MAIN_SURFACE_SELECTOR);
     const main = mains.length === 1 ? mains[0] : null;
     const legacy = Boolean(main && qualifiedAppShellForMain(main));
-    const current = main ? qualifiedWorkspaceRowForMain(main) : null;
+    const current = main ? qualifiedEditorWorkspace(main) : null;
     const probe = Boolean(eval(${JSON.stringify(expression)}));
     const diagnostic = eval(${JSON.stringify(diagnosticExpression)});
     const backgroundPassed = getComputedStyle(document.querySelector('#mask-sidebar')).backgroundColor === 'rgba(0, 0, 0, 0)' &&
@@ -104,13 +120,13 @@ for (const [name, markup] of Object.entries(fixtures)) {
       const treeRect = tree.getBoundingClientRect();
       const mainLeft = main.getBoundingClientRect().left;
       window.treeBetween = treeRect.left >= railRight && mainLeft >= treeRect.right;
-      if (['currentCached', 'currentNestedCached'].includes(${JSON.stringify(name)})) {
+      if (['currentCached', 'currentNestedCached', 'currentNestedPageSurfaceCached'].includes(${JSON.stringify(name)})) {
         window.initialThread = annotationConsensusThreadId();
         const pages = document.querySelectorAll('[data-app-shell-active-page]');
         pages[0].setAttribute('data-app-shell-active-page', 'false');
         pages[1].setAttribute('data-app-shell-active-page', 'true');
-        const nextMain = activePageElements(document, exports.MAIN_SURFACE_SELECTOR)[0];
-        const nextMount = qualifiedWorkspaceRowForMain(nextMain);
+        const nextMain = activePageElements(document, MAIN_SURFACE_SELECTOR)[0];
+        const nextMount = qualifiedEditorWorkspace(nextMain);
         nextMount.row.insertBefore(tree, nextMount.workspace);
         window.switchPassed = Boolean(eval(${JSON.stringify(expression)})) &&
           annotationConsensusThreadId() === 'thread_cached_002' &&
@@ -144,7 +160,8 @@ for (const [name, markup] of Object.entries(fixtures)) {
     assert.equal(result.diagnostic.rowChildren[1].workspaceClass, false);
     assert.equal(result.diagnostic.mainAncestors.some((ancestor) => ancestor.workspaceClass), true);
   }
-  if (name === "currentCached" || name === "currentNestedCached") {
+  assert.equal(result.diagnostic.ownedPageSurface, name.startsWith("currentNestedPageSurface"), `${name}: marked page belongs to the direct workspace holder`);
+  if (["currentCached", "currentNestedCached", "currentNestedPageSurfaceCached"].includes(name)) {
     assert.equal(result.initialThread, 'thread_current_001', 'cached thread annotations must be ignored');
     assert.equal(result.switchPassed, true, 'activity-only page swap must preserve qualification and tree position');
     assert.equal(result.diagnostic.totalMainCount, 2);

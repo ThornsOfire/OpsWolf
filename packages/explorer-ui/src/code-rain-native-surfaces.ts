@@ -14,9 +14,18 @@ html[data-code-codex-code-rain-background] {
 html[data-code-codex-code-rain-background][data-code-codex-code-rain-background][data-code-codex-code-rain-background] body aside[data-testid="app-shell-floating-left-panel"] {
   background-color: rgb(16,17,20) !important;
 }
-/* Current native peek menus overflow their 62px rail. Paint the menu itself,
- * not only that rail. The state gate leaves the expanded sidebar unchanged. */
+@media (forced-colors: none) and (prefers-reduced-transparency: no-preference) {
+/* The page shell paints both a frame gradient and a decorative workspace fill
+ * underneath the panels. Their own translucent masks provide the contrast. */
+html[data-code-codex-code-rain-background] [data-app-shell-frame][data-app-shell-page-surface="true"],
+html[data-code-codex-code-rain-background] [data-app-shell-frame] [data-app-shell-page-surface="true"]:not([data-app-shell-active-page="false"], [data-app-shell-active-page="false"] *),
+html[data-code-codex-code-rain-background] [data-app-shell-frame] [data-app-shell-workspace="true"] > [data-app-shell-surface-backing][aria-hidden="true"] {
+  background-color: transparent !important;
+  background-image: none !important;
+}
+}
 @media (forced-colors: none) {
+/* Current native peek menus overflow their rail. Paint the menu itself. */
 html[data-code-codex-code-rain-background][data-code-codex-code-rain-background][data-code-codex-code-rain-background] body aside[data-slate-sidebar-peeking="true"] .sidebar-navigation {
   background-color: rgb(16,17,20) !important;
 }

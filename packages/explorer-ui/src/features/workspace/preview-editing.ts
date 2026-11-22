@@ -4,7 +4,7 @@ import type { DetachedEditDraft } from '../../contracts/explorer-model';
 import { type NormalizedTextPreview,type PreviewTab } from "../../contracts/explorer-model";
 import type { MainPreviewPort } from "../../contracts/main-preview";
 import { WorkspaceSession } from "../../core/session/workspace-session";
-import { DetachedDraftStore,DraftStore } from '../preview/draft-store';
+import { DetachedDraftStore,DraftStore,type EditDraftSnapshot } from '../preview/draft-store';
 import { isEditablePreview,normalizeTextareaText,previewText } from "../preview/responses";
 const detachedDrafts=new DetachedDraftStore<DetachedEditDraft>();
 const clearDetachedEditDraft=() => detachedDrafts.clear();
@@ -44,6 +44,20 @@ export interface PreviewEditingControllerPorts {
   readonly flushQueuedNativeReconnect: () => boolean;
 }
 export class PreviewEditingController {
+  captureSessionDraft(): EditDraftSnapshot | undefined {
+    return this.drafts.path ? {path:this.drafts.path,text:this.drafts.text,...(this.drafts.error===undefined?{}:{error:this.drafts.error})} : undefined;
+  }
+  restoreSessionDraft(saved: EditDraftSnapshot | undefined): void {
+    // Switching waits for saves first. Invalidate pending reconciliation without
+    // flushing a queued switch/reconnect in the middle of suspending its tabs.
+    this.drafts.path=saved?.path??null;
+    this.drafts.text=saved?.text??'';
+    this.drafts.error=saved?.error;
+    this.drafts.saving=false;
+    this.drafts.revision+=1;
+    this.drafts.session+=1;
+    this.syncEditModeButton();
+  }
   reportConflict(message:string):void { this.drafts.error=message; }
   readonly drafts = new DraftStore();
   constructor(private readonly host: PreviewEditingControllerPorts) { }

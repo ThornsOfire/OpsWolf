@@ -21,6 +21,7 @@ import { MAX_PREVIEW_TEXT_UNITS } from "../core/configuration/explorer";
 import { CONVERSATION_ICON,CSV_PREVIEWER_ID,DIAGRAM_PREVIEWER_ID,MAIN_PREVIEW_ACTIVATE_EVENT,MAIN_PREVIEW_CLOSE_EVENT,MAIN_PREVIEW_DRAFT_EVENT,MAIN_PREVIEW_RELOAD_EVENT,MAIN_PREVIEW_SAVE_EVENT,MAIN_PREVIEW_TAG,MARKDOWN_PREVIEWER_ID } from "../core/preview/configuration";
 import { cloneView,firstVisibleLineOffset,formatBytes,isCsvPreviewPath,isDiagramPreviewPath,isMarkdownPreviewPath,isMediaPreviewView,normalizeState,officeDocumentKind,previewerIdForMediaKind,previewMethod,previewPackageId,restoreAttribute,selectionOffsetWithin,sourceLineCount,textPositionAtOffset,unsupportedCopy } from "../features/preview/view-state";
 import { documentEditorVisibility } from "../features/preview/editor-visibility";
+import type { MainPreviewViewport } from '../contracts/main-preview';
 import type { DiagramPreviewJob,DocxBlockSplitResult,DocxPaginationClock,FocusSnapshot,MainPreviewActivateDetail,MainPreviewActivateEvent,MainPreviewCloseDetail,MainPreviewCloseEvent,MainPreviewDraftDetail,MainPreviewDraftEvent,MainPreviewEditorState,MainPreviewEmptyView,MainPreviewFileView,MainPreviewGitDiffView,MainPreviewMediaView,MainPreviewModelView,MainPreviewPathDetail,MainPreviewReloadEvent,MainPreviewSaveEvent,MainPreviewState,MainPreviewTextView,ModelMemoryCacheScope,ModelPreviewJob,ModelPreviewSourceInspection,NotebookCellModel,NotebookMimeBundle,NotebookModel,NotebookOutputModel,NotebookPreviewJob,NotebookRenderBudget,OfficeDomBudget,OfficePreviewJob,ParsedXlsxWorksheet,PdfPreviewJob,SuppressedAttributes,XlsxSharedStrings,XlsxStyleTable,XlsxWorksheetMeta } from "../file-preview/contracts";
 import { localizeOwnedUi } from "../i18n";
 import { getFileIcon,icons } from "../icons";
@@ -62,6 +63,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   _largeTextReader: LargeTextReader | null = null;
   _largeMarkdownKey: string | undefined;
   _draftPreviewPath: string | undefined;
+  private sessionViewportRevision = 0;
 
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
@@ -358,6 +360,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   setState(state: MainPreviewState): void {
+    const viewportRevision = this.sessionViewportRevision;
     const nextState = normalizeState(state);
     const workspaceChanged = nextState.workspace?.threadId !== this._state.workspace?.threadId ||
       nextState.workspace?.rootPath !== this._state.workspace?.rootPath;
@@ -384,6 +387,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         return {
           scrollTop: scroller?.scrollTop ?? 0,
           scrollLeft: scroller?.scrollLeft ?? 0,
+          selection: scroller instanceof HTMLTextAreaElement && !editorTransition && !workspaceChanged
+            ? {start:scroller.selectionStart,end:scroller.selectionEnd,direction:scroller.selectionDirection} : undefined,
         };
       })()
       : undefined;
@@ -406,7 +411,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._syncSuppression();
     if (readerViewport) {
       queueMicrotask(() => {
-        if (this._connected && this._state.activePath === nextState.activePath) {
+        if (this._connected && this._state === nextState && this.sessionViewportRevision === viewportRevision) {
           const previewContent = this._panelMount.querySelector<HTMLElement>(".preview-content");
           const markdownEditor = this._panelMount.querySelector<HTMLElement>(".markdown-editor-surface");
           if (markdownEditor) {
@@ -431,6 +436,10 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
               editor.setSelectionRange(caret, caret);
               editor.focus({ preventScroll: true });
             }
+            else if (readerViewport.selection) {
+              const selection=readerViewport.selection;
+              editor.setSelectionRange(selection.start,selection.end,selection.direction);
+            }
             editor.scrollTop = readerViewport.scrollTop;
             editor.scrollLeft = readerViewport.scrollLeft;
             this._syncEditorScroll(editor);
@@ -443,6 +452,34 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
         }
       });
     }
+  }
+
+  captureSessionViewport(): MainPreviewViewport | undefined {
+    const path=this._state.activePath;
+    if(!path)return;
+    const scroller=this._panelMount.querySelector<HTMLElement>('.code-editor')??this._panelMount.querySelector<HTMLElement>('.preview-content');
+    return {path,scrollTop:scroller?.scrollTop??0,scrollLeft:scroller?.scrollLeft??0,
+      draftPreview:this._draftPreviewPath===path,
+      ...(scroller instanceof HTMLTextAreaElement?{selection:{start:scroller.selectionStart,end:scroller.selectionEnd,direction:scroller.selectionDirection}}:{})};
+  }
+
+  restoreSessionViewport(viewport: MainPreviewViewport): void {
+    if(viewport.path!==this._state.activePath)return;
+    const draftPreview=viewport.draftPreview?viewport.path:undefined;
+    if(this._draftPreviewPath!==draftPreview){this._draftPreviewPath=draftPreview;this._renderPanel();}
+    const revision=++this.sessionViewportRevision,state=this._state;
+    queueMicrotask(()=>{
+      if(!this._connected||this._state!==state||this.sessionViewportRevision!==revision)return;
+      const scroller=this._panelMount.querySelector<HTMLElement>('.code-editor')??this._panelMount.querySelector<HTMLElement>('.preview-content');
+      if(!scroller)return;
+      if(scroller instanceof HTMLTextAreaElement&&viewport.selection){
+        const selection=viewport.selection;
+        scroller.setSelectionRange(selection.start,selection.end,selection.direction);
+      }
+      scroller.scrollTop=viewport.scrollTop;scroller.scrollLeft=viewport.scrollLeft;
+      if(scroller instanceof HTMLTextAreaElement)this._syncEditorScroll(scroller);
+      // Returning to a chat must not take focus from its composer/sidebar.
+    });
   }
 
   _syncWordWrap(): void {

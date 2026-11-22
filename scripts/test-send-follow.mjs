@@ -22,10 +22,13 @@ const richHtml=`<!doctype html><meta charset="utf-8"><style>body{margin:0}main{w
 <div id="composer" data-codex-composer-root><div id="portal" data-above-composer-conversation-id="fixture-rich-thread"><div id="editor" role="textbox" contenteditable="true">Synthetic rich draft</div><button id="rich-send" type="button">Synthetic submit</button></div><div id="fixed" data-above-composer-conversation-id="fixture-rich-thread" data-above-composer-fixed-content-portal="true" style="display:none"></div></div></main></div>
 <script src="/bundle.js"></script><script>
 window.s=document.getElementById('scroll');window.content=document.getElementById('content');window.portal=document.getElementById('portal');window.fixed=document.getElementById('fixed');window.editor=document.getElementById('editor');window.acceptPromise=Promise.resolve();
-window.resetRich=()=>{window.dispose?.();portal.setAttribute('data-above-composer-conversation-id','fixture-rich-thread');fixed.setAttribute('data-above-composer-conversation-id','fixture-rich-thread');content.innerHTML=Array.from({length:30},(_,i)=>'<div data-content-search-unit-key="rich-'+i+'"><p>Synthetic history '+i+'</p></div>').join('')+'<div data-content-search-unit-key="rich-user-old"><div data-user-message-bubble="true"><p>Previous synthetic message</p></div></div>';editor.textContent='Synthetic rich draft';window.accepted=0;window.mode='append';window.order='message-first';window.queueCommit=false;window.queuedCommit=null;s.scrollTop=s.scrollHeight;window.dispose=install();};
+window.resetRich=()=>{window.dispose?.();portal.setAttribute('data-above-composer-conversation-id','fixture-rich-thread');fixed.setAttribute('data-above-composer-conversation-id','fixture-rich-thread');content.innerHTML=Array.from({length:30},(_,i)=>'<div data-content-search-unit-key="rich-'+i+'"><p>Synthetic history '+i+'</p></div>').join('')+'<div data-content-search-unit-key="rich-user-old"><div data-user-message-bubble="true"><p>Previous synthetic message</p></div></div>';editor.textContent='Synthetic rich draft';window.accepted=0;window.mode='append';window.order='message-first';window.transientState=null;window.queueCommit=false;window.queuedCommit=null;s.scrollTop=s.scrollHeight;window.dispose=install();};
 window.commitRich=async()=>{const finish=async()=>{const publish=()=>{accepted++;if(mode==='reuse'){const unit=content.lastElementChild;unit.setAttribute('data-content-search-unit-key','rich-user-'+accepted);unit.querySelector('p').textContent='Accepted synthetic message '+accepted;}else if(mode==='same-key'){content.lastElementChild.replaceWith(content.lastElementChild.cloneNode(true));}else if(mode==='history'){content.insertAdjacentHTML('afterbegin','<div data-content-search-unit-key="rich-older"><div data-user-message-bubble="true"><p>Older synthetic history</p></div></div>');}else{content.insertAdjacentHTML('beforeend','<div data-content-search-unit-key="rich-user-'+accepted+'"><div data-user-message-bubble="true"><p>Accepted synthetic message '+accepted+'</p></div></div>');}};
 const clear=()=>{if(mode==='replace-editor'){const next=editor.cloneNode(false);editor.replaceWith(next);window.editor=next;}editor.textContent='';editor.dispatchEvent(new Event('input',{bubbles:true}));};
-if(order==='clear-first'){clear();await new Promise(r=>setTimeout(r,30));publish();}else{publish();await new Promise(r=>setTimeout(r,30));clear();}};if(queueCommit)queuedCommit=finish;else await finish();};
+const temporary=transientState;const setTemporary=value=>{if(temporary==='readonly')editor.setAttribute('contenteditable',value?'false':'true');else if(temporary==='hidden')editor.hidden=value;else if(temporary==='aria-hidden'){if(value)portal.setAttribute('aria-hidden','true');else portal.removeAttribute('aria-hidden');}else if(temporary==='inert')portal.inert=value;};
+if(temporary){setTemporary(true);await new Promise(r=>setTimeout(r,80));}
+if(order==='clear-first'){clear();await new Promise(r=>setTimeout(r,30));publish();}else{publish();await new Promise(r=>setTimeout(r,30));clear();}
+if(temporary){await new Promise(r=>setTimeout(r,80));setTemporary(false);}};if(queueCommit)queuedCommit=finish;else await finish();};
 document.getElementById('composer').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229&&editor.contains(e.target)){e.preventDefault();window.acceptPromise=commitRich();}});
 document.getElementById('rich-send').addEventListener('click',()=>{window.acceptPromise=commitRich();});
 window.latest=()=>s.scrollHeight-s.clientHeight-s.scrollTop<4;window.paused=()=>{const control=document.querySelector('[data-code-codex-reading-control]');return !!control&&!control.hidden;};resetRich();
@@ -97,6 +100,47 @@ try{
   await prepareRich(mode,order);await key();await ev('acceptPromise');await delay(100);
   await checkRich(mode+' / '+order+': accepted rich commit resumes following',`accepted===1&&editor.textContent===''&&!paused()&&latest()`);
  }
+ // The native trace retained the same editor inside a temporarily hidden
+ // ancestor, then cleared it before the new message arrived. Also exercise
+ // readonly/hidden/inert forms of the same bounded availability transition.
+ // Message arrival and draft clearing must still agree after it returns.
+ for(const state of ['readonly','hidden','aria-hidden','inert'])for(const order of ['message-first','clear-first']){
+  await prepareRich('append',order);await ev('transientState='+JSON.stringify(state));await key();await ev('acceptPromise');await delay(100);
+  await checkRich('Temporary '+state+' / '+order+': same-editor accepted send resumes','accepted===1&&editor.textContent===""&&!paused()&&latest()');
+ }
+ for(const mode of ['same-key','replace-editor']){
+  await prepareRich(mode);await ev("transientState='aria-hidden'");await key();await ev('acceptPromise');await delay(100);
+  await checkRich('Temporary hidden / '+mode+': missing acceptance or changed editor stays paused','paused()&&!latest()');
+ }
+ // Exact live order: same editor becomes unavailable, returns empty, then
+ // the accepted message arrives. Neither availability nor clearing is a send.
+ await prepareRich();await ev('queueCommit=true');await key();
+ await ev("portal.setAttribute('aria-hidden','true');editor.textContent=''");await delay(80);
+ await checkRich('Hidden empty editor does not resume before acceptance','accepted===0&&paused()&&!latest()');
+ await ev("portal.removeAttribute('aria-hidden')");await delay(80);
+ await checkRich('Restored empty editor still waits for the new user message','accepted===0&&paused()&&!latest()');
+ await ev('queuedCommit()');await delay(100);
+ await checkRich('Message arriving after empty editor restoration resumes following','accepted===1&&!paused()&&latest()');
+ await prepareRich();await ev('queueCommit=true');await key();
+ await ev("portal.setAttribute('aria-hidden','true')");await delay(80);await wheel();
+ await ev("portal.removeAttribute('aria-hidden');queuedCommit()");await delay(100);
+ await checkRich('User scroll during temporary hiding cancels delayed acceptance','accepted===1&&paused()&&!latest()');
+ await prepareRich();await ev('queueCommit=true');await key();
+ await ev("portal.setAttribute('aria-hidden','true');(()=>{const alternative=document.createElement('textarea');alternative.id='alternative';document.getElementById('composer').append(alternative)})()");await delay(80);
+ await ev("document.getElementById('alternative').remove();portal.removeAttribute('aria-hidden');queuedCommit()");await delay(100);
+ await checkRich('A different available editor cancels the temporarily hidden editor intent','accepted===1&&paused()&&!latest()');
+ await prepareRich();await ev('queueCommit=true');await key();
+ await ev("(()=>{const alternative=document.createElement('textarea');alternative.id='alternative';portal.append(alternative)})()");await delay(80);
+ await ev("document.getElementById('alternative').remove();queuedCommit()");await delay(100);
+ await checkRich('Ambiguous available editors cancel pending intent','accepted===1&&paused()&&!latest()');
+ await prepareRich();await ev('queueCommit=true');await key();
+ await ev("portal.setAttribute('aria-hidden','true')");await delay(80);
+ await ev("portal.setAttribute('data-above-composer-conversation-id','fixture-other-thread');fixed.setAttribute('data-above-composer-conversation-id','fixture-other-thread');portal.removeAttribute('aria-hidden');queuedCommit()");await delay(100);
+ await checkRich('Chat change during temporary hiding cancels pending intent','accepted===1&&!latest()');
+ await prepareRich();await ev('queueCommit=true');await key();
+ await ev("portal.setAttribute('aria-hidden','true')");await delay(10100);
+ await ev("portal.removeAttribute('aria-hidden');queuedCommit()");await delay(100);
+ await checkRich('Temporary hiding cannot extend the original acceptance deadline','accepted===1&&paused()&&!latest()');
  for(const order of ['message-first','clear-first']){
   await prepareRich('replace-editor',order);await key();await ev('acceptPromise');await delay(100);
   await checkRich('Replaced rich editor / '+order+': pending ownership is cancelled','accepted===1&&paused()&&!latest()');

@@ -25,9 +25,13 @@ export class SendFollow {
     doc.addEventListener('compositionend', this.compositionEnd, options);
   }
 
+  private editors(root: HTMLElement): HTMLElement[] {
+    return [...root.querySelectorAll<HTMLElement>('[contenteditable="true"],textarea')]
+      .filter(e => !e.closest('[hidden],[inert],[aria-hidden="true"]') &&
+        !e.matches(':disabled,[readonly],[aria-disabled="true"]') && e.getBoundingClientRect().width > 0);
+  }
   private editor(root: HTMLElement): HTMLElement | undefined {
-    const editors = [...root.querySelectorAll<HTMLElement>('[contenteditable="true"],textarea')]
-      .filter(e => !e.closest('[hidden],[inert],[aria-hidden="true"]') && e.getBoundingClientRect().width > 0);
+    const editors = this.editors(root);
     return editors.length === 1 ? editors[0] : undefined;
   }
   private latest(): Message | undefined {
@@ -66,7 +70,14 @@ export class SendFollow {
     const pending = this.pending;
     if (!pending) return;
     if (!this.ports.valid() || this.doc.hidden || this.ports.composer() !== pending.root ||
-        this.editor(pending.root) !== pending.editor || pending.revision !== this.ports.interactionRevision()) { this.cancel(); return; }
+        !pending.editor.isConnected || !pending.root.contains(pending.editor) ||
+        pending.revision !== this.ports.interactionRevision()) { this.cancel(); return; }
+    const editors = this.editors(pending.root);
+    // Native sending can temporarily hide/disable the same connected editor.
+    // Keep its intent only until the original deadline; do not resume while it
+    // is unavailable, adopt a replacement, or accept an ambiguous composer.
+    if (!editors.length) return;
+    if (editors.length !== 1 || editors[0] !== pending.editor) { this.cancel(); return; }
     const latest = this.latest();
     if (!latest) return;
     // Native rendering can reuse a bubble node for a new stable message unit.

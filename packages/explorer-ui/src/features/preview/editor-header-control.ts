@@ -71,9 +71,14 @@ export class EditorHeaderControl {
       this.compactStyle=this.host.ownerDocument.createElement('style');
       this.compactStyle.dataset.codeCodexOwned='compact-header';
       this.compactStyle.textContent=`
-        [data-code-codex-compact-header],
+        /* In the shared frame the page inherits an 8px gutter through this
+           variable. Only the header itself uses it as a row height. */
+        [data-code-codex-compact-header]:not([data-app-shell-shared-local-frame] > *),
         [data-code-codex-compact-header] header[data-app-shell-titlebar] {
           --app-shell-titlebar-height:32px !important;
+        }
+        [data-code-codex-compact-header],
+        [data-code-codex-compact-header] header[data-app-shell-titlebar] {
           --app-shell-header-height:32px !important;
         }
         [data-code-codex-compact-header] header[data-app-shell-titlebar] {

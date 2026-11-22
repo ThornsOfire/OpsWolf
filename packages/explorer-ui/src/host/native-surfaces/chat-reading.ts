@@ -77,7 +77,7 @@ export function installChatReading(doc: Document = document): () => void {
   const schedule = () => { if (!frame) frame = requestAnimationFrame(sync); };
   const observer = new MutationObserver(schedule);
   observer.observe(doc.documentElement, {subtree: true, childList: true, characterData: true, attributes: true,
-    attributeFilter: ['data-app-shell-active-page','data-above-composer-conversation-id','data-response-annotation-conversation','aria-expanded','aria-label','data-local-conversation-item-target-ids','data-content-search-turn-key','hidden','inert','aria-hidden','disabled','aria-disabled']});
+    attributeFilter: ['data-app-shell-active-page','data-above-composer-conversation-id','data-response-annotation-conversation','aria-expanded','aria-label','data-local-conversation-item-target-ids','data-content-search-turn-key','hidden','inert','aria-hidden','disabled','aria-disabled','contenteditable','readonly']});
   doc.addEventListener('visibilitychange', schedule);
   const dispose = () => { disposed = true; observer.disconnect(); doc.removeEventListener('visibilitychange', schedule); cancelAnimationFrame(frame); release(); activityStates.clear(); if (registry[OWNER] === dispose) delete registry[OWNER]; };
   registry[OWNER] = dispose;

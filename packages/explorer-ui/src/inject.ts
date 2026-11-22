@@ -17,15 +17,14 @@ import { EXPLORER_TAG, OWNED_EXPLORER_SELECTOR, rendererStartBlock, reportRender
 import { CodeCodexElement } from "./app/explorer-element";
 import { GLOW_HORIZON_BACKGROUND_ATTRIBUTE, GLOW_HORIZON_BACKGROUND_COLOR_PROPERTY, PARTICLE_BACKGROUND_ATTRIBUTE, PARTICLE_BACKGROUND_COLOR_PROPERTY, TRANSPARENT_BACKGROUND_ATTRIBUTE, TRANSPARENT_BACKGROUND_COLOR_PROPERTY } from "./core/configuration/explorer";
 import {
-  codex26715Adapter,
   activePageElements,
   isClippedMainSurface,
   isTemporaryLocalThreadAlias,
   MAIN_SURFACE_SELECTOR,
   plausibleThreadId,
   qualifiedAppShellForMain,
-  qualifiedWorkspaceRowForMain,
 } from "./adapters/codex-26.715";
+import { qualifiedEditorWorkspace } from "./adapters/editor-workspace";
 import { usesClippedMainLayout } from "./adapters/codex-layout-version";
 import { isHomeWorkspaceView } from "./home-view";
 import { LOGIN_BACKGROUND_CSS, reconcileLoginBackground, isNativeLoginView } from "./native-login";
@@ -49,7 +48,9 @@ const TRANSPARENT_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-transparent
 // pseudo-surface and gradient fades. Keep one mask on each outer surface.
 const PAGE_SURFACE_BACKGROUND_CSS = `
 html:is([data-code-codex-particle-image-background], [data-code-codex-glow-horizon-background]) [data-app-shell-page-surface="true"] :is(
-  .sidebar-navigation,
+  /* Codex puts the same navigation class on its inner hover flyout. Let
+   * that surface paint its native popover color while it floats over content. */
+  .sidebar-navigation:not(:where([data-slate-sidebar-content][class~="bg-(--app-shell-sidebar-popover-background)"])),
   [data-app-shell-main-content-top-fade] [class*="MainContentTopFade"],
   [data-thread-scroll-footer="true"],
   [data-thread-scroll-footer="true"] > .pointer-events-none.bg-surface
@@ -64,12 +65,29 @@ html:is([data-code-codex-particle-image-background], [data-code-codex-glow-horiz
 `;
 const CURRENT_LAYOUT_EXPLORER_SELECTOR = `${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-mount-strategy="known:workspace-row"]`;
 const CURRENT_LAYOUT_HEADER_LEFT_PROPERTY = "--code-codex-current-layout-header-left";
+const TITLE_TREE_OVERLAP = "--code-codex-title-tree-overlap";
+const PAGE_HEADER = 'header[data-app-shell-titlebar]:not(:has([data-app-shell-titlebar-content]), [data-app-shell-active-page="false"] *)';
+const PAGE_TITLE = `${PAGE_HEADER} [data-app-shell-main-titlebar]:not([inert])`;
 const SHELL_LAYOUT_CSS = `
 /* The new page shell keeps the conversation title in a fixed body header,
  * outside the flex row that our file tree widens. Shift that header by the
  * measured panel width; the legacy title lives inside main and is untouched. */
 html:has(${CURRENT_LAYOUT_EXPLORER_SELECTOR}:not([data-home-view-hidden])) header:has([data-app-shell-titlebar-content]):not([data-app-shell-active-page="false"] *) {
   left: var(${CURRENT_LAYOUT_HEADER_LEFT_PROPERTY}) !important;
+}
+
+/* The new header can span the tree. Inset its contents by the overlap while
+ * leaving its end controls and the application menu anchored. */
+[data-app-shell-frame]:has(${CURRENT_LAYOUT_EXPLORER_SELECTOR}:not([data-home-view-hidden]))
+${PAGE_TITLE} {
+  padding-left: var(${TITLE_TREE_OVERLAP}, revert-layer);
+  box-sizing: border-box;
+}
+
+/* The native new-chat action lives in its own start slot, outside the title. */
+[data-app-shell-frame]:has(${CURRENT_LAYOUT_EXPLORER_SELECTOR}:not([data-home-view-hidden]))
+${PAGE_HEADER} > [data-app-shell-header-slot="start"] {
+  margin-left: var(${TITLE_TREE_OVERLAP}, revert-layer);
 }
 
 /* The row begins above the native sidebar and conversation surface by 8px. */
@@ -335,10 +353,10 @@ function isVisibleMount(element: Element): boolean {
 
 function qualifiedMainSurface(): HTMLElement | null {
   const mains = activePageElements<HTMLElement>(document, MAIN_SURFACE_SELECTOR);
-  if (mains.length !== 1 || !codex26715Adapter.qualifiesRenderer(document)) return null;
+  if (mains.length !== 1) return null;
   const main = mains[0];
   if (!main || !isVisibleMount(main)) return null;
-  return main;
+  return qualifiedAppShellForMain(main) || qualifiedEditorWorkspace(main) ? main : null;
 }
 
 function stableInlineMount(mainSurface: HTMLElement | null, codexVersion: string | undefined): MountPoint | null {
@@ -349,7 +367,7 @@ function stableInlineMount(mainSurface: HTMLElement | null, codexVersion: string
 
   const verifiedMain = mainSurface;
   if (verifiedMain) {
-    const current = qualifiedWorkspaceRowForMain(verifiedMain, document);
+    const current = qualifiedEditorWorkspace(verifiedMain, document);
     if (current && isVisibleMount(current.row) && isVisibleMount(current.workspace)) {
       return {
         parent: current.row,
@@ -429,7 +447,17 @@ let currentLayoutWidthObserver: ResizeObserver | null = null;
 function updateCurrentLayoutHeader(explorer: CodeCodexElement): void {
   const main = qualifiedMainSurface();
   if (!explorer.isConnected || explorer.hasAttribute("data-home-view-hidden") || !main) return;
-  document.documentElement.style.setProperty(CURRENT_LAYOUT_HEADER_LEFT_PROPERTY, `${main.getBoundingClientRect().left}px`);
+  const contentLeft = main.getBoundingClientRect().left;
+  document.documentElement.style.setProperty(CURRENT_LAYOUT_HEADER_LEFT_PROPERTY, `${contentLeft}px`);
+  const tree = explorer.getBoundingClientRect();
+  const frame = explorer.closest("[data-app-shell-frame]");
+  const titles = frame ? [...frame.querySelectorAll<HTMLElement>(PAGE_TITLE)].filter(title => title.offsetWidth > 0) : [];
+  const title = titles.length === 1 ? titles[0] : null;
+  const bounds = title?.getBoundingClientRect();
+  // The main is already at its final flex position during the tree's slide-in.
+  const overlap = bounds && title && bounds.right > contentLeft && tree.bottom > bounds.top && tree.top < bounds.bottom
+    ? (contentLeft - bounds.left) * title.offsetWidth / bounds.width : 0;
+  document.documentElement.style.setProperty(TITLE_TREE_OVERLAP, overlap > 0 ? `${overlap}px` : "");
 }
 
 function reconcileCurrentLayoutHeader(explorer: CodeCodexElement | null, strategy: string): void {
@@ -438,6 +466,7 @@ function reconcileCurrentLayoutHeader(explorer: CodeCodexElement | null, strateg
     currentLayoutWidthObserver = null;
     currentLayoutObservedExplorer = null;
     document.documentElement.style.removeProperty(CURRENT_LAYOUT_HEADER_LEFT_PROPERTY);
+    document.documentElement.style.removeProperty(TITLE_TREE_OVERLAP);
     return;
   }
   if (currentLayoutObservedExplorer === explorer) {
@@ -691,7 +720,7 @@ function scheduleMountReconciliation(): void {
 }
 
 function workspaceMountChanged(records: readonly MutationRecord[]): boolean {
-  const container = '[data-app-shell-workspace]';
+  const container = '[data-app-shell-workspace],[data-app-shell-main-titlebar]';
   return records.some(record => {
     if (record.type === 'attributes') {
       return record.attributeName === 'data-app-shell-workspace-row' || record.attributeName === 'data-app-shell-workspace';
