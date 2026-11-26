@@ -16,7 +16,11 @@ So yeah, that escalated pretty quickly lol.
 
 ### Catching up with Codex — alpha.30
 
-We're preparing **OpsWolf 0.1.0-alpha.30** and its portable package, built on **Code-Codex v0.6.0**. I've been using alpha.30 locally, and it's feeling much better. There's still work to do before all the pieces feel like they belong together.
+The current checkpoint is **OpsWolf 0.1.0-alpha.30**, built on **Code-Codex v0.6.0**. I've been using alpha.30 locally, and it's feeling much better. There's still work to do before all the pieces feel like they belong together.
+
+**Portable test download:** [alpha.30, portable revision 1](https://github.com/ThornsOfire/OpsWolf/actions/runs/45728024620). Sign into GitHub, open the run's Artifacts section and extract the inner OpsWolf ZIP. The hosted build and package review passed; this is a test package, not a GitHub Release or a claim of fresh-machine acceptance. This download expires December 10, 2026 at 00:25 UTC.
+
+Inner ZIP SHA-256: `492a4e39cc26a14877281d272bb7d0f17d53807ac8326fc0aa6d252be2164767`.
 
 Codex added its own file tabs and editing while we were building ours. Suddenly we had two editors trying to use the same space. Headers overlapped, the tree sometimes covered chat, and opening a file could leave you wondering which editor you were supposed to use. Fun times lol.
 
