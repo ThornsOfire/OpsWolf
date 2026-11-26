@@ -17,7 +17,6 @@ export function nativeTabFilePath(id: string, root: string): string | null {
   return /^(?:[a-z]:[\\/]|\/)/i.test(path) ? citationRelativePath(path, root) : null;
 }
 interface Page { id: string; name: string; node: HTMLElement; button: HTMLElement; close: HTMLButtonElement | null }
-const NATIVE_EDITING_SELECTOR = 'textarea,input:not([type="hidden"]),[contenteditable]:not([contenteditable="false"]),[role="textbox"]';
 let sequence = 0;
 /** Present native right-panel pages as peers of a pinned primary Chat page.
  * Native nodes, sessions and handlers remain under their original owners. */
@@ -41,6 +40,7 @@ export class NativeMiddlePages {
   private style: HTMLStyleElement | undefined;
   private signature = '';
   private pending = false;
+  private revision = 0;
   private returnToChat = false;
   private readonly originals = new Map<HTMLElement, Map<string, string | null>>();
   private readonly headerVariables = new Map<HTMLElement, Map<string, [string, string]>>();
@@ -52,7 +52,7 @@ export class NativeMiddlePages {
     this.started = true;
     this.observer = new MutationObserver(this.schedule);
     this.observer.observe(this.ports.element.ownerDocument.body, { childList: true, subtree: true, attributes: true,
-      attributeFilter: ['data-app-shell-active-page', 'data-code-codex-owned', 'data-tab-id', 'aria-selected', 'hidden', 'aria-hidden', 'style', 'data-above-composer-conversation-id', 'data-response-annotation-conversation', 'data-app-shell-titlebar-content'] });
+      attributeFilter: ['data-app-shell-active-page', 'data-app-shell-shared-local-frame', 'data-code-codex-owned', 'data-tab-id', 'aria-selected', 'hidden', 'aria-hidden', 'style', 'data-above-composer-conversation-id', 'data-response-annotation-conversation', 'data-app-shell-titlebar-content'] });
     this.ports.element.ownerDocument.addEventListener('click', this.onNativeClick, true);
     this.resize = new ResizeObserver(this.schedule);
     this.schedule();
@@ -66,6 +66,7 @@ export class NativeMiddlePages {
     this.release(); this.contextKey = ''; this.selected = 'chat'; this.nativeSelection = '';
   }
   private schedule = (): void => {
+    if (!this.scope && this.nativeOwnsLayout()) return;
     if (this.started && !this.frame) this.frame = requestAnimationFrame(() => { this.frame = 0; this.refresh(); });
   };
   private mark(element: HTMLElement, name: string, value: string): void {
@@ -81,6 +82,8 @@ export class NativeMiddlePages {
     this.originals.delete(element);
   }
   private release(): void {
+    this.revision++;
+    this.pending = false;
     this.titleObserver?.disconnect(); this.titleObserver = undefined;
     this.titleContainer = undefined; this.primaryTitle = 'Chat';
     this.resize?.disconnect();
@@ -101,7 +104,7 @@ export class NativeMiddlePages {
     const context = this.ports.context, document = this.ports.element.ownerDocument;
     const key = this.ports.enabled && context ? `${context.threadId}\0${context.rootPath}` : '';
     if (key !== this.contextKey) { this.release(); this.contextKey = key; this.selected = 'chat'; this.nativeSelection = ''; this.returnToChat = false; }
-    if (!key || !context) { this.release(); return; }
+    if (!key || !context || this.nativeOwnsLayout()) { this.release(); return; }
     const scopes = [...document.querySelectorAll<HTMLElement>('[data-app-shell-active-page="true"]')];
     const scope = scopes.length === 1 ? scopes[0] : undefined;
     const main = scope?.querySelector<HTMLElement>('main[data-app-shell-main-surface="default"]');
@@ -112,7 +115,7 @@ export class NativeMiddlePages {
     const viewport = main?.querySelector<HTMLElement>('[data-app-shell-main-content-layout]');
     // Main-controller page placements need a separate adapter; never hide an
     // unfamiliar primary page or invent a chat identity from a tab label.
-    if (!scope || !main || !header || !toolbar || !title || !viewport ||
+    if (!scope || scope.closest('[data-app-shell-shared-local-frame]') || !main || !header || !toolbar || !title || !viewport ||
         annotationConsensusThreadId(scope, true) !== context.threadId ||
         header.querySelector('[data-app-shell-tab-controller="main"]')) { this.release(); return; }
     const exit = header.querySelector<HTMLButtonElement>('button[aria-label="Exit full view"]');
@@ -255,7 +258,7 @@ export class NativeMiddlePages {
     this.shadow.innerHTML = `<style>
       :host{color:inherit;font:inherit}*{box-sizing:border-box}.tabs{display:flex;flex:1;min-width:0;align-items:center}button,select{font:inherit;color:inherit;background:transparent;border:0;border-radius:5px;height:28px;cursor:pointer}button:hover,select:hover{background:rgba(127,127,127,.16)}button:focus-visible,select:focus-visible{outline:2px solid currentColor;outline-offset:-2px}
       .chat{flex:none;min-width:62px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 10px;font-weight:600}.strip{display:flex;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none;align-items:center}.strip::-webkit-scrollbar{display:none}.tab{display:flex;flex:none;align-items:center;max-width:210px;border-inline-end:1px solid rgba(127,127,127,.2)}.page{min-width:90px;max-width:165px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:0 8px}.close{width:24px;flex:none}button[aria-selected="true"]{background:rgba(127,127,127,.16);box-shadow:inset 0 -2px currentColor}select{width:28px;flex:none;font-size:0}option{font-size:13px}.move{flex:none;width:28px;font-size:17px}.move:disabled{opacity:.45;cursor:default}
-    </style><div class="tabs" role="tablist" aria-label="Middle pages"><button class="chat" role="tab" aria-selected="true" title="Return to the primary chat">Chat</button><div class="strip"></div></div><select aria-label="Open middle pages" title="Open middle pages"></select><button class="move" aria-label="Move file to editor" hidden>↗</button>`;
+    </style><div class="tabs" role="tablist" aria-label="Middle pages"><button class="chat" role="tab" aria-selected="true" title="Return to the primary chat">Chat</button><div class="strip"></div></div><select aria-label="Open middle pages" title="Open middle pages"></select><button class="move" aria-label="Open file in editor and keep native tab" hidden>↗</button>`;
     this.shadow.querySelector('.chat')!.addEventListener('click', () => this.select('chat'));
     this.shadow.querySelector('select')!.addEventListener('change', event => this.select((event.target as HTMLSelectElement).value));
     this.shadow.querySelector('.move')!.addEventListener('click', () => { void this.transfer(); });
@@ -284,8 +287,12 @@ export class NativeMiddlePages {
     }
     this.schedule();
   }
+  private nativeOwnsLayout(): boolean {
+    return !!this.ports.element.closest('[data-app-shell-shared-local-frame]') ||
+      !!this.scope?.closest('[data-app-shell-shared-local-frame]');
+  }
   private valid(): boolean {
-    return this.started && this.ports.enabled && !!this.scope?.isConnected &&
+    return this.started && this.ports.enabled && !this.nativeOwnsLayout() && !!this.scope?.isConnected &&
       this.scope.matches('[data-app-shell-active-page="true"]') &&
       this.contextKey === `${this.ports.context?.threadId}\0${this.ports.context?.rootPath}` &&
       annotationConsensusThreadId(this.scope,true) === this.ports.context?.threadId;
@@ -318,31 +325,31 @@ export class NativeMiddlePages {
     if (primaryOption && primaryOption.textContent !== this.primaryTitle) primaryOption.textContent = this.primaryTitle;
     const move = this.shadow.querySelector<HTMLButtonElement>('.move')!, root = this.ports.context?.rootPath;
     move.hidden = !root || !nativeTabFilePath(this.selected, root);
-    const panel = this.scope && [...this.scope.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tab-id]')].find(panel => panel.dataset.tabId === this.selected);
-    const editing = !!panel?.querySelector(NATIVE_EDITING_SELECTOR);
     move.disabled = this.pending;
-    move.setAttribute('aria-label',editing ? 'Open file in editor and keep native editing state' : 'Move file to editor');
-    move.title = editing ? 'Open this file in the editor; keep the native tab and its editing state' : 'Move this local file to the editor after it loads successfully';
+    move.setAttribute('aria-label','Open file in editor and keep native tab');
+    move.title = 'Open the current disk file in the editor; keep the native tab and its editing state';
   }
   private async transfer(): Promise<void> {
     const context = this.ports.context, page = this.pages.find(page => page.id === this.selected);
     const path = context && page && nativeTabFilePath(page.id, context.rootPath);
     if (!path || !page || !this.valid() || this.pending) return;
-    const key = this.contextKey; this.pending = true; this.render();
+    const key = this.contextKey, revision = this.revision; this.pending = true; this.render();
     try {
       const loaded = await this.ports.openFile(path);
-      if (!loaded || !this.valid() || key !== this.contextKey || this.selected !== page.id || !page.node.isConnected) return;
-      const panel = [...this.scope!.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tab-id]')].find(panel => panel.dataset.tabId === page.id);
-      const editing = panel?.querySelector(NATIVE_EDITING_SELECTOR);
+      if (!loaded || revision !== this.revision || !this.valid() || key !== this.contextKey || this.selected !== page.id || !page.node.isConnected) return;
       this.returnToChat = true;
-      if (editing) this.ports.announce('Opened in editor. The native tab was kept to preserve its editing state.');
-      else if (page.close && !page.close.disabled) page.close.click();
+      // Native dirty state is not observable through DOM controls: the buffer
+      // may live in a shadow editor or be unmounted. Only its owner may close it.
+      this.ports.announce('Opened the disk file in editor. The native tab was kept to preserve its editing state.');
       this.selected = 'chat'; this.schedule();
-    } catch { this.ports.announce('The file could not be moved. Its native tab was kept open.'); }
-    finally { this.pending = false; this.render(); this.schedule(); }
+    } catch {
+      if (revision === this.revision && this.valid()) this.ports.announce('The file could not be opened in editor. Its native tab was kept open.');
+    } finally {
+      if (revision === this.revision) { this.pending = false; this.render(); this.schedule(); }
+    }
   }
   private onNativeClick = (event: MouseEvent): void => {
-    if (event.button || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (!this.header || event.button || event.ctrlKey || event.metaKey || event.altKey) return;
     if (event.composedPath().some(node => node instanceof HTMLElement && node.hasAttribute('data-app-shell-tab-close-button'))) return;
     const toggle = event.composedPath().find((node):node is HTMLButtonElement => node instanceof HTMLButtonElement && node.matches('[data-app-shell-workspace-layout-toggle="main"]'));
     if (toggle && this.header?.contains(toggle)) {

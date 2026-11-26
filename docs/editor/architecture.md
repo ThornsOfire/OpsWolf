@@ -1,6 +1,8 @@
 # Editor architecture and data lifecycle
 
-This documents the editor fork on `feature/right-editor-pane`. It supplements the repository's [maintenance architecture](../architecture.md), which also covers the inherited plugin suite and installer.
+This documents the current editor migration source and its retained legacy implementation. It supplements the repository's [maintenance architecture](../architecture.md), which also covers the inherited plugin suite and installer.
+
+The ownership migration is implemented through alpha.30; see [current status](migration-status.md) for acceptance limits and backlog. Legacy modules below remain intentional compatibility/recovery paths, not evidence that modern Codex should host a second editor. The scrolling/close-all legacy tab UI is not the native tab strip.
 
 ## Component ownership
 
@@ -11,11 +13,14 @@ Paths below are relative to the repository root.
 | Native-page qualification, injection and remount | `packages/explorer-ui/src/inject.ts`, `packages/explorer-ui/src/adapters/editor-workspace.ts`, `packages/explorer-ui/src/adapters/codex-26.715.ts` |
 | Native sidebar's one-time collapse after first user chat selection | `packages/explorer-ui/src/native-sidebar.ts` |
 | Application wiring, authenticated workspace lifecycle, dirty-switch orchestration | `packages/explorer-ui/src/app/explorer-element.ts` |
-| Editor DOM, tabs, metadata controls, source/preview switching | `packages/explorer-ui/src/app/main-preview-element.ts` |
-| Pane geometry and native-header reservation | `packages/explorer-ui/src/features/preview/editor-pane.ts` |
-| Embedded browser geometry notifications through the native resize listener | `packages/explorer-ui/src/features/preview/native-browser-geometry.ts` |
-| Primary Chat/native middle-page presentation and local-file transfer actions | `packages/explorer-ui/src/features/preview/native-middle-pages.ts` |
-| E control and scoped compact native header | `packages/explorer-ui/src/features/preview/editor-header-control.ts` |
+| Read-only embedded reader; legacy editor DOM, tabs and source/preview switching | `packages/explorer-ui/src/app/main-preview-element.ts` |
+| Legacy pane geometry and native-header reservation | `packages/explorer-ui/src/features/preview/editor-pane.ts` |
+| Legacy embedded browser geometry notifications through the native resize listener | `packages/explorer-ui/src/features/preview/native-browser-geometry.ts` |
+| Legacy Chat/native middle-page presentation and explicit file-copy actions | `packages/explorer-ui/src/features/preview/native-middle-pages.ts` |
+| Scoped compact native header, without editor controls | `packages/explorer-ui/src/features/preview/compact-native-header.ts` |
+| Native right-file opening and acceptance | `packages/explorer-ui/src/features/preview/native-panel-owner.ts`, `packages/explorer-ui/src/host/native-panel-actions.ts`, `packages/explorer-ui/src/host/native-file-tabs.ts` |
+| Automatic native-file tools and bounded reader slot | `packages/explorer-ui/src/features/preview/native-file-tools.ts` |
+| Docked tree reservation and scoped header leases | `packages/explorer-ui/src/host/tree-layout.ts` |
 | Tab collection and per-project pins | `packages/explorer-ui/src/features/preview/tab-store.ts`, `pinned-files.ts` |
 | Preview requests, full text transfer, stale-result checks | `packages/explorer-ui/src/features/workspace/preview-requests.ts` |
 | Tab scheduling, native/recorded diff tabs, opening current source | `packages/explorer-ui/src/features/workspace/preview-workspace.ts` |
@@ -23,14 +28,22 @@ Paths below are relative to the repository root.
 | Save/discard/cancel dialogs | `packages/explorer-ui/src/features/preview/close-dialog.ts` |
 | Large plain-text rendering and logical wrapped line numbers | `packages/explorer-ui/src/features/preview/large-text-reader.ts`, `wrapped-line-numbers.ts` |
 | Persistent native-record review and chat-card adaptation | `packages/explorer-ui/src/features/workspace/change-review.ts` |
-| Native comparison view hosted inside editor layout | `packages/explorer-ui/src/features/preview/native-diff-host.ts` |
+| Modern native comparison tools; legacy hosted comparison layout | `packages/explorer-ui/src/features/preview/native-diff-host.ts` |
 | Native text read/save policies and chunk validation | `crates/workspace-service/src/preview.rs`, `preview/text_transfer.rs`, `preview/text_policy.rs` |
 | Native review bridge route | `crates/launcher/src/bridge/routes/changes.rs` |
 | App Server turn reads and project-scoped patch projection | `crates/context-resolver/src/lib.rs`, `review.rs` |
 
 Abbreviated sibling names in a cell resolve beside the preceding full source path. UI presentation uses capability ports; features don't import application elements or own the authenticated bridge.
 
-Pane top reservations measure marked app-shell headers. Legacy fallback is restricted to headers directly on the main surface or its parent; nested reader/content toolbars aren't app chrome. Including those toolbars creates a layout feedback loop that can push the editor downward.
+## Modern native ownership
+
+Codex owns the split, original tabs, native buffers and saves. `NativePanelOwner` qualifies the current workspace and waits for an accepted original right tab/panel; an action response alone cannot release a draft. `NativeFileTools` inserts one owned flex child inside a qualified file panel, ahead of its flexible native body. It preserves native nodes and inline styles, fails closed on unknown geometry, and disposes its own listeners/readers on identity change. Its qualified source viewer also receives one removable Rain stylesheet inside the open shadow root. The sheet changes only observed plain backings, is gated by the existing Rain canvas and tools row, and is removed on viewer replacement or lost ownership; native buffers, theme variables and edit highlights stay native. No E control or modern legacy-pane reservation remains.
+
+The application mounts saved-file readers through `setEmbeddedPreview`, which excludes editor state and write actions. It uses authenticated preview requests with captured bridge/context/generation checks, including link and citation event boundaries. Project pins remain bookmarks. Historical patches and retained drafts are labelled read-only views; neither is presented as a native unsaved buffer. Modern Changes keeps native layout; recorded response patches expand inline.
+
+## Retained legacy geometry
+
+The following geometry applies only to older hosts without the modern shared frame. Pane top reservations measure marked app-shell headers. Legacy fallback is restricted to headers directly on the main surface or its parent; nested reader/content toolbars aren't app chrome. Including those toolbars creates a layout feedback loop that can push the editor downward.
 
 For the qualified active page with a sibling shell titlebar, docked layout leases the titlebar width and its main-titlebar container to the middle pane boundary. Native end controls remain at that pane's right edge. The editor begins at the same header band's top, converting viewport offsets to layout units for zoom, so its resize strip includes the tab row. Unowned native right-panel asides retain their requested width but are capped to the remaining middle content width; hosted Changes remains under its separate adapter. Native layout writes and child replacement are reconciled, and hiding, expanding, suspension or disposal restores leased properties. Unknown header layouts retain the existing below-header fallback.
 
@@ -38,9 +51,11 @@ Qualified browser panels also release fixed/minimum widths on their inner native
 
 ## Reading and editing source
 
-`NativeMiddlePages` qualifies the current chat against the native annotations before installing a pinned Chat/page proxy strip. Native tabs, panels, and menu anchors stay under their original parents. Scoped attribute/style rules hide the nested divider and alternate between the original conversation viewport and an unowned native right panel at full middle width. The separately owned Changes host is excluded from page hiding. Original attributes, header variables, styles and controls are released on disposal, header replacement, unknown main-controller placements, or context mismatch.
+On legacy hosts, `NativeMiddlePages` qualifies the current chat against the native annotations before installing a pinned Chat/page proxy strip. Native tabs, panels, and menu anchors stay under their original parents. Scoped attribute/style rules hide the nested divider and alternate between the original conversation viewport and an unowned native right panel at full middle width. The separately owned Changes host is excluded from page hiding. Original attributes, header variables, styles and controls are released on disposal, header replacement, unknown main-controller placements, or context mismatch.
 
-The controller recognizes only verified `text-editor:local:` and `artifact:local:` file identities, normalizes the absolute path within the current project, and delegates opening to application wiring. That port uses existing draft/save guards and the authenticated reader, then reports success only for the same generation, project, tab instance and selected file after loading. Native close runs only after success and a second context check; native input/editor surfaces keep their original tab. No native draft is copied or saved by this action. See [middle pages](middle-pages.md) for controls and compatibility limits.
+The controller recognizes only verified `text-editor:local:` and `artifact:local:` file identities, normalizes the absolute path within the current project, and delegates opening to application wiring. That port uses existing draft/save guards and the authenticated reader, then reports success only for the same generation, project, tab instance and selected file after loading. The action always preserves the original native tab: native dirty state cannot be inferred reliably from mounted DOM. Only the original explicit native close control closes it. No native draft is copied or saved by this action. See [middle pages](middle-pages.md) for controls and compatibility limits.
+
+For the legacy editor (modern readers use the same authenticated read policy but never start editing):
 
 1. `PreviewWorkspaceController` opens or reuses a tab for a relative project path and assigns a tab instance/revision.
 2. `PreviewRequestsController` requests the native preview. Larger supported text uses complete transfer metadata and validated chunks instead of accepting a sliced inline response.
@@ -74,7 +89,7 @@ The resolver requests `thread/turns/list` with `limit: 1`, descending order and 
 
 The persistent renderer skips in-progress turns. It refreshes after a visible response finishes, on explicit Refresh, and at most once per minute while idle. It looks back through at most 40 pages and caches up to 10 useful reviews; newer refreshes reuse immutable older records. Per-file expansion state is in memory and pruned with retained reviews.
 
-Recorded and native comparison opening publishes the requested active tab to the editor before reopening its surface. Otherwise a hidden editor still showing conversation state can auto-select its first old file and overwrite the intended diff selection. Hiding explicitly resets fullscreen and persists docked mode without changing saved width, files or draft contents. Accepted chat-tab/Escape transitions follow the same rule; cancelled transitions and temporary suspension/reparenting don't reset layout. The regression fixtures cover reopening comparisons after a fullscreen editor is hidden.
+On legacy hosts, recorded and native comparison opening publishes the requested active tab to the editor before reopening its surface. Otherwise a hidden editor still showing conversation state can auto-select its first old file and overwrite the intended diff selection. Hiding explicitly resets fullscreen and persists docked mode without changing saved width, files or draft contents. Accepted chat-tab/Escape transitions follow the same rule; cancelled transitions and temporary suspension/reparenting don't reset layout. The regression fixtures cover reopening comparisons after a fullscreen editor is hidden.
 
 | Bound | Current value |
 | --- | --- |
@@ -114,7 +129,7 @@ The Open file event identifies the current diff tab. Application wiring verifies
 
 `EditorCitations` maps textarea, literal-source or mounted virtual-row selection to full logical lines. Its right-click popover uses normal buttons and keyboard focus. Rendered document selections offer an explicit source transition rather than pretending rendered positions are source lines. Highlights use the CSS Highlight API for inline source and bounded marks for virtual rows. Unique quotes can relocate; changed/missing or ambiguous quotes never receive a guessed highlight. Refresh, hiding and disposal dismiss popovers and release highlights.
 
-`features/workspace/citations.ts` owns the session-only group and user-initiated link handling. It verifies the event's preview owner/path, active context and project root, then delegates navigation to `PreviewWorkspaceController`. Application wiring reuses dirty-switch protection before opening another source. Group activation publishes the requested first source before revealing a hidden editor. File contents still load through the existing authenticated bridge and native policy; citation payloads never replace loaded file bodies.
+`features/workspace/citations.ts` owns the session-only group and user-initiated link handling. It verifies the event's preview owner/path, active context and project root, then delegates navigation to `PreviewWorkspaceController`. Application wiring reuses dirty-switch protection before opening another source. Group activation publishes the requested first source before revealing a hidden editor. Modern navigation delegates file opening to Codex through NativePanelOwner after workspace/chat and lexical path qualification. Native buffers use Codex's file-access policy; this route does not pass through the OpsWolf workspace reader. The optional saved-file reader and legacy editor still load contents through the authenticated bridge with its sensitive-file and redirected-path restrictions. Equivalent native-host restrictions have not been independently verified. Citation payloads never replace loaded file bodies.
 
 `host/native-surfaces/composer-citations.ts` requires agreeing active-chat annotations and exactly one visible same-chat composer. Textareas use their native setter/input event; contenteditable uses the browser editing command at the end of the existing draft. No submit action or private React store is used. Unknown/ambiguous layouts fail with Copy citation available. This adapter needs real-host verification after relevant native markup changes.
 

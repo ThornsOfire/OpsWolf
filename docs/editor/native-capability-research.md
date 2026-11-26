@@ -1,6 +1,24 @@
 # Native UI capability boundaries
 
-Research for the local candidate, 2026-10-29. These findings describe the inspected host; they do not establish compatibility with future versions. Requested features remain open where their required capability is missing.
+These findings are version-specific. The November 24 native file-opening result supersedes the October finding that no extension-side route had been established. It does not establish a stable public API or finish F58.
+
+## Native right-panel ownership, November 24, 2026
+
+On Codex 26.1120.5083.0, the existing host action service accepts `windows.tabs.open` with the current window, thread identity, a file target and explicit right placement. The source adapter discovers a unique service through the existing semantic module loader; it does not pin minified export names, call arbitrary factories, access React state or copy native implementation code. Discovery itself sends no action. The original tab and matching selected content panel, not a successful RPC response, establish acceptance.
+
+The docked explorer is outside the shared native frame. Its owned workspace-row placement and immediate workspace sibling must qualify against the active main surface and chat before native file identities can be matched. Same-named files use their full workspace-relative path. Seeing a modern frame merely prevents fallback into a competing legacy pane; it is not permission to select or open anything.
+
+A bounded live probe opened two synthetic same-named Markdown files in distinct native right tabs. After the existing OpsWolf preview relinquished its own width through its public visibility method, the actual source controller opened a third synthetic source file. The matching native tab/panel became selected and chat width remained unchanged. This was a narrow route test, not a whole-renderer installation or physical UI acceptance.
+
+The source route now guards explicit tree, chat-anchor, document-link, citation and current-source opens. Existing drafts are released only after matching native acceptance; failed saves, unavailable actions, identity changes and cancelled transactions preserve them. Native discovery/action waits are bounded. Once an action has been sent to Codex it cannot be recalled: timing out stops our transaction and prevents late draft release, but cannot guarantee that the host will never complete its action later.
+
+**Tools source, November 24:** supported native file panels now receive an owned normal-flow row before their flexible native editor body. Pinning uses existing project bookmarks. Saved-file previews reuse the authenticated reader and installed renderer in an explicit read-only mode; they never represent the native unsaved buffer. E is removed. Modern Changes enhancement leaves native layout and controls in charge; recorded response patches remain inline. The old pane remains available only on legacy layouts. A bounded synthetic-file probe observed unchanged chat width, original native nodes/styles, allocated preview space and complete teardown.
+
+**Still required:** exact candidate qualification and owner activation, then mixed browser/file tabs, native editing/save/reopen, previews across supported file types, citations and tree/header geometry. Native source selection is verified only through available contiguous numbered rows; arbitrary native draft capture and native file-wrap/save command ports are not established. Passing `target.line` is dispatch evidence, not proof of line navigation.
+
+## Historical research, October 29, 2026
+
+The sections below describe the older host and prior transfer design. They explain earlier capability limits; they are not instructions to restore middle-page relocation or automatic native-tab closing.
 
 ## Independent Changes entry (plan C)
 

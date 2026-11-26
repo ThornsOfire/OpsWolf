@@ -82,6 +82,7 @@ export const style1 = String.raw`  *, *::before, *::after { box-sizing: border-b
     white-space: nowrap;
   }
   .edit-mode-toggle { flex: none; }
+  .edit-mode-toggle[hidden] { display:none; }
   .edit-mode-toggle {
     display: inline;
     margin: 0;

@@ -13,6 +13,7 @@ export interface NativeDiffSectionsPorts {
   readonly context: ExplorerContext | undefined;
   readonly enabled: boolean;
   readonly readRevisions: (since?: string | null) => Promise<ReviewRevisions>;
+  readonly qualifyPanel?: (panel: HTMLElement) => boolean | undefined;
 }
 interface Section { expanded: boolean; unread: boolean; collapsePending: boolean; revision?: string | undefined; }
 /** Session-scoped read markers backed by successful native patch records, not filesystem snapshots. */
@@ -45,7 +46,8 @@ export class NativeDiffSections {
   private qualified(): boolean {
     return !!this.panel?.isConnected && !!this.key && this.currentKey() === this.key
       && !this.panel.closest('[data-app-shell-active-page="false"],[hidden],[aria-hidden="true"]')
-      && annotationConsensusThreadId(this.panel.closest('[data-app-shell-active-page="true"]') ?? this.panel.ownerDocument, true) === this.ports.context?.threadId;
+      && (this.ports.qualifyPanel?.(this.panel) ??
+        annotationConsensusThreadId(this.panel.closest('[data-app-shell-active-page="true"]') ?? this.panel.ownerDocument, true) === this.ports.context?.threadId);
   }
   sync(panel: HTMLElement, visible: boolean): void {
     const key = this.currentKey();

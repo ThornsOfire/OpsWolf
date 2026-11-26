@@ -13,7 +13,8 @@ import { CodeMinimap,codeMinimapStyles } from "../code-minimap";
 import { userPreferences } from '../core/configuration/user-preferences';
 import { mainPreviewStyles } from "../components/styles/main-preview";
 import { attachTooltips } from "../components/tooltips";
-import { EditorHeaderControl } from "../features/preview/editor-header-control";
+import { CompactNativeHeader } from "../features/preview/compact-native-header";
+import { NativePanelOwner } from "../features/preview/native-panel-owner";
 import { EDITOR_PANE_KEY, EditorPaneLayout, nativeHeaderInset, readEditorPanePreference } from "../features/preview/editor-pane";
 import { INLINE_TEXT_BYTES } from "../core/preview/text-configuration";
 import { LargeTextReader,largeTextStyles } from "../features/preview/large-text-reader";
@@ -67,7 +68,9 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
 
   _minimapEnabled = true;
   readonly _editorPane = new EditorPaneLayout(this);
-  readonly _editorHeader: EditorHeaderControl;
+  readonly _editorHeader: CompactNativeHeader;
+  private readonly nativePanelOwner = new NativePanelOwner(this);
+  private embeddedReadOnly = false;
   readonly _citationUi:EditorCitations;
   readonly _linkUi:EditorLinks;
   _wrappedLineNumbers: WrappedLineNumbers | null = null;
@@ -144,12 +147,18 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._clippedLayout = usesClippedMainLayout(bootstrap.codexVersion ?? bootstrap.version);
     this._shadow = this.attachShadow({ mode: "open" });
     this._shadow.innerHTML = `
-      <style>${mainPreviewStyles}${SURFACE_OPACITY_PREVIEW_CSS}${codeMinimapStyles}</style>
+      <style>${mainPreviewStyles}${SURFACE_OPACITY_PREVIEW_CSS}${codeMinimapStyles}
+        :host([data-native-layout-retained]) { display:none !important; }
+        :host([data-embedded-reader]) { position:relative;inset:auto;z-index:auto;width:100%;height:100%;pointer-events:auto; }
+        :host([data-embedded-reader]) .surface { display:grid !important;grid-template-rows:minmax(0,1fr);height:100%; }
+        :host([data-embedded-reader]) :is(.tab-strip,.editor-pane-actions,.editor-pane-resizer,.open-files-menu) { display:none !important; }
+        :host([data-embedded-reader]) .panel-mount { grid-row:1;min-height:0; }
+        :host([data-embedded-reader]) .preview-meta-bar button { color:inherit;background:transparent;border:1px solid currentColor;border-radius:4px;cursor:pointer; }
+      </style>
       <div class="surface">
         <div class="editor-pane-actions">
           <button type="button" class="tab-pin-toggle" data-tooltip="Pin this file for this project" aria-pressed="false">Pin</button>
           <button type="button" class="open-files-toggle" popovertarget="open-files-menu" popovertargetaction="toggle" data-tooltip="All open files" aria-label="All open files" aria-haspopup="menu" aria-expanded="false">▾</button>
-          <button type="button" class="editor-pane-toggle" data-tooltip="Toggle editor pane layout" aria-label="Editor pane" aria-pressed="false">E</button>
           <button type="button" class="word-wrap-toggle" data-tooltip="Enable word wrap" aria-label="Enable word wrap" aria-pressed="false"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3" aria-hidden="true"><path d="M2 3h12M2 7h9a3 3 0 0 1 0 6H8m2-2-2 2 2 2M2 11h3"/></svg></button>
           <button type="button" class="editor-fullscreen-toggle" data-tooltip="Expand editor" aria-label="Expand editor" aria-pressed="false"></button>
           <button type="button" class="editor-pane-close" data-tooltip="Close all unpinned tabs" aria-label="Close all unpinned tabs">×</button>
@@ -160,7 +169,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
       </div>
       <div id="open-files-menu" class="open-files-menu" popover="auto" role="menu" aria-label="Open files"></div>
     `;
-    this._editorHeader=new EditorHeaderControl(this,this._required<HTMLButtonElement>(".editor-pane-toggle"));
+    this._editorHeader=new CompactNativeHeader(this);
     this._tabList = this._required<HTMLElement>(".tab-strip");
     this._panelMount = this._required<HTMLElement>(".panel-mount");
     const citationOwner=this;
@@ -198,9 +207,6 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._tabList.addEventListener('dragover', event => this._overTabDrag(event));
     this._tabList.addEventListener('drop', event => this._dropTabDrag(event));
     this._tabList.addEventListener('dragend', () => this._clearTabDrag());
-    this._required('.editor-pane-toggle').addEventListener('click', () => {
-      this._setEditorVisible(!this._editorVisible);
-    });
     this._required('.editor-fullscreen-toggle').addEventListener('click', () => {
       this._panePreference.docked = !this._panePreference.docked;
       this._savePanePreference();this._syncSuppression();
@@ -359,7 +365,20 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.setState(state);
   }
 
+  /** A contained read-only view. Never accepts editor state or owns a writer. */
+  setEmbeddedPreview(state: Omit<MainPreviewState, 'editor'>): void {
+    this.embeddedReadOnly = true;
+    this.setAttribute('data-embedded-reader', '');
+    this.setState(state);
+  }
+
   setState(state: MainPreviewState): void {
+    if (this.embeddedReadOnly) {
+      const view = state.tabs.find(tab => tab.path === state.activePath);
+      state = {...(state.workspace?{workspace:state.workspace}:{}), activePath: view?.path ?? null,
+        tabs: view ? [view.kind === 'text' || view.kind === 'empty' ? {...view, editable: false} : view] : [],
+        ...(state.enabledPreviewers?{enabledPreviewers:state.enabledPreviewers}:{}), ...(state.citations?{citations:state.citations}:{})};
+    }
     const viewportRevision = this.sessionViewportRevision;
     const nextState = normalizeState(state);
     const workspaceChanged = nextState.workspace?.threadId !== this._state.workspace?.threadId ||
@@ -547,7 +566,8 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this.toggleAttribute("data-has-files", this._state.tabs.length > 0);
     this.toggleAttribute("data-file-active", this._state.activePath !== null);
     this.toggleAttribute("data-editing", Boolean(this._state.editor));
-    this._renderTabs();
+    if (this.embeddedReadOnly) this._tabList.replaceChildren();
+    else this._renderTabs();
     this._renderPanel();
     this._restoreFocus(focus);
     this._scrollSelectedTabIntoView();
@@ -698,6 +718,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     this._cancelDiagramPreview();
     this._cancelModelPreview();
     this.removeAttribute('data-native-diff-active');
+    if(!this.embeddedReadOnly&&this.nativePanelOwner.usesNativeLayout()){this._panelMount.replaceChildren();return;}
     if (this._state.activePath === null) {
       if(this._editorVisible) {
         const empty=this.ownerDocument.createElement('div');empty.className='editor-empty';
@@ -710,6 +731,32 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     let view = this._state.tabs.find((candidate) => candidate.path === this._state.activePath);
     if (!view) {
       this._panelMount.replaceChildren();
+      return;
+    }
+
+    if (this.embeddedReadOnly) {
+      const panel = this.ownerDocument.createElement('section');
+      panel.className = 'preview-panel';
+      panel.setAttribute('aria-label', 'Read-only file preview');
+      const controls = this.ownerDocument.createElement('div');
+      controls.className = 'preview-meta-bar';
+      const wrap = this.ownerDocument.createElement('button');
+      wrap.type = 'button'; wrap.textContent = 'Wrap preview';
+      wrap.setAttribute('aria-pressed', String(this._wordWrap));
+      wrap.onclick = () => userPreferences(this.ownerDocument.defaultView!).set('wordWrap', !this._wordWrap);
+      controls.append(wrap);
+      if (view.kind === 'text' && view.sizeBytes > INLINE_TEXT_BYTES && isMarkdownPreviewPath(view.path) &&
+          this._state.enabledPreviewers?.includes(MARKDOWN_PREVIEWER_ID)) {
+        const key = `${view.path}\0${view.version}`, render = this.ownerDocument.createElement('button');
+        render.type = 'button'; render.textContent = this._largeMarkdownKey === key ? 'Plain text' : 'Render Markdown';
+        render.onclick = () => {this._largeMarkdownKey = this._largeMarkdownKey === key ? undefined : key; this._renderPanel();};
+        controls.append(render);
+      }
+      const content = this.ownerDocument.createElement('div');
+      content.className = 'preview-content';
+      this._renderViewContent(content, view);
+      panel.append(controls, content); this._panelMount.replaceChildren(panel);
+      this._syncWordWrap(); this._citationUi.refresh(); this._linkUi.refresh();
       return;
     }
 
@@ -2045,6 +2092,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _dispatchPathEvent<T>(name: string, detail: T): void {
+    if (this.embeddedReadOnly && [MAIN_PREVIEW_DRAFT_EVENT, MAIN_PREVIEW_SAVE_EVENT, 'cle-main-preview-edit'].includes(name)) return;
     this.dispatchEvent(new CustomEvent<T>(name, { bubbles: true, composed: true, detail }));
   }
 
@@ -2295,19 +2343,28 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
   }
 
   _syncSuppression(): void {
+    // Current Codex owns every split and native buffer. Retained legacy session
+    // data must never reserve another column or suppress chat on this host.
+    if (this.embeddedReadOnly || this.nativePanelOwner.usesNativeLayout()) {
+      this._paneResizeCleanup?.(); this._editorPane.restore(); this._restoreSuppressedChildren();
+      this._syncNativeTitle(null); this._syncNativeViewportBounds(this, null);
+      this.removeAttribute('data-editor-pane'); this.removeAttribute('data-editor-pane-open');
+      this.toggleAttribute('data-native-layout-retained', !this.embeddedReadOnly);
+      this.toggleAttribute('data-editor-visible', this.embeddedReadOnly && !this._suspended);
+      this._editorHeader.sync(!this.embeddedReadOnly && this._connected && !this._suspended);
+      return;
+    }
+    this.removeAttribute('data-native-layout-retained');
     const hasNativeSurface = this.parentElement?.matches(MAIN_SURFACE_SELECTOR) === true;
-    const paneActive = hasNativeSurface && this._connected && !this._suspended && this._panePreference.docked && this._editorVisible;
+    const visible = this._editorVisible && !this._suspended;
+    const paneActive = hasNativeSurface && this._connected && this._panePreference.docked && visible;
     if (!paneActive) this._paneResizeCleanup?.();
-    const title = this._syncNativeTitle(hasNativeSurface && this._connected && !this._suspended && this._editorVisible ? this.parentElement : null);
+    const title = this._syncNativeTitle(hasNativeSurface && this._connected && visible ? this.parentElement : null);
     this.toggleAttribute('data-editor-pane', this._panePreference.docked && hasNativeSurface);
     this.toggleAttribute('data-editor-pane-open', paneActive);
-    const visible=this._editorVisible && !this._suspended;
     if(!visible)this._citationUi.closeMenu();
     this.toggleAttribute('data-editor-visible',visible);
-    const toggle=this._required<HTMLButtonElement>('.editor-pane-toggle');
-    toggle.setAttribute('aria-pressed',String(visible));
-    toggle.dataset.tooltip=visible?'Close editor':'Open editor';toggle.setAttribute('aria-label',toggle.dataset.tooltip);
-    this._editorHeader.sync(hasNativeSurface && this._connected && !this._suspended,visible);
+    this._editorHeader.sync(hasNativeSurface && this._connected && !this._suspended);
     const fullscreen=this._required<HTMLButtonElement>('.editor-fullscreen-toggle');
     fullscreen.dataset.tooltip=this._panePreference.docked?'Expand editor':'Restore editor to right pane';
     fullscreen.setAttribute('aria-label',fullscreen.dataset.tooltip);
@@ -2327,7 +2384,7 @@ export class CodeCodexMainPreviewElement extends HTMLElement {
     }
     this._editorPane.restore();
     if (this.parentElement?.matches(MAIN_SURFACE_SELECTOR)) this.style.setProperty('--cle-editor-pane-top', `${nativeHeaderInset(this.parentElement)}px`);
-    const parent = this._connected && !this._suspended && this._editorVisible && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)
+    const parent = this._connected && visible && this.parentElement?.matches(MAIN_SURFACE_SELECTOR)
       ? this.parentElement
       : null;
     if (!parent) {

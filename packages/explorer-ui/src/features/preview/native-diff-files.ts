@@ -9,6 +9,7 @@ export interface NativeDiffFilesPorts {
   readonly enabled: boolean;
   readonly openFile: (path: string) => Promise<boolean>;
   readonly announce: (message: string) => void;
+  readonly qualifyPanel?: (panel: HTMLElement) => boolean | undefined;
 }
 interface FileAction { host: HTMLElement; button: HTMLButtonElement; cleanup: () => void; path: string; }
 
@@ -29,7 +30,8 @@ export class NativeDiffFiles {
   private qualified(): boolean {
     return !!this.panel?.isConnected && !!this.key && this.key === this.currentKey()
       && !this.panel.closest('[data-app-shell-active-page="false"],[hidden],[aria-hidden="true"]')
-      && annotationConsensusThreadId(this.panel.closest('[data-app-shell-active-page="true"]') ?? this.panel.ownerDocument, true) === this.ports.context?.threadId;
+      && (this.ports.qualifyPanel?.(this.panel) ??
+        annotationConsensusThreadId(this.panel.closest('[data-app-shell-active-page="true"]') ?? this.panel.ownerDocument, true) === this.ports.context?.threadId);
   }
   private label(): string { return getLocale() === 'zh-CN' ? '在编辑器中打开文件' : 'Open file in editor'; }
   private labels = (): void => {

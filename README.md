@@ -12,63 +12,73 @@ So yeah, that escalated pretty quickly lol.
 
 **This is still an alpha, so expect a few rough edges.** There's no setup wizard yet. You'll need Windows and the official Codex desktop app. We have a ZIP you can unpack and run without installing coding tools, but we're still testing it before putting out a public release. Testing it on another PC is next.
 
-We're on **OpsWolf 0.1.0-alpha.18**, built on [Code-Codex v0.6.0](releases/README.md). Rain now lets you save your own presets, choose two looks to blend between, and keep those choices for next time. The new controls and saved blend choices have worked on my setup, including after a restart. The editor also has **Refresh**, **Clear list** and **Show all**. [More about Rain's settings](docs/editor/code-rain-integration.md#presets-and-blend-settings).
+### Catching up with Codex — alpha.30
+
+We're preparing **OpsWolf 0.1.0-alpha.30** and its portable package, built on **Code-Codex v0.6.0**. I've been using alpha.30 locally, and it's feeling much better. There's still work to do before all the pieces feel like they belong together.
+
+Codex added its own file tabs and editing while we were building ours. Suddenly we had two editors trying to use the same space. Headers overlapped, the tree sometimes covered chat, and opening a file could leave you wondering which editor you were supposed to use. Fun times lol.
+
+So we stopped trying to give it another editor on the side. **Chat stays in the main pane, Codex handles the right-hand tabs, and OpsWolf adds its tools there.** You can have files and browser pages on that side. The old E button is gone; use the native panel controls instead.
+
+The tree now keeps its space when I toggle the Codex sidebar, Rain is working again, and the file panel finally matches the rest of the background. Some of our old conveniences still need to come back. I'd rather be clear about that than pretend the migration finished every part of the job.
 
 ### Read it, then work on it
 
-Open a file from the explorer and it appears beside chat. **Preview** is for reading; **Edit** lets you change supported text files. **Save**, or **Ctrl+S**, writes the file. Markdown Preview can show headings, links and tables; Edit shows the source that makes them.
+Open a file from the explorer or a supported chat link and it opens on the right, with your conversation still beside it. Codex handles the editing; our tools appear in supported file tabs.
 
-![Rendered Markdown and its table beside the conversation](docs/images/editor-preview-demo.png)
+You'll find Pins and **Saved file preview** in our bar. The preview is an extra read-only view of what's saved on disk, which can be different from what you're still editing. It's useful for our preview plugins, but I want the everyday file controls to be simpler: a clear Preview/Edit choice and obvious save controls. That part isn't there yet.
 
-*Preview: a sample Markdown file in the real editor. The chat beside it is a demo.*
+**The screenshots below are outdated.** We're keeping them to show the earlier editor while we prepare new ones. They don't show alpha.30's native tab layout.
 
-![The same Markdown sample in Edit with word wrap and source line numbers](docs/images/editor-edit-demo.png)
+![Outdated screenshot: OpsWolf Markdown preview beside chat](docs/images/editor-preview-demo.png)
 
-*Edit: the same file as source text, with word wrap and line numbers.*
+*Outdated screenshot — the earlier Preview mode, with a sample document and demo conversation.*
 
-The **E** button opens or hides the editor. Drag its left edge to resize it, or use its fullscreen button when you want more room. Hiding a fullscreen editor resets it, so the next E puts it beside chat again.
+![Outdated screenshot: OpsWolf source editor](docs/images/editor-edit-demo.png)
 
-Tabs can scroll with your mouse wheel, move by dragging, and appear in an open-files dropdown. Pin files to reopen them for that project. **Close all** leaves pins alone, and unsaved edits get a save/discard/cancel choice. Pins remember files, not unsaved drafts.
+*Outdated screenshot — the earlier Edit mode, including the Save, wrap and tab controls. Those controls haven't all returned in the new layout.*
+
+I also miss our scrolling tabs, open-files list and Close all button. Bringing those conveniences to the native tabs is on the list, along with Pins in Codex's own Files view. Pins remember files, not unsaved edits.
 
 ### See what changed without losing the conversation
 
-Click Codex's live **files changed** bubble and its comparison viewer opens in the editor's **Changes** tab. You keep Codex's review controls, with the comparison beside your chat. Clicking a file in the bubble's hover list takes you to that file's change.
+Codex's **Show changes** button for the file you're looking at is a nice addition. We're keeping that, along with its native Changes view, and adding our review tools where they fit.
 
-List getting long? **Clear list** tucks those entries away for this session. New recorded edits bring files back, and **Show all** brings the cleared entries back whenever you want. It doesn't undo your work. **Clear all unread** just clears the unread dots.
+![Outdated screenshot: native Changes in the earlier OpsWolf editor](docs/images/changes-native.png)
 
-![The native Codex Changes viewer hosted inside an OpsWolf editor tab](docs/images/changes-native.png)
+*Outdated screenshot — Codex's Changes viewer inside the old OpsWolf editor, captured in alpha.3. It now stays in Codex's native panel.*
 
-*Codex's Changes viewer inside our editor, captured in alpha.3. This shows changes to our public screenshot tool.*
+There's also a persistent **Native changes** panel above the message box. Expand it to read recorded changes, or use **Open file** to look at the current file on the right. **Clear list** tucks entries away for the session; **Show all** brings them back. New recorded edits can bring files back too. None of that undoes your work.
 
-There's also a persistent **Native changes** panel above the message box. It stays available after the live bubble has gone. Expand the file list, then open just the changes you want to read. **Open file** takes you from the recorded diff to the current file, where you can edit it.
+![Outdated screenshot: persistent Native changes panel](docs/images/native-changes-demo.png)
 
-![The persistent Native changes panel above chat, with a recorded diff open on the right](docs/images/native-changes-demo.png)
+*Outdated screenshot — the earlier review layout, using a sample change and demo conversation.*
 
-*The panel above chat, with a sample change open on the right. The conversation is a demo. This is a second way to review changes, separate from the Changes tab above.*
-
-This shows changes Codex has recorded, even for project files that aren't in Git. It can miss edits made by hand or through commands, so keep your own backups too.
+This shows changes Codex has recorded. It can miss edits made by hand or through commands, so keep your own backups too.
 
 ### The other little things that help
 
-- **Point at the actual lines.** Select text and right-click to cite it in chat, copy a citation, or collect several ranges. Clicking a reference opens and highlights its source. It works across supported text formats.
+- **Point at the actual lines.** In the saved-file reader, select text and right-click to cite it in chat, copy a citation, or collect several ranges. Clicking a reference opens and highlights its source. It works across supported text formats.
 - **Keep your reading position.** Scroll up to read without the feed constantly pulling you away. Sending your next message resumes following the conversation.
 - **Find the right file.** File links in chat open in the editor when they're inside the current project. Dragging a file from the explorer into chat supplies its full location.
-- **Make it comfortable.** Settings include source wrap, a minimap, an optional typing-speed counter and first-chat sidebar collapse. Our menu/settings name and logo can use your own saved identity profile; Windows identity aisn't changed by that (yet).
+- **Make it comfortable.** Settings include an optional typing-speed counter and first-chat sidebar collapse. Legacy source wrap/minimap preferences do not control the native editor. Our menu/settings name and logo can use your own saved identity profile; Windows identity aisn't changed by that (yet).
 - **Add some atmosphere.** Optional preview plugins and backgrounds live in Preview Market. [Code Rain](https://github.com/ThornsOfire/OpsWolf-Code-Rain) adds configurable rain; [Nova Fox](https://github.com/ThornsOfire/nova-fox-companion) is a separate companion with optional OpsWolf integration.
 
 Open **OpsWolf → OpsWolf settings…** for our preferences. Open **OpsWolf → Preview Market** to add or enable preview plugins and backgrounds. With Rain active, the background-settings button at the top of the explorer opens its controls directly. If you've chosen your own app label, look under that menu name instead.
 
-![OpsWolf settings with the default wolf logo and shared preferences](docs/images/settings-demo.png)
+![Outdated screenshot: OpsWolf settings with a demo profile](docs/images/settings-demo.png)
 
-*Our settings panel using a demo profile. Yours can have its own name and artwork. [About these screenshots](docs/images/README.md).*
+*Outdated screenshot — an earlier settings panel using a demo profile. Yours can have its own name and artwork. [About these screenshots](docs/images/README.md).*
 
 ### A few rough edges, because alpha means alpha
 
-- Big files have limits: you can read up to **10 MiB**, but editing stops at **512 KiB**. Large Markdown files open as plain text first; you can choose to load the formatted view. If a file can't be edited, a red message explains why.
-- Citations work, but you might still see a huge ugly link while typing or hovering over one. Making those look tidy is still on the list.
-- The agent's activity details are meant to open automatically so you can see what it's doing. We've made a fix, but still need to check the screen where it was failing. This is separate from following new messages or scrolling up to read.
-- Rain is much smoother on my setup now, even while blending between looks. Saved blend choices also survived a restart. The personal preset library needs more testing, and we'd love feedback from other PCs. The editor's transparency still doesn't work with every theme.
-- This is a basic text and code editor for now. Code suggestions, debugging tools, a reliable AI context meter and support for more file types are still on the wishlist.
+- **Saving should be clearer.** I can edit a file and switch tabs without losing the edit, but that doesn't tell me whether it's saved to disk. We still need to confirm that properly and make the controls easier to find.
+- **Busy tab bars need help.** Native tabs get squished when you open a lot. Scrolling, an open-tabs list and Close all/others/right are on the list, with proper protection for unsaved work.
+- **Pins aren't everywhere yet.** Our file tools have bookmarks; Codex's New Tab → Files view doesn't have our Pins bar.
+- **Rain still has gaps.** File transparency looks good on my setup, but New Tab and Changes are still opaque. Other themes need more work too. Disable your active background before enabling another.
+- **Some extra UI needs a rethink.** Once the native file controls are clearer, we'll revisit whether the separate Saved file preview still earns its space.
+- **Big files have limits.** Our reader supports complete text up to 10 MiB; the older OpsWolf editor stops editing at 512 KiB. Codex's own editor has its own behavior.
+- **There's cleanup left.** Some old code and tests still serve a purpose, and some won't. We'll sort that out as the workflow settles. Citations can still show ugly long links, too.
 - Updates can break things we rely on. **Review updates** tells you when a new Code-Codex version is available, and we stop its installer from replacing OpsWolf. Codex itself can still update through Windows or the Store. To restart OpsWolf, save your work, close it normally and use your OpsWolf launcher again. The built-in Restart button is blocked because it can reopen without our additions. [How updates work](docs/editor/manual-updates.md).
 
 The [user guide](docs/editor/README.md) has more help, and [known issues](docs/editor/known-issues.md) covers the bugs we're tracking. We haven't tested every Codex version, theme or monitor setup yet.
@@ -77,7 +87,7 @@ The [user guide](docs/editor/README.md) has more help, and [known issues](docs/e
 
 ### Getting started today
 
-The test download is on GitHub under **Actions**. You'll need to sign in to download it. There isn't a public alpha Release yet, and these test downloads expire. The [download and launch guide](docs/editor/portable.md) walks you through it.
+Existing test downloads are on GitHub under **Actions**; check the exact version in the run and package. We're preparing the alpha.30 portable package for this update and will link the exact download when it's ready. You'll need to sign in to download it. There isn't a public alpha Release yet, and these test downloads expire. The [download and launch guide](docs/editor/portable.md) walks you through it.
 
 1. Download the test package and unpack the outer ZIP. There's an OpsWolf ZIP inside; unpack that one too.
 2. Save your work and close Codex normally.
@@ -120,7 +130,7 @@ If something breaks in our additions, report it to this fork with your versions,
 | --- | --- |
 | Implementation | `candidate/planned-development`; [source branch](https://github.com/ThornsOfire/OpsWolf/tree/candidate/planned-development). `main` is a documentation landing page; `feature/right-editor-pane` is the historical baseline. |
 | Versions | See [fork metadata](cursadex-version.json) for the display version and [Cargo.toml](Cargo.toml) for the inherited package version. This integration targets upstream Code-Codex v0.6.0. [Rain has its own plugin version](releases/plugins/appearance/code-rain/manifest.json). The source revision, package version, local handoff and running build each have their own identity. |
-| Qualification | Alpha.18: 62 combined local gates; native tests 499 passed / 24 inherited ignores / 0 failed. Local owner observations confirm menu controls and saved blend choices after restart. Portable revision 1: 14 builder + 5 runtime-auditor fixtures, relocated CLI/hash/plugin checks; 25 included plugins, 4 redistribution exclusions. Hosted results belong to their exact Actions run; first-recipient/clean-machine acceptance is pending. [Portable scope and checklist](docs/editor/portable.md); [earlier integration evidence](docs/editor/upstream-integration.md#alpha15-qualification). |
+| Qualification | Alpha.30 local deferred regression: 73 gates passed, with two unchanged build gates reused after identity checks (75 passing dispositions). Native suite: 499 passed, 0 failed, 24 inherited ignores. One fixture setup correction preserved its assertions; no product fix was needed. These are local results, not fresh hosted CI, clean-machine qualification or complete live acceptance. [Current status](docs/editor/migration-status.md). |
 | Legacy naming | Formerly Cursadex. Preserve `cursadex-*` metadata, event/storage keys, CSS hooks and technical launch names. Branding changes do not authorize migrations or identifier refactors. |
 | Portability | No maintainer Desktop layout, app-state paths, personal identity artwork or external workspace scripts required by a clone. No public installer/fresh-machine certification yet. |
 
@@ -164,11 +174,15 @@ Pair UI/backend versions. This command uses mutable build outputs, not an immuta
 - Input: respect session limits, fresh-capture and hit-target checks. GPU/protected-window captures can fail; never click blind. Inspect/capture the current target before input. `type_text` is literal single-line text, not scripts/key chords; use supported key actions separately.
 - Stop/cleanup: physical Escape/F12 stops control. After cancellation, only a new owner-authorized task can start a new session; read-only captures don't rearm input. Never replay a cancelled action. Finish with `end_control_session`.
 
+### Migration status
+
+The modern pane ownership migration is implemented through alpha.30; the save/Preview-Edit controls, native tab overflow and bulk-close conveniences, complete Pins integration and remaining Rain surfaces are backlog work. Do not treat native tab-switch persistence as verified disk persistence. See [migration status](docs/editor/migration-status.md) for local checks, owner observations and pending acceptance. The current source keeps legacy draft protections and older-host paths; cleanup must trace consumers before removing them.
+
 ### Runtime contracts
 
 - Modules: UI `packages/explorer-ui/src/`; native workspace/transport/context under `crates/`. [Architecture](docs/architecture.md), [editor ownership/data flow](docs/editor/architecture.md), [development/check matrix](docs/editor/development.md).
-- File I/O: authenticated workspace bridge, current-project path/type/sensitive-file policy, complete content, loaded-version conflict checks. Inline/edit limit 512 KiB; complete read limit 10 MiB; larger text virtualized; large Markdown rendering explicit. Preserve dirty drafts/caret through view changes and save failure/cancel.
-- Tabs: 64 open, 32 project pins; pins store normalized-root-relative paths/order, never draft contents. Recorded diffs read-only; **Open file** resolves current source through normal reader policy.
+- File I/O: authenticated workspace bridge, current-project path/type/sensitive-file policy, complete content, loaded-version conflict checks. OpsWolf legacy inline/edit limit 512 KiB; complete reader limit 10 MiB; larger text virtualized; large Markdown rendering explicit. Preserve dirty drafts/caret through view changes and save failure/cancel.
+- Legacy tabs: 64 open; native tabs have their own behavior. Up to 32 project pins; pins store normalized-root-relative paths/order, never draft contents. Recorded diffs read-only; **Open file** resolves current source through normal reader policy.
 - Review: native patch history, not filesystem snapshots; no permanent duplicate diff archive. Native comparison remains owned by Codex, positioned through qualified adapters without cloning/reparenting React nodes. Unknown layouts retain native behavior; English/observed-layout limits apply.
 - Citations: supported text, up to 32 grouped ranges, bounded quotes and explicit draft markers. [Routing/presentation limits](docs/editor/citations.md). No compact composer chips claimed.
 - Preferences/identity local to renderer storage. [Settings](docs/editor/settings.md), [identity/restart scope](docs/editor/identity.md), [link permissions/reset](docs/editor/links.md). No Windows/Discord identity claim; profiles, chat/auth and documents remain separate.

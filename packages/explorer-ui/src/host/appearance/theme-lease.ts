@@ -64,12 +64,14 @@ export function selectCodexAppearanceAdapter(moduleExports: Record<string,unknow
   for(const value of values){
     if(!isObjectRecord(value))continue;
     const appActions=data(value,'appActions'),coordination=data(value,'clientCoordination');
-    if(!isCodexRpcNamespace(appActions)||!isCodexRpcNamespace(coordination))continue;
+    const modern=isCodexRpcNamespace(data(value,'appServerManagers'))&&isCodexRpcNamespace(data(value,'workspaceFiles'));
+    if(!isCodexRpcNamespace(appActions)||(!isCodexRpcNamespace(coordination)&&!modern))continue;
     try{
-      const run=method(appActions,'runInPrimaryWindow'),invalidate=method(coordination,'invalidateQueryCache');
+      const run=method(appActions,'runInPrimaryWindow');
+      const legacy=isCodexRpcNamespace(coordination)&&typeof method(coordination,'invalidateQueryCache')==='function';
       // Callable RPC proxies can synthesize .call/.apply as RPC properties.
       // Use the intrinsic without reading either property on the method.
-      if(typeof run==='function'&&typeof invalidate==='function')adapters.push({runAction:action=>Reflect.apply(run,appActions,[{action}])});
+      if(typeof run==='function'&&(legacy||modern))adapters.push({runAction:action=>Reflect.apply(run,appActions,[{action}])});
     }catch{ /* An uninspectable candidate does not authorize an action. */ }
   }
   // Older builds re-export this function from app-initial; newer builds keep
@@ -161,7 +163,10 @@ export function getCodexAppearanceAdapter(): Promise<CodexAppearanceAdapter> {
 
 
 export async function runCodexAppearanceAction(action: CodexAppearanceAction,readTimeoutMs?: number): Promise<Record<string,unknown>> {
+  const restoration=inactiveRestoration;
   const adapter=await getCodexAppearanceAdapter();
+  // Discovery awaits imports; stale recovery must not dispatch an action.
+  restoration?.assert();
   const pending=adapter.runAction(action);
   let timer: number|undefined;
   try {
@@ -183,8 +188,15 @@ export async function runCodexAppearanceAction(action: CodexAppearanceAction,rea
 
 
 
+// Only explicit inactive-owner recovery installs this guard. Ordinary theme
+// operations retain their existing behavior; a changed lease always wins.
+let inactiveRestoration:{assert:()=>void;cleared:boolean}|undefined;
+const RESTORATION_READ_TIMEOUT_MS=5_000;
+
 export async function readCodexAppearanceTheme(timeoutMs?: number): Promise<CodexAppearanceTheme> {
-  const result=await runCodexAppearanceAction({ type: "app.appearance.get" },timeoutMs);
+  const restoration=inactiveRestoration;restoration?.assert();
+  const result=await runCodexAppearanceAction({ type: "app.appearance.get" },timeoutMs??(restoration?RESTORATION_READ_TIMEOUT_MS:undefined));
+  restoration?.assert();
   if(!isCodexAppearanceTheme(result.mode)) {
     throw new Error("Codex returned an unsupported Appearance setting");
   }
@@ -194,7 +206,10 @@ export async function readCodexAppearanceTheme(timeoutMs?: number): Promise<Code
 
 
 export async function writeCodexAppearanceTheme(value: CodexAppearanceTheme): Promise<void> {
+  const restoration=inactiveRestoration;restoration?.assert();
+  // A dispatched write must settle before another background can proceed.
   const result=await runCodexAppearanceAction({ type: "app.appearance.set_mode",mode: value });
+  restoration?.assert();
   if(result.mode!==value) {
     throw new Error("Codex did not confirm the Appearance change");
   }
@@ -282,11 +297,39 @@ export function prepareParticleThemeTransfer(to: DarkBackgroundPluginId, outgoin
   };
 }
 
+/** A normal owner Disable may restore/clear only the record captured here.
+ * No activation, deletion or native setting is performed by preparation. */
+export function prepareInactiveParticleRestoration(target:DarkBackgroundPluginId):{
+  readonly owner:DarkBackgroundPluginId;
+  readonly restore:(cleanup:()=>Promise<unknown>,current:()=>boolean)=>Promise<void>;
+}|undefined {
+  const expected=readParticleThemeLease();
+  if(!expected||expected.owner===target)return;
+  if(!expected.owner)throw Error('The saved Appearance restoration has no known owner. It was not changed.');
+  return {owner:expected.owner,restore:async(cleanup,current)=>{
+    if(inactiveRestoration)throw Error('An Appearance restoration is already pending.');
+    const guard={cleared:false,assert:()=>{
+      if(!current())throw new DOMException('Background recovery is no longer current','AbortError');
+      const latest=readParticleThemeLease();
+      if(guard.cleared?Boolean(latest):!latest||latest.owner!==expected.owner||latest.previousPreference!==expected.previousPreference||latest.forcedPreference!==expected.forcedPreference){
+        throw Error('The saved Appearance restoration changed during recovery. It was not replaced.');
+      }
+    }};
+    inactiveRestoration=guard;
+    try{
+      guard.assert();await cleanup();guard.assert();
+      if(!guard.cleared)throw Error('The previous background did not release its Appearance restoration.');
+    }finally{if(inactiveRestoration===guard)inactiveRestoration=undefined;}
+  }};
+}
+
 export function clearParticleThemeLease(owner?: DarkBackgroundPluginId): void {
   try {
+    const restoration=inactiveRestoration;restoration?.assert();
     const lease=readParticleThemeLease();
     if(owner&&lease?.owner&&lease.owner!==owner) return;
     localStorage.removeItem(PARTICLE_BACKGROUND_THEME_LEASE_KEY);
+    if(restoration){restoration.cleared=true;restoration.assert();}
   } catch(__codeCodexCaught) {
     recordCaughtRuntimeError("clearParticleThemeLease",__codeCodexCaught);
 

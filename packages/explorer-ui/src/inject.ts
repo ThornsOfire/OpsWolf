@@ -1,4 +1,5 @@
 import {nativeSettingsBackgroundCss} from './native-background-surfaces';
+import {TreeLayout,installTreeLayoutStyle} from './host/tree-layout';
 import {CODE_RAIN_NATIVE_SURFACE_CSS} from './code-rain-native-surfaces';
 import {collapseNativeSidebarOnStartup} from './native-sidebar';
 import {installChatReading} from './host/native-surfaces/chat-reading';
@@ -15,7 +16,7 @@ import { openRuntimeInformation, observeCodexRuntime } from "./runtime-informati
 import { runtimeEvent } from "./runtime-events";
 import { EXPLORER_TAG, OWNED_EXPLORER_SELECTOR, rendererStartBlock, reportRendererStartBlock } from "./core/document-renderer";
 import { CodeCodexElement } from "./app/explorer-element";
-import { GLOW_HORIZON_BACKGROUND_ATTRIBUTE, GLOW_HORIZON_BACKGROUND_COLOR_PROPERTY, PARTICLE_BACKGROUND_ATTRIBUTE, PARTICLE_BACKGROUND_COLOR_PROPERTY, TRANSPARENT_BACKGROUND_ATTRIBUTE, TRANSPARENT_BACKGROUND_COLOR_PROPERTY } from "./core/configuration/explorer";
+import { GLOW_HORIZON_BACKGROUND_ATTRIBUTE, GLOW_HORIZON_BACKGROUND_COLOR_PROPERTY, PARTICLE_BACKGROUND_ATTRIBUTE, PARTICLE_BACKGROUND_COLOR_PROPERTY } from "./core/configuration/explorer";
 import {
   activePageElements,
   isClippedMainSurface,
@@ -40,10 +41,8 @@ const UI_VERSION = __CODE_CODEX_VERSION__;
 export { EXPLORER_TAG } from "./core/document-renderer";
 const DISMISS_EVENT = "code-codex:dismiss";
 const RESELECTION_LISTENER_STATE = Symbol.for("code-codex:reselection-listener:v1");
-const SHELL_LAYOUT_STYLE_SELECTOR = 'style[data-code-codex-shell-layout="codex-26.715"]';
 const PARTICLE_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-particle-background="v1"]';
 const GLOW_HORIZON_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-glow-horizon-background="v1"]';
-const TRANSPARENT_BACKGROUND_STYLE_SELECTOR = 'style[data-code-codex-transparent-background="v1"]';
 // New page surfaces add a second translucent sidebar, opaque workspace
 // pseudo-surface and gradient fades. Keep one mask on each outer surface.
 const PAGE_SURFACE_BACKGROUND_CSS = `
@@ -63,78 +62,6 @@ html:is([data-code-codex-particle-image-background], [data-code-codex-glow-horiz
   background-image: none !important;
 }
 `;
-const CURRENT_LAYOUT_EXPLORER_SELECTOR = `${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-mount-strategy="known:workspace-row"]`;
-const CURRENT_LAYOUT_HEADER_LEFT_PROPERTY = "--code-codex-current-layout-header-left";
-const TITLE_TREE_OVERLAP = "--code-codex-title-tree-overlap";
-const PAGE_HEADER = 'header[data-app-shell-titlebar]:not(:has([data-app-shell-titlebar-content]), [data-app-shell-active-page="false"] *)';
-const PAGE_TITLE = `${PAGE_HEADER} [data-app-shell-main-titlebar]:not([inert])`;
-const SHELL_LAYOUT_CSS = `
-/* The new page shell keeps the conversation title in a fixed body header,
- * outside the flex row that our file tree widens. Shift that header by the
- * measured panel width; the legacy title lives inside main and is untouched. */
-html:has(${CURRENT_LAYOUT_EXPLORER_SELECTOR}:not([data-home-view-hidden])) header:has([data-app-shell-titlebar-content]):not([data-app-shell-active-page="false"] *) {
-  left: var(${CURRENT_LAYOUT_HEADER_LEFT_PROPERTY}) !important;
-}
-
-/* The new header can span the tree. Inset its contents by the overlap while
- * leaving its end controls and the application menu anchored. */
-[data-app-shell-frame]:has(${CURRENT_LAYOUT_EXPLORER_SELECTOR}:not([data-home-view-hidden]))
-${PAGE_TITLE} {
-  padding-left: var(${TITLE_TREE_OVERLAP}, revert-layer);
-  box-sizing: border-box;
-}
-
-/* The native new-chat action lives in its own start slot, outside the title. */
-[data-app-shell-frame]:has(${CURRENT_LAYOUT_EXPLORER_SELECTOR}:not([data-home-view-hidden]))
-${PAGE_HEADER} > [data-app-shell-header-slot="start"] {
-  margin-left: var(${TITLE_TREE_OVERLAP}, revert-layer);
-}
-
-/* The row begins above the native sidebar and conversation surface by 8px. */
-${CURRENT_LAYOUT_EXPLORER_SELECTOR} {
-  margin-top: 8px;
-  height: calc(100% - 8px) !important;
-  min-height: 0;
-}
-
-/* Cached pages can mount while Chromium pauses their animation timeline.
- * Keep the inline tree at its flex position instead of leaving it at the
- * entrance animation's translated, transparent first frame. */
-:is([data-app-shell-workspace-row="true"], [data-app-shell-workspace="true"]):has(> [data-app-shell-active-page]) > ${CURRENT_LAYOUT_EXPLORER_SELECTOR} {
-  animation: none !important;
-}
-
-html:is([data-code-codex-particle-image-background], [data-code-codex-glow-horizon-background]) body ${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-collapsed="true"] + ${MAIN_SURFACE_SELECTOR} {
-  border-left-color: transparent !important;
-  background-clip: border-box !important;
-}
-
-html:is([data-code-codex-particle-image-background], [data-code-codex-glow-horizon-background]) body ${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-collapsed="true"][data-mount-strategy="known:main-content-clip"] + :has(> ${MAIN_SURFACE_SELECTOR}) > ${MAIN_SURFACE_SELECTOR} {
-  border-left-color: transparent !important;
-  background-clip: border-box !important;
-}
-
-html:is([data-code-codex-particle-image-background], [data-code-codex-glow-horizon-background]) body ${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-collapsed="true"][data-mount-strategy="known:workspace-row"] + :has(${MAIN_SURFACE_SELECTOR}) ${MAIN_SURFACE_SELECTOR} {
-  border-left-color: transparent !important;
-  background-clip: border-box !important;
-}
-
-${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-mount-strategy="known:main.main-surface"] + ${MAIN_SURFACE_SELECTOR} > header[data-app-shell-header-edge-scroll] {
-  position: absolute !important;
-  top: 0 !important;
-  right: 0 !important;
-  left: 0 !important;
-  width: auto !important;
-}
-
-@container thread-content (min-width: 600px) {
-  ${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-mount-strategy="known:main.main-surface"]:not([data-collapsed="true"]) + ${MAIN_SURFACE_SELECTOR} .thread-scroll-container[data-app-action-timeline-scroll] > div > [data-mcp-app-portal-target="true"],
-  ${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-mount-strategy="known:main.main-surface"]:not([data-collapsed="true"]) + ${MAIN_SURFACE_SELECTOR} .thread-scroll-container[data-app-action-timeline-scroll] [data-pip-obstacle="thread-footer"] {
-    max-width: min(var(--thread-content-max-width), calc(100% - 100px)) !important;
-  }
-}
-`;
-
 const PARTICLE_BACKGROUND_CSS = `
 html[${PARTICLE_BACKGROUND_ATTRIBUTE}] {
   background-color: var(${PARTICLE_BACKGROUND_COLOR_PROPERTY}, #000) !important;
@@ -431,59 +358,7 @@ function chooseMount(): MountPoint | null {
   return { parent: document.body, before: null, placement: "drawer", strategy: "safe-drawer", mainSurface };
 }
 
-function installShellLayoutStyle(): void {
-  let style = document.querySelector<HTMLStyleElement>(SHELL_LAYOUT_STYLE_SELECTOR);
-  if (!style) {
-    style = document.createElement("style");
-    style.dataset.codeCodexShellLayout = "codex-26.715";
-    (document.head ?? document.documentElement).append(style);
-  }
-  if (style.textContent !== SHELL_LAYOUT_CSS) style.textContent = SHELL_LAYOUT_CSS;
-}
-
-let currentLayoutObservedExplorer: CodeCodexElement | null = null;
-let currentLayoutWidthObserver: ResizeObserver | null = null;
-
-function updateCurrentLayoutHeader(explorer: CodeCodexElement): void {
-  const main = qualifiedMainSurface();
-  if (!explorer.isConnected || explorer.hasAttribute("data-home-view-hidden") || !main) return;
-  const contentLeft = main.getBoundingClientRect().left;
-  document.documentElement.style.setProperty(CURRENT_LAYOUT_HEADER_LEFT_PROPERTY, `${contentLeft}px`);
-  const tree = explorer.getBoundingClientRect();
-  const frame = explorer.closest("[data-app-shell-frame]");
-  const titles = frame ? [...frame.querySelectorAll<HTMLElement>(PAGE_TITLE)].filter(title => title.offsetWidth > 0) : [];
-  const title = titles.length === 1 ? titles[0] : null;
-  const bounds = title?.getBoundingClientRect();
-  // The main is already at its final flex position during the tree's slide-in.
-  const overlap = bounds && title && bounds.right > contentLeft && tree.bottom > bounds.top && tree.top < bounds.bottom
-    ? (contentLeft - bounds.left) * title.offsetWidth / bounds.width : 0;
-  document.documentElement.style.setProperty(TITLE_TREE_OVERLAP, overlap > 0 ? `${overlap}px` : "");
-}
-
-function reconcileCurrentLayoutHeader(explorer: CodeCodexElement | null, strategy: string): void {
-  if (!explorer || strategy !== "known:workspace-row") {
-    currentLayoutWidthObserver?.disconnect();
-    currentLayoutWidthObserver = null;
-    currentLayoutObservedExplorer = null;
-    document.documentElement.style.removeProperty(CURRENT_LAYOUT_HEADER_LEFT_PROPERTY);
-    document.documentElement.style.removeProperty(TITLE_TREE_OVERLAP);
-    return;
-  }
-  if (currentLayoutObservedExplorer === explorer) {
-    updateCurrentLayoutHeader(explorer);
-    return;
-  }
-  currentLayoutWidthObserver?.disconnect();
-  currentLayoutObservedExplorer = explorer;
-  const update = () => {
-    updateCurrentLayoutHeader(explorer);
-  };
-  currentLayoutWidthObserver = new ResizeObserver(update);
-  currentLayoutWidthObserver.observe(explorer);
-  const sidebar = explorer.parentElement?.querySelector<HTMLElement>(":scope > aside.app-shell-left-panel");
-  if (sidebar) currentLayoutWidthObserver.observe(sidebar);
-  update();
-}
+const treeLayout = new TreeLayout();
 
 function installTransparentBackgroundStyle(): void {
   optionalPluginExport<() => void>('transparent-background','installTransparentBackgroundStyle')?.();
@@ -592,7 +467,7 @@ export function injectExplorer(): CodeCodexElement | null {
   existing?.setHomeViewActive(homeView);
   existing?.reconcileLoginSession(isNativeLoginView(document));
   if (!homeView) {
-    reconcileCurrentLayoutHeader(existing, "");
+    treeLayout.release();
     if (existing || !document.body) return existing;
     // The hidden host restores saved background controllers even when the
     // application starts at sign-in. It must never create a login drawer.
@@ -606,7 +481,7 @@ export function injectExplorer(): CodeCodexElement | null {
   }
   const mount = chooseMount();
   if (!mount) return existing;
-  if (mount.strategy === "known:main.main-surface" || mount.strategy === "known:workspace-row") installShellLayoutStyle();
+  if (mount.strategy === "known:main.main-surface" || mount.strategy === "known:workspace-row") installTreeLayoutStyle(document);
 
   if (existing) {
     const responsiveDrawer =
@@ -617,7 +492,7 @@ export function injectExplorer(): CodeCodexElement | null {
       existing.reconcileMount(mount.parent, mount.before, mount.placement, mount.strategy);
     }
     existing.reconcileMainPreview(mount.mainSurface);
-    reconcileCurrentLayoutHeader(existing, mount.strategy);
+    treeLayout.reconcile(existing, mount.strategy, mount.mainSurface);
     return existing;
   }
 
@@ -630,11 +505,12 @@ export function injectExplorer(): CodeCodexElement | null {
   if (mount.before) mount.parent.insertBefore(explorer, mount.before);
   else mount.parent.append(explorer);
   explorer.reconcileMainPreview(mount.mainSurface);
-  reconcileCurrentLayoutHeader(explorer, mount.strategy);
+  treeLayout.reconcile(explorer, mount.strategy, mount.mainSurface);
   return explorer;
 }
 
 function retireRemountObserver(): void {
+  treeLayout.release();
   remountObserver?.disconnect();
   remountObserver = undefined;
   if (remountFrame !== undefined) cancelAnimationFrame(remountFrame);
@@ -646,6 +522,7 @@ function retireRemountObserver(): void {
 }
 
 function disableRemount(): void {
+  treeLayout.release();
   dismissExplorerForSession();
 }
 
@@ -725,6 +602,12 @@ function workspaceMountChanged(records: readonly MutationRecord[]): boolean {
     if (record.type === 'attributes') {
       return record.attributeName === 'data-app-shell-workspace-row' || record.attributeName === 'data-app-shell-workspace';
     }
+    // Sidebar transitions can insert an unmarked portal anchor directly into
+    // the owned tree's row. Re-establish our qualified placement so adjacency
+    // consumers keep their existing strict workspace boundary.
+    if (record.target instanceof Element &&
+        record.target.matches('[data-app-shell-workspace-row],[data-app-shell-workspace]') &&
+        record.target.querySelector(`:scope > ${OWNED_EXPLORER_SELECTOR}[data-placement="inline"][data-mount-strategy="known:workspace-row"]`)) return true;
     return [...record.addedNodes, ...record.removedNodes].some(node =>
       node instanceof Element && (node.matches(container) || node.querySelector(container)));
   });

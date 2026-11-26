@@ -2,6 +2,12 @@
 
 We need a quick way to catch mistakes, a proper check before publishing, and a deeper test before asking people to trust a release. Those are different jobs. Passing one does not pass the others.
 
+## Latest local regression checkpoint
+
+On November 25, 2026, alpha.30's 73 deferred gates passed. Two unchanged UI/native build gates reused their matching earlier evidence: 75 passing dispositions, not 75 fresh executions. Native tests: 499 passed, zero failed, 24 inherited ignores. A synthetic Rain setup correction retained all assertions; product code was unchanged. These results do not replace hosted CI, clean-install qualification or unfinished live save/reopen acceptance. See [migration status](migration-status.md).
+
+Keep valid legacy and shared draft/save tests during the next cleanup. Review behavior and consumers before retiring them; test redesign follows the agreed workflow changes.
+
 ## Choose checks for this change
 
 Start with the reported behaviour and the boundary being changed. Decide what would demonstrate the correction before selecting commands.
@@ -29,6 +35,12 @@ Use real-host feedback once the coherent checked candidate, preserved recovery a
 | 3. Release and clean-install qualification | Before a broader release or a significant host/toolchain/installer change | A fresh documented setup works without the maintainer's paths, caches or private state; upgrade and recovery behavior is understood | Owner-approved isolated environment, explicit version/platform matrix and separate release decision |
 
 Existing [focused checks](development.md#choose-checks-for-what-changed), GitHub workflows and the workspace's deployment/post-restart contract remain the starting point. The foundation below coordinates a small selection; it does not replace their assertions or silently run every suite.
+
+## Native ownership migration checks
+
+For changes to native file routing, run `node scripts/test-native-file-tabs.mjs` and the affected owner/action/workspace helpers. `node scripts/test-native-preview-integration.mjs` exercises the registered explorer, authenticated request composition, automatic tools, saved-reader isolation, stale links and citation cancellation. `node scripts/test-native-file-tools.mjs` covers attachment, geometry and teardown. Native Changes uses `test-native-diff-modern.mjs` alongside the retained legacy diff checks.
+
+Keep existing draft/save, session retention and geometry fixtures when their shared interfaces change. These synthetic checks use installed dependencies and do not establish actual-host save behavior, installed previewer coverage or activation acceptance. A new deployment must include the relevant new checks in its reviewed qualification configuration.
 
 ## Foundation now
 
@@ -77,6 +89,10 @@ Preserve automated, fixture, prior qualification, agent-live and owner-live evid
 The foundation reporter is deliberately conservative: PR01 through PR08 always remain required, even if a receipt sets `required: false`. A required `not-applicable` row stays incomplete, even with a reason, and a nonempty `pendingOwnerOrBroaderChecks` list remains visible and non-green. A noncommon row explicitly marked optional may be inapplicable with a reason. The reporter does not interpret owner-waiver prose or silently clear other unresolved receipt rows. Exception handling can be designed later; the actual receipt remains unchanged.
 
 Use synthetic files, disposable profiles and app-owned temporary output. Real drafts, client documents and current settings are outside automatic tests. UI actions still require the relevant authorization and app/target checks. Smoke reporting is read-only and performs no desktop input. A failure records evidence and a stable bug; it does not authorize a repair, restart, rollback or publication.
+
+## Publication OPSEC gate
+
+[Publication OPSEC review](publication-opsec.md) now defines the required agent-operated staged-content and outgoing-history/artifact review, with focused security checks where relevant. It is separate from regression testing and owner publication approval. Experimental test waivers do not waive it. No scanner, Git hook or new CI enforcement is installed by this procedure; record actual tools and coverage rather than claiming automatic enforcement.
 
 ## Later phases and decisions
 

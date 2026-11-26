@@ -16,14 +16,14 @@ import {launchFixture,delay} from './browser-fixture.mjs';
 const root=resolve(import.meta.dirname,'..');
 const label=process.argv[2]??'current';
 if(!/^[a-z0-9-]+$/.test(label))throw Error('Use a simple result label');
-const out=resolve(root,'artifacts/header-action-layout',label);mkdirSync(out,{recursive:true});
-const sourceFiles=['editor-header-control.ts','native-middle-pages.ts','editor-pane.ts'];
+const out=resolve(root,'artifacts/f58-native-tools/header-action-layout',label);mkdirSync(out,{recursive:true});
+const sourceFiles=['compact-native-header.ts','native-middle-pages.ts','editor-pane.ts'];
 const sources=Object.fromEntries(sourceFiles.map(name=>[name,createHash('sha256').update(readFileSync(resolve(root,'packages/explorer-ui/src/features/preview',name))).digest('hex')]));
 const bundle=await build({bundle:true,write:false,format:'iife',stdin:{contents:`
-import {EditorHeaderControl} from './features/preview/editor-header-control';
+import {CompactNativeHeader} from './features/preview/compact-native-header';
 import {NativeMiddlePages} from './features/preview/native-middle-pages';
 import {EditorPaneLayout} from './features/preview/editor-pane';
-window.controllers={EditorHeaderControl,NativeMiddlePages,EditorPaneLayout};
+window.controllers={CompactNativeHeader,NativeMiddlePages,EditorPaneLayout};
 `,resolveDir:resolve(root,'packages/explorer-ui/src'),loader:'ts'}});
 const html=`<!doctype html><meta charset="utf-8"><style>
 *{box-sizing:border-box}html,body{margin:0;font:13px sans-serif}button{width:28px;height:28px;flex:none;padding:0;border:0;background:#ddd;color:#111;cursor:pointer}
@@ -37,30 +37,28 @@ header{position:absolute;inset:0 0 auto;height:32px;display:flex;align-items:cen
 #end{position:relative;margin-left:auto;display:grid;flex:0 1 auto;padding-right:8px;height:32px;align-items:center}
 #end-content{display:inline-flex;align-items:center;gap:6px}#new-wrap{display:flex;flex:none;gap:6px;width:39px;padding-right:4px;justify-content:flex-end}
 #right-content{position:absolute;inset-inline:auto 0;display:flex;width:360px;height:32px}#right-frame{width:360px;display:flex;padding-left:14px}#add-wrap{display:flex;flex:none;width:28px}#native-zero{display:flex;flex:1;min-width:0}#native-strip{display:flex;flex:1;min-width:0}
-main{position:absolute;top:32px;width:100%;height:728px}#workspace{height:100%;display:flex;position:relative}#chat{width:640px;min-width:0}#chat-frame{width:1000px;height:100%}aside{width:360px;flex:none}#native-frame{width:360px;min-width:360px;height:100%}#viewer{position:absolute;right:0;top:0;width:380px;height:100%;background:#eee;pointer-events:none}#fallback{position:fixed;left:10px;bottom:10px}
+main{position:absolute;top:32px;width:100%;height:728px}#workspace{height:100%;display:flex;position:relative}#chat{width:640px;min-width:0}#chat-frame{width:1000px;height:100%}aside{width:360px;flex:none}#native-frame{width:360px;min-width:360px;height:100%}#viewer{position:absolute;right:0;top:0;width:380px;height:100%;background:#eee;pointer-events:none}
 [hidden]{display:none!important}
 </style><div id="active" data-app-shell-active-page="true"><div id="page" data-app-shell-page-surface="true">
 <header data-app-shell-titlebar="true"><div id="start" data-app-shell-header-slot="start"><div data-app-shell-header-slot-content><button id="new-chat" aria-label="New chat">N</button></div></div>
-<div id="titlebar" data-app-shell-main-titlebar="true"><div id="main-slot" data-app-shell-titlebar-slot="main" data-app-shell-focus-area="main"><div id="toolbar" data-app-shell-header-toolbar="true"><div id="title"><span data-app-shell-titlebar-content>Fixture conversation</span></div><div id="actions"><button id="dots" aria-label="Chat actions">…</button><button id="summary" aria-label="Toggle pinned summary">S</button></div></div></div></div>
+<div id="titlebar" data-app-shell-main-titlebar="true"><div id="main-slot" data-app-shell-titlebar-slot="main" data-app-shell-focus-area="main"><div id="toolbar" data-app-shell-header-toolbar="true"><div id="title"><span data-app-shell-titlebar-content>Fixture conversation</span></div><div id="actions"><button id="dots" aria-label="Chat actions">Ã¢â‚¬Â¦</button><button id="summary" aria-label="Toggle pinned summary">S</button></div></div></div></div>
 <div id="right-content" data-app-shell-titlebar-slot="content" data-app-shell-focus-area="right-panel"><div id="right-frame"><div id="native-strip" data-app-shell-tab-strip-controller="right"><span data-app-shell-tab-controller="right" data-tab-id="browser-1"><button id="native-page" aria-label="Example browser">B</button></span></div><div id="native-zero" data-app-shell-focus-area="right-panel"></div><span style="display:contents"><div id="add-wrap"><button id="native-add" aria-label="New tab">+</button></div></span></div></div>
 <div id="end" data-app-shell-header-slot="end"><div><div id="end-content" data-app-shell-header-slot-content><div id="new-wrap"><button id="hide" data-app-shell-focus-area="main" data-app-shell-workspace-layout-toggle="main" aria-label="Hide tabs">H</button></div></div></div></div></header>
 <main data-app-shell-main-surface="default"><div id="workspace"><div id="chat" data-app-shell-main-content-layout="thread-edge-scroll"><div id="chat-frame"><div data-response-annotation-conversation="thread123456">Synthetic response</div><div data-above-composer-conversation-id="thread123456"><textarea id="composer">Unsent synthetic draft</textarea></div></div></div><aside data-app-shell-focus-area="right-panel"><div id="native-frame"><div id="panel" role="tabpanel" data-app-shell-tab-panel-controller="right" data-tab-id="browser-1">Synthetic page</div></div></aside></div><div id="viewer"></div></main>
-</div></div><button id="fallback">E</button><script src="/fixture.js"></script><script>
+</div></div><script src="/fixture.js"></script><script>
 window.errors=[];addEventListener('error',e=>errors.push(e.message));addEventListener('unhandledrejection',e=>errors.push(String(e.reason)));
-window.$=s=>document.querySelector(s);window.counts={dots:0,summary:0,hide:0,e:0,add:0,newChat:0,page:0};window.editorOpen=true;
+window.$=s=>document.querySelector(s);window.counts={dots:0,summary:0,hide:0,add:0,newChat:0,page:0};
 $('#dots').onclick=()=>counts.dots++;$('#summary').onclick=()=>counts.summary++;$('#native-add').onclick=()=>counts.add++;$('#new-chat').onclick=()=>counts.newChat++;$('#native-page').onclick=()=>{counts.page++;$('#panel').hidden=false};
 $('#hide').onclick=()=>{counts.hide++;const hidden=!$('aside').hidden;$('aside').hidden=hidden;$('#hide').setAttribute('aria-label',hidden?'Show tabs':'Hide tabs');$('header').style.setProperty('--app-shell-titlebar-trailing-width',hidden?'0px':'81px')};
-window.eControl=new controllers.EditorHeaderControl($('#viewer'),$('#fallback'));
+window.compact=new controllers.CompactNativeHeader($('#viewer'));
 window.layout=new controllers.EditorPaneLayout($('#viewer'));
 window.middle=new controllers.NativeMiddlePages({element:document.body,context:{threadId:'thread123456',rootPath:'C:/fixture'},enabled:true,openFile:async()=>false,revealMiddle(){},announce(){}});
-$('#fallback').onclick=()=>{counts.e++;editorOpen=!editorOpen;if(editorOpen)layout.apply($('main'),380);else layout.restore();eControl.sync(true,editorOpen)};
 window.original={titlebar:$('#titlebar').getAttribute('style'),mainSlot:$('#main-slot').getAttribute('style'),end:$('#end').getAttribute('style'),header:$('header').getAttribute('style'),right:$('#right-content').getAttribute('style')};
 window.nativeParents={dots:$('#dots').parentElement,summary:$('#summary').parentElement,page:$('#native-page').parentElement,panel:$('#panel').parentElement};
-window.eButton=()=>document.querySelector('[data-code-codex-editor-control]')?.shadowRoot.querySelector('button');
-window.getControls=()=>({dots:$('#dots'),summary:$('#summary'),hide:$('#hide'),e:eButton(),add:$('#native-add'),newChat:$('#new-chat')});
+window.getControls=()=>({dots:$('#dots'),summary:$('#summary'),hide:$('#hide'),add:$('#native-add'),newChat:$('#new-chat')});
 window.geometry=()=>{const h=$('header').getBoundingClientRect();return{header:{x:h.x,y:h.y,right:h.right,bottom:h.bottom},controls:Object.fromEntries(Object.entries(getControls()).map(([id,e])=>{const r=e?.getBoundingClientRect();return[id,r?{x:r.x,y:r.y,right:r.right,bottom:r.bottom,width:r.width,height:r.height}:null]}))}};
 window.hitOwner=e=>{const r=e.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return hit===e||e.contains(hit)||hit===e.getRootNode().host};
-layout.apply($('main'),380);middle.start();eControl.sync(true,true);
+layout.apply($('main'),380);middle.start();compact.sync(true);
 </script>`;
 const server=createServer((req,res)=>{res.setHeader('Content-Type',req.url==='/fixture.js'?'text/javascript':'text/html');res.end(req.url==='/fixture.js'?bundle.outputFiles[0].text:html)});
 await new Promise(r=>server.listen(0,'127.0.0.1',r));
@@ -72,6 +70,7 @@ async function qualify(name,{clicks=true}={}){
  await check(name+': controls have nonoverlapping rectangles within header',`(()=>{const {header:h,controls:c}=geometry(),v=Object.values(c);return v.every(r=>r&&r.width>0&&r.height>0&&r.x>=h.x-.5&&r.right<=h.right+.5&&r.y>=h.y-.5&&r.bottom<=h.bottom+.5)&&v.every((a,i)=>v.slice(i+1).every(b=>a.right<=b.x+.5||b.right<=a.x+.5||a.bottom<=b.y+.5||b.bottom<=a.y+.5))})()`);
  await check(name+': all control centers belong to their own hit target',`Object.values(getControls()).every(e=>e&&hitOwner(e))`);
  if(clicks){for(const id of ['dots','summary','add','newChat']){const before=await browser.evaluate('({...counts})');await click(id);await check(name+': physical click invokes only '+id,`Object.entries(counts).every(([key,value])=>value===${JSON.stringify(before)}[key]+(key===${JSON.stringify(id)}?1:0))`);}}
+ await check(name+': no E or fallback control is created',`!$('[data-code-codex-editor-control],#fallback,.editor-pane-toggle')&&![...document.querySelectorAll('button')].some(button=>button.textContent.trim()==='E')`);
  await check(name+': draft and native ownership remain intact',`$('#composer').value==='Unsent synthetic draft'&&$('#dots').parentElement===nativeParents.dots&&$('#summary').parentElement===nativeParents.summary&&$('#native-page').parentElement===nativeParents.page&&$('#panel').parentElement===nativeParents.panel`);
 }
 try{
@@ -90,20 +89,35 @@ try{
   await qualify('Hosted Changes width '+width+' zoom '+zoom);
  }
  await browser.evaluate(`document.body.style.zoom='1';$('#page').style.width='1000px';layout.apply($('main'),380)`);await delay(150);
- const beforeE=await browser.evaluate('counts.e');await click('e');await check('Physical E hides editor through original fallback',`counts.e===${beforeE+1}&&!editorOpen`);
- await qualify('Editor hidden', {clicks:false});await click('e');await check('Physical E reopens editor through original fallback',`counts.e===${beforeE+2}&&editorOpen`);
+ await browser.evaluate(`layout.restore();compact.sync(false)`);
+ await check('Disabling compact sizing releases its leases without introducing controls',`!$('[data-code-codex-compact-header]')&&!$('style[data-code-codex-owned=compact-header]')&&!$('[data-code-codex-editor-control]')`);
+ await browser.evaluate(`compact.sync(true)`);await qualify('Editor layout restored without a toggle', {clicks:false});
  // Unknown primary native placements release the middle adapter, keeping nodes.
  await browser.evaluate(`const n=document.createElement('span');n.id='unknown';n.dataset.appShellTabController='main';$('header').append(n)`);await delay(150);
  await check('Unknown primary tab placement releases middle ownership',`!$('[data-code-codex-middle-owner]')&&!$('[data-code-codex-owned="middle-tabs"]')&&$('#native-page').isConnected`);
  await browser.evaluate(`$('#unknown').remove()`);await delay(150);
- await check('Qualified layout returns exactly one middle strip and E',`document.querySelectorAll('[data-code-codex-owned="middle-tabs"]').length===1&&document.querySelectorAll('[data-code-codex-editor-control]').length===1`);
- await browser.evaluate(`eControl.dispose();middle.dispose();layout.restore();$('header').style.removeProperty('--app-shell-titlebar-trailing-width')`);await delay(100);
- await check('Disposal restores leased header dimensions and native parents',`($('#titlebar').getAttribute('style')||null)===original.titlebar&&($('#main-slot').getAttribute('style')||null)===original.mainSlot&&($('#end').getAttribute('style')||null)===original.end&&($('#right-content').getAttribute('style')||null)===original.right&&!$('header').style.getPropertyValue('--cle-middle-new-tab-right')&&!$('[data-code-codex-editor-control]')&&!$('[data-code-codex-owned="middle-tabs"]')&&!$('#fallback').hidden&&$('#panel').parentElement===nativeParents.panel`);
- await browser.evaluate(`$('#toolbar').removeAttribute('data-app-shell-header-toolbar');middle.start();eControl.sync(true,true)`);await delay(120);
- await check('Unrecognized toolbar keeps native layout and visible fallback',`!$('[data-code-codex-middle-owner]')&&!$('[data-code-codex-editor-control]')&&!$('#fallback').hidden`);
- await browser.evaluate(`eControl.dispose();middle.dispose()`);
+ await check('Qualified layout returns one middle strip without E',`document.querySelectorAll('[data-code-codex-owned="middle-tabs"]').length===1&&document.querySelectorAll('[data-code-codex-editor-control]').length===0`);
+ await browser.evaluate(`compact.dispose();middle.dispose();layout.restore();$('header').style.removeProperty('--app-shell-titlebar-trailing-width')`);await delay(100);
+ await check('Disposal restores leased header dimensions and native parents',`($('#titlebar').getAttribute('style')||null)===original.titlebar&&($('#main-slot').getAttribute('style')||null)===original.mainSlot&&($('#end').getAttribute('style')||null)===original.end&&($('#right-content').getAttribute('style')||null)===original.right&&!$('header').style.getPropertyValue('--cle-middle-new-tab-right')&&!$('[data-code-codex-editor-control]')&&!$('[data-code-codex-owned="middle-tabs"]')&&!$('[data-code-codex-compact-header]')&&!$('style[data-code-codex-owned=compact-header]')&&$('#panel').parentElement===nativeParents.panel`);
+ await browser.evaluate(`$('#toolbar').removeAttribute('data-app-shell-header-toolbar');middle.start();compact.sync(true)`);await delay(120);
+ await check('Unrecognized toolbar keeps native layout without replacement controls',`!$('[data-code-codex-middle-owner]')&&!$('[data-code-codex-editor-control]')&&!$('[data-code-codex-compact-header]')&&!$('style[data-code-codex-owned=compact-header]')`);
+ await browser.evaluate(`compact.dispose();middle.dispose()`);
+ await browser.evaluate(`$('#toolbar').setAttribute('data-app-shell-header-toolbar','true');$('#active').setAttribute('data-app-shell-shared-local-frame','');$('#page').style.setProperty('--app-shell-titlebar-height','8px');compact.sync(true)`);await delay(120);
+ await check('Shared-frame page keeps its eight-pixel gutter while its native header is slim',`getComputedStyle($('#page')).getPropertyValue('--app-shell-titlebar-height').trim()==='8px'&&getComputedStyle($('header')).getPropertyValue('--app-shell-titlebar-height').trim()==='32px'&&$('header').getBoundingClientRect().height===32`);
+ await browser.evaluate(`compact.sync(true);compact.sync(true)`);await delay(80);
+ await check('Repeated sync has one sizing stylesheet and no editor controls',`document.querySelectorAll('style[data-code-codex-owned=compact-header]').length===1&&!$('[data-code-codex-editor-control],#fallback,.editor-pane-toggle')`);
+ await browser.evaluate(`$('#active').dataset.appShellActivePage='false'`);await delay(120);
+ await check('Inactive page releases compact sizing automatically',`!$('[data-code-codex-compact-header]')&&!$('style[data-code-codex-owned=compact-header]')`);
+ await browser.evaluate(`$('#active').dataset.appShellActivePage='true'`);await delay(120);
+ await check('Returning active page restores compact sizing without a control',`$('#page').hasAttribute('data-code-codex-compact-header')&&!$('[data-code-codex-editor-control]')`);
+ await browser.evaluate(`window.peer=new controllers.CompactNativeHeader($('#viewer'));peer.sync(true);compact.dispose()`);
+ await check('Another sizing owner keeps its lease until it disposes',`$('#page').hasAttribute('data-code-codex-compact-header')&&document.querySelectorAll('style[data-code-codex-owned=compact-header]').length===1`);
+ await browser.evaluate(`peer.dispose();$('#page').setAttribute('data-code-codex-compact-header','previous');compact.sync(true);compact.dispose()`);
+ await check('Teardown restores preexisting scope metadata and removes owned styling',`$('#page').getAttribute('data-code-codex-compact-header')==='previous'&&!$('style[data-code-codex-owned=compact-header]')&&$('#dots').parentElement===nativeParents.dots&&$('#panel').parentElement===nativeParents.panel`);
+ await browser.evaluate(`$('#page').removeAttribute('data-code-codex-compact-header');$('#toolbar').append(document.createElement('span'))`);await delay(100);
+ await check('Disposed observer cannot recreate compact sizing',`!$('[data-code-codex-compact-header]')&&!$('style[data-code-codex-owned=compact-header]')`);
  await check('No browser exceptions',`errors.length===0`);
- const result={passed:checks.every(c=>c.passed),sources,assumptions:['Public baseline/overlap markers and CSS-zoom geometry: main slot grows from header minus 87px to minus 6px with unchanged end grid. Native CSS expressions producing this measured effect are synthetic.','Hosted Changes uses its ownership marker and retained native tab, not the real NativeDiffHost reader.'],checks,states};
+ const result={passed:checks.every(c=>c.passed),sources,assumptions:['Public baseline/overlap markers and CSS-zoom geometry: main slot grows from header minus 87px to minus 6px with unchanged end grid. Native CSS expressions producing this measured effect are synthetic.','Hosted Changes uses its ownership marker and retained native tab, not the real NativeDiffHost reader.'],checks,states,browserErrors:await browser.evaluate('errors')};
  writeFileSync(resolve(out,'result.json'),JSON.stringify(result,null,2)+'\n');
  console.log(JSON.stringify({passed:result.passed,checks:checks.length,failed:checks.filter(c=>!c.passed).map(c=>c.name),result:resolve(out,'result.json')}));
  if(!result.passed)process.exitCode=1;

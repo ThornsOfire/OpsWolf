@@ -102,7 +102,6 @@ export const mainPreviewStyles = String.raw`
 
   .editor-pane-actions { position: relative; grid-row: 1; grid-column: 2; display: flex; justify-content: flex-end; align-items: center; gap: 3px; padding: 1px 5px; min-width: 0; background: var(--cle-main-bar); pointer-events: auto; -webkit-app-region: no-drag; }
   .editor-pane-actions button { border: 1px solid var(--cle-main-line); border-radius: 4px; background: var(--cle-main-bar); padding: 2px 6px; font-size: 12px; line-height: 18px; cursor: pointer; }
-  .editor-pane-toggle[aria-pressed="true"] { background: var(--cle-main-hover); }
   .tab-pin-toggle[aria-pressed="true"] { color: var(--cle-syntax-function); }
   .tab-pin-mark { color: var(--cle-syntax-function); font-size: 9px; }
   .open-files-menu { position: fixed; inset: auto; margin: 0; width: min(390px, calc(100vw - 16px)); max-height: min(480px, 65vh); overflow: auto; padding: 5px; border: 1px solid var(--cle-main-line); border-radius: 7px; background: var(--cle-main-bg); color: var(--cle-main-text); box-shadow: 0 8px 28px #0005; pointer-events: auto; font: inherit; }
@@ -120,14 +119,12 @@ export const mainPreviewStyles = String.raw`
   :host([data-editor-pane-open]) .editor-pane-resizer { display: block; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; z-index: 4; cursor: col-resize; pointer-events: auto; touch-action: none; }
   .editor-pane-resizer:focus-visible { outline: 2px solid var(--cle-main-focus); outline-offset: -2px; }
   :host([data-editor-pane-open]) .native-diff-mount { margin-left:6px; }
-  .editor-pane-toggle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
   /* Native title-bar controls retain their own hit targets above our pane.
    * Actions and scrolling tabs share one compact row in separate columns. */
   :host([data-editor-pane]) { top: var(--cle-editor-pane-top, 48px) !important; }
   :host([data-editor-pane]) .surface,
   :host([data-editor-pane][data-clipped-layout="true"]) .surface { grid-template-rows: var(--cle-preview-tab-height) minmax(0, 1fr); }
-  :host([data-editor-pane]) .editor-pane-toggle { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :host([data-editor-pane]) .tab-strip { width: 100% !important; padding-right: 0; }
 
   :host([data-clipped-layout="true"]) .surface {
@@ -1709,8 +1706,6 @@ export const mainPreviewStyles = String.raw`
   .preview-meta-bar .preview-metadata { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .preview-mode-button[aria-pressed="true"] { background: var(--cle-main-line) !important; }
   .preview-mode-button:disabled { opacity: .5; cursor: default !important; }
-  .editor-pane-toggle { width:28px; padding-inline:0 !important; font-weight:600; }
-  .editor-pane-toggle[hidden] { display:none !important; }
   :host(:not([data-editor-visible])) .surface { display:none !important; }
   .editor-fullscreen-toggle { width:28px; height:24px; display:grid; place-items:center; padding:0 !important; }
   .editor-empty { height:100%; display:grid; place-items:center; padding:24px; box-sizing:border-box; text-align:center; color:var(--cle-main-muted); background:var(--cle-main-bg); pointer-events:auto; }

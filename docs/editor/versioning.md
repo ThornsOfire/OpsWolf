@@ -1,5 +1,21 @@
 # OpsWolf versions
 
+**Alpha.30 experimental:** supported right file tabs inside the shared main use the same existing contrast mask as chat, removing the remaining stacked utility mask. Standalone file masks remain. Tests stay deferred until before commit; equal-opacity visual acceptance follows activation.
+
+**Alpha.29 experimental:** removes the duplicate right-file Rain mask and clears the native source background at its observed CSS layer priority. Includes the small unused-code/documentation cleanup. Tests remain deferred until before commit; visual acceptance follows activation.
+
+**Alpha.28 experimental:** repairs current Appearance capability selection and explicit Code Rain recovery from an inactive saved background owner. The owner waived test suites for this activation; compilation, source/artifact identity and rollback review remain required. Native Rain activation/restoration and right-panel transparency need live acceptance.
+
+**0.1.0-alpha.27** addresses the alpha.26 live regressions: native sidebar toggles keep the file tree beside its workspace, and Code Rain reaches qualified native file/source backings. Codex retains tabs, split, buffers and saves. Source checks do not replace activation and live acceptance.
+
+**0.1.0-alpha.26** is the native-panel ownership candidate: E is removed, supported native file tabs receive OpsWolf tools automatically, and saved-file previews remain read-only. Codex owns the right split, original tabs, native buffers and saving; modern layouts cannot reserve a second OpsWolf editor column. Qualification and owner activation are required before live acceptance.
+
+**0.1.0-alpha.25** lets the native file tab use the space occupied by an empty OpsWolf editor. When the native file closes, the empty editor follows the previous visibility preference. An open OpsWolf draft keeps its pane.
+
+**0.1.0-alpha.24** corrects the docked tree overlap observed on alpha.23 with a native file tab open. Chat text and the composer fit the space beside the tree, and the titlebar starts at the same edge. Verify the layout after activation.
+
+The **0.1.0-alpha.23** candidate uses the current native file tab for in-place editing and reserves header space when the file tree opens beside a native split. See the [editor guide](README.md#existing-native-text-and-markdown-tabs) for the controls and fallback behavior.
+
 `cursadex-version.json` is the fork version source of truth. **0.1.0-alpha.22** aligns docked editor tabs with the compact chat toolbar and keeps the new-chat pencil clear of the tree controls. Verify the layout after activation. Alpha.21 adjusts the chat header beside the file tree, restores Code Rain behind the workspace panels and keeps the collapsed sidebar hover list readable. Check these three surfaces on the installed host after activation. Alpha.20 added startup and explorer placement for the marked workspace page in Codex 26.1117.3838.0. A matching launcher and renderer are required. Alpha.19 passed post-restart checks for send-follow, tab and draft retention, project separation and document controls on the preceding host. Each installation still requires an explicitly activated package.
 
 The previous **0.1.0-alpha.18** checkpoint added personal Rain presets and explicit saved blend endpoints/options to alpha.17. It retains corrected upstream **0.6.0** at `96d58788f8b90661095e33fe562d5f2e7149cf5c`, Rain plugin **0.1.4**, F50 Refresh and F51 Clear list / Show all. The renderer, worker and plugin pins are unchanged. Component fixtures and independent source review pass. All 62 combined qualification gates pass, including the matching offline native/UI build and native tests (499 passed, zero failed, 24 inherited ignores). Local owner observations confirm menu controls and saved blend presets after restart; broader host/edge-case acceptance remains pending. The version file identifies source, not installation or a published release. See [Rain integration](code-rain-integration.md) and [upstream integration](upstream-integration.md) for scope and compatibility.

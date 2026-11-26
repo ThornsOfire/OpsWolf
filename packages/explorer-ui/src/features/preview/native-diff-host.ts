@@ -3,6 +3,8 @@ import {annotationConsensusThreadId} from '../../adapters/codex-26.715';
 import {NativeDiffFiles} from './native-diff-files';
 import {NativeDiffSections} from './native-diff-sections';
 import type {ReviewRevisions} from '../workspace/native-review-revisions';
+import {qualifiedNativeFileFrame} from '../../host/native-file-tabs';
+import {NativePanelOwner} from './native-panel-owner';
 export interface NativeDiffHostPorts {
  readonly element:HTMLElement;
  readonly context:ExplorerContext|undefined;
@@ -41,11 +43,23 @@ export class NativeDiffHost {
  private layout=new StyleLease();private activeLayout=new StyleLease();
  private readonly files:NativeDiffFiles;
  private readonly sections:NativeDiffSections;
- constructor(private readonly ports:NativeDiffHostPorts){this.files=new NativeDiffFiles(ports);this.sections=new NativeDiffSections(ports);}
+ private readonly nativeOwner:NativePanelOwner;
+ private modern=false;
+ constructor(private readonly ports:NativeDiffHostPorts){
+  this.nativeOwner=new NativePanelOwner(ports.element);
+  const owner=this;
+  const enhancements={
+   get context(){return ports.context;},get enabled(){return ports.enabled;},
+   openFile:(path:string)=>ports.openFile(path),announce:(message:string)=>ports.announce(message),
+   readRevisions:(since?:string|null)=>ports.readRevisions(since),
+   qualifyPanel:(panel:HTMLElement)=>owner.nativeOwner.usesNativeLayout()?owner.modernPanel()===panel:undefined,
+  };
+  this.files=new NativeDiffFiles(enhancements);this.sections=new NativeDiffSections(enhancements);
+ }
  start():void {
   if(!this.disposed)return;this.disposed=false;
   const document=this.ports.element.ownerDocument;
-  this.observer=new MutationObserver(this.schedule);this.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-expanded','data-app-action-review-file-expanded','data-review-path','hidden','aria-hidden','aria-label','aria-pressed','disabled','aria-disabled','data-state','data-preview-tabs','data-app-shell-active-page','data-editor-visible','data-editor-pane-open','data-native-diff-active','data-app-shell-workspace-layout','data-app-shell-right-panel-full-width']});
+  this.observer=new MutationObserver(this.schedule);this.observer.observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-expanded','aria-selected','data-tab-id','data-app-shell-shared-local-frame','inert','data-app-action-review-file-expanded','data-review-path','hidden','aria-hidden','aria-label','aria-pressed','disabled','aria-disabled','data-state','data-preview-tabs','data-app-shell-active-page','data-editor-visible','data-editor-pane-open','data-native-diff-active','data-app-shell-workspace-layout','data-app-shell-right-panel-full-width']});
   document.addEventListener('click',this.onClick,true);document.addEventListener('cle-main-preview-native-wrap',this.onWrap);document.defaultView?.addEventListener('resize',this.schedule);
   this.resize=new ResizeObserver(this.schedule);this.schedule();
   this.styleObserver=new MutationObserver(records=>{if(records.some(r=>r.target instanceof HTMLElement&&(this.layout.changed(r.target)||this.activeLayout.changed(r.target))))this.schedule();});
@@ -62,6 +76,7 @@ export class NativeDiffHost {
   return buttons.length===1?buttons[0]:undefined;
  }
  private onWrap=(event:Event):void=>{
+  if(this.nativeOwner.usesNativeLayout())return;
   if(event.target!==this.ports.preview()||!this.currentKey()||this.currentKey()!==this.key||!this.ports.target()||!this.panel||annotationConsensusThreadId(this.panel.closest('[data-app-shell-active-page="true"]')??this.ports.element.ownerDocument,true)!==this.ports.context?.threadId)return;
   const enabled=(event as CustomEvent<{enabled?:unknown}>).detail?.enabled,button=this.wrapButton();
   if(typeof enabled==='boolean'&&button&&(button.getAttribute('aria-pressed')==='true')!==enabled)button.click();
@@ -71,6 +86,7 @@ export class NativeDiffHost {
   return [...this.ports.element.ownerDocument.querySelectorAll<T>(selector)].find(e=>!e.closest('[data-app-shell-active-page="false"]'));
  }
  private onClick=(event:MouseEvent):void=>{
+  if(this.nativeOwner.usesNativeLayout())return;
   if(event.button!==0||event.ctrlKey||event.metaKey||event.altKey||!this.currentKey())return;
   const button=event.composedPath().find((n):n is HTMLButtonElement=>n instanceof HTMLButtonElement);if(!button)return;
   const live=/^\d+ files? changed$/.test(button.querySelector(':scope > .truncate-text')?.textContent?.trim()??'');
@@ -86,8 +102,16 @@ export class NativeDiffHost {
   this.panel=undefined;this.aside=undefined;this.threadId='';
  }
  private refresh():void {
+  const modern=this.nativeOwner.usesNativeLayout();
+  if(modern!==this.modern){this.release();this.modern=modern;this.attempted=undefined;this.requested=false;}
   const key=this.currentKey();if(key!==this.key){this.release();this.key=key;this.attempted=undefined;this.requested=false;}
   if(!key)return;
+  if(modern){
+   const panel=this.modernPanel();
+   if(panel!==this.panel){this.release();this.panel=panel;}
+   if(panel){this.files.sync(panel);this.sections.sync(panel,true);}
+   return;
+  }
   const document=this.ports.element.ownerDocument;
   const panels=[...document.querySelectorAll<HTMLElement>('[role="tabpanel"][data-tab-id="diff"][data-app-shell-tab-panel-controller="right"]')].filter(p=>!p.closest('[data-app-shell-active-page="false"],[hidden],[aria-hidden="true"]'));
   const panel=panels.length===1?panels[0]:undefined;
@@ -142,5 +166,19 @@ export class NativeDiffHost {
   this.layout.set(aside,'left',`${(bounds.left-origin.left)/sx}px`);this.layout.set(aside,'top',`${(bounds.top-origin.top)/sy}px`);
   this.layout.set(aside,'width',`${bounds.width/sx}px`);this.layout.set(aside,'height',`${bounds.height/sy}px`);
   if(target!==this.observedTarget||workspace!==this.observedWorkspace){this.resize?.disconnect();this.observedTarget=target;this.observedWorkspace=workspace;this.resize?.observe(target);this.resize?.observe(workspace);}
+ }
+ /** The modern host owns all layout and tab actions, even when qualification
+  * fails. Never recover an unknown modern surface through legacy geometry. */
+ private modernPanel():HTMLElement|undefined {
+  const frame=qualifiedNativeFileFrame(this.ports.element,this.ports.context);
+  if(!this.currentKey()||!frame)return;
+  const visible=(node:HTMLElement)=>!node.closest('[data-app-shell-active-page="false"],[hidden],[aria-hidden="true"],[inert],[data-code-codex-owned]')&&
+   node.getClientRects().length>0&&getComputedStyle(node).visibility==='visible';
+  const panels=[...frame.querySelectorAll<HTMLElement>('[role="tabpanel"][data-app-shell-tab-panel-controller="right"][data-tab-id]')].filter(visible);
+  if(panels.length!==1||panels[0]!.dataset.tabId!=='diff')return;
+  const tabs=[...frame.querySelectorAll<HTMLElement>('header [data-app-shell-tab-controller="right"][data-tab-id]')]
+   .filter(tab=>visible(tab)&&(tab.matches('[aria-selected="true"]')||!!tab.querySelector('button[aria-selected="true"]')));
+  if(tabs.length!==1||tabs[0]!.dataset.tabId!=='diff')return;
+  return panels[0];
  }
 }

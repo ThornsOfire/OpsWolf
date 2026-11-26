@@ -20,6 +20,8 @@ These rules apply inside this repository. They supplement workspace/user instruc
 
 ## Completing a change
 
+- Before committing or publishing, follow [publication OPSEC review](docs/editor/publication-opsec.md): review staged content, outgoing history/refs and exact artifacts, with focused code-security review where the changes warrant it. Keep a redacted, identity-bound record. This is an agent-operated preparation gate; it does not install a hook, imply scanner coverage or replace owner publication approval.
+
 - For a meaningful user-facing addition, behavior change, fix, removal, compatibility limit, or dependency/security change, update the appropriate `CHANGELOG.md` **Unreleased** section in the same logical change. Describe the resulting behavior; group implementation commits instead of dumping Git subjects.
 - Keep future ideas in the roadmap, not as shipped changelog entries. Use version/date release sections only for an actual authorized release. The inherited 0.5.40 version is not a new editor-fork release number.
 - Documentation-only, tests-only and internal maintenance with no user-visible effect may omit an entry. If the runtime-path check flags such a change, document the reason with `Changelog: none - <specific reason>` in the final commit message for that checked range. No extra approval is required for a justified exemption.
@@ -29,10 +31,10 @@ These rules apply inside this repository. They supplement workspace/user instruc
 
 ## Editor and native layout
 
-- Keep chat, the explorer, editor visibility, editor fullscreen and native tabs as separate capabilities. E hides/shows; hiding or an accepted return to the editor's chat tab/Escape exits fullscreen so reopening is docked. Temporary suspension/reparenting and cancelled switches preserve layout; close-all keeps pins. Avoid broad overlay/CSS changes that steal native hit targets.
+- On modern shared-frame hosts, chat owns the main pane and Codex owns the right tabs, split, editing and saves. Supported file tabs receive OpsWolf tools automatically; there is no E control or second editor column. Unknown modern layouts retain native presentation. Legacy pane visibility/fullscreen remain separate capabilities: hiding or an accepted return to chat/Escape exits fullscreen; suspension and cancelled switches preserve layout. Close-all keeps pins. Avoid broad overlay/CSS changes that steal native hit targets.
 - Measure app chrome using qualified app-shell markers. Nested file/diff/content headers must not contribute to the editor's top inset. Check repeated layout updates, zoom, docked/fullscreen transitions, narrow windows, 1080p and 4K when relevant.
 - Native DOM adapters must verify active-page and matching chat identity, preserve native handlers and ownership, restore leased styles/listeners on disposal, and leave unknown layouts in their native presentation. Don't access private React stores or reparent/clone native comparison nodes.
-- Publish the requested active tab before reopening a hidden editor. Check E, conversation state, native bubble/hover selection, recorded-review opening and fullscreen restore when changing activation.
+- Modern file opens must confirm the matching original native tab/panel before releasing a retained OpsWolf draft. Check explicit tree/chat/document/citation routes and native Changes ownership. On legacy hosts, publish the requested active tab before reopening the hidden pane; retain conversation, review and fullscreen restore checks.
 - Feature controllers own their state and use small capability ports. Follow `docs/architecture.md`; don't import application elements into feature/core modules or silently duplicate policies across layers.
 
 ## Files, drafts and history

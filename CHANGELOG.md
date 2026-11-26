@@ -10,6 +10,10 @@ This initial record was reconstructed from the fork's commits and checked implem
 
 ### Added
 
+- The native-file migration routes supported file opens into Codex's right tab strip. Supported native file tabs automatically receive project pins and an optional read-only saved-file preview. Native editors keep their buffers and saves; browser tabs keep their native presentation. E and its replacement-pane behavior are removed. Existing project bookmarks remain available without opening a competing column. Failed opens and saves keep retained OpsWolf drafts. This migration is present in local alpha.30; remaining native-workflow gaps are documented separately. [Native file workflow](docs/editor/README.md#existing-native-text-and-markdown-tabs).
+
+- In the current native layout, Changes retains its original tab, divider and controls. Recorded response patches remain readable inline, with a separate action to open the current file. The left tree reserves its own column; restoring older OpsWolf session state cannot reserve another editor pane.
+
 - A reusable Windows x64 portable packaging recipe and matching Actions review-artifact workflow prepare the native launcher, editor and locked offline plugins without bundling personal profiles or requiring developer tools on the recipient PC. Distribution remains a pilot pending exact-package review, hosted checks and first-recipient acceptance; no public release or automatic updater is implied. [Portable setup and checks](docs/editor/portable.md).
 
 - Rain settings separate single-preset management from Position #1 / Position #2 blend choices. Create, overwrite, rename and delete up to eight personal presets, then explicitly Save the appearance, endpoint snapshots and timing/startup options. Saved blends restart at Position #1; existing appearance settings remain compatible.
@@ -97,6 +101,12 @@ This initial record was reconstructed from the fork's commits and checked implem
 - The native Codex sidebar waits for your first chat selection before collapsing once per launch. Startup, project browsing and automatic chat restoration leave its native state alone. Manually toggling it opts out of further automatic collapse; the explorer has independent controls. ([initial sidebar behavior](https://github.com/ThornsOfire/OpsWolf/commit/52eeb34))
 
 ### Fixed
+
+- Rain clears the native source viewer's layered background rule and avoids duplicate dark masks in supported right file tabs. Files inside the shared main use the same contrast mask as chat, including its configured opacity, while preserving text and edit highlights.
+
+- Code Rain can use the current Codex Appearance service and recover an inactive background's saved appearance restoration when explicitly enabled, preserving the original preference and refusing conflicting ownership.
+
+- Native sidebar toggles keep the file tree beside its workspace so chat headers and native file tools retain their space and ownership. Rain can show through the qualified native file backing and source viewer; native text, selection and edit highlights retain their own styling.
 
 - The docked editor tabs line up with the compact native chat toolbar on the shared Windows page layout. The new-chat pencil clears the file tree’s Editing label.
 

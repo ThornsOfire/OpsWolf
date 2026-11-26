@@ -2,7 +2,13 @@
 
 ## Current checkpoint
 
-OpsWolf **0.1.0-alpha.15** includes Rain plugin **0.1.4**. Its matching native/UI build passed the combined local qualification and offline import of all 29 locked plugins. After handoff, the owner reports smooth Rain, working controls and no visible frame drops even during heavy blending. These are bounded visual observations, not numeric FPS or general GPU certification. Another saved-settings restart check remains pending. The separately prepared preset-flow component below adds blend-option persistence and still requires coordinator integration and live acceptance. See [upstream qualification](upstream-integration.md#alpha15-qualification).
+OpsWolf **alpha.30** includes the recent native-panel and Appearance follow-ups. Explicit Rain Enable can ask a known inactive background to complete saved appearance restoration when no background is selected or running. It preserves the previous preference and refuses active, pending, unknown or changed ownership. Disable the active effect before enabling another; recovery is not permission to erase its restoration record.
+
+The owner confirms Rain enabled after alpha.28 and several theme changes no longer stuck. Exact native preference restoration remains unmeasured. Supported file transparency looks right in alpha.30; New Tab and Changes still need transparency, and other-theme compatibility is deferred. Qualified file paint removes duplicate masks while preserving native text/highlights; Rain-off and accessibility rules retain native backings.
+
+The previously deferred regression run now passes 73 gates, with two unchanged build gates reused after identity checks. This includes Appearance, recovery, Rain and the 17-check native-file paint fixture. It does not certify every native preference/race or host version. [Migration status](migration-status.md) separates local tests, owner observations and remaining acceptance.
+
+Personal presets and saved blend choices are already integrated, with earlier owner observations of restart persistence. Renderer smoothness observations remain setup-specific, not measured universal FPS. [Historical upstream integration](upstream-integration.md#alpha15-qualification) retains the earlier alpha.15 record.
 
 ## Presets and blend settings
 

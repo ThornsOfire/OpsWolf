@@ -15,6 +15,8 @@ interface ChatFileLinkPorts {
   readonly context:ExplorerContext|undefined;
   readonly enabled:boolean;
   readonly openFile:(path:string)=>Promise<boolean>;
+  readonly keepNativeReferences?:()=>boolean;
+  readonly observeNativeFile?:(path:string)=>void;
   readonly announce:(message:string)=>void;
 }
 
@@ -37,7 +39,7 @@ export class ChatFileLinks {
     this.ports.element.ownerDocument.removeEventListener('keydown',this.onKey,true);
     this.ports.element.ownerDocument.removeEventListener('keyup',this.onKey,true);
   }
-  private target(event:MouseEvent|KeyboardEvent):{element:HTMLElement;path:string}|null {
+  private target(event:MouseEvent|KeyboardEvent):{element:HTMLElement;path:string;native:boolean}|null {
     const context=this.ports.context,doc=this.ports.element.ownerDocument;
     if(!this.started||!this.ports.enabled||!context||event.defaultPrevented||event.ctrlKey||event.metaKey||event.shiftKey||event.altKey)return null;
     const anchor=event.composedPath().find((node):node is HTMLElement=>node instanceof HTMLElement&&(node instanceof HTMLAnchorElement||node.matches(FILE_REFERENCE)));
@@ -47,15 +49,18 @@ export class ChatFileLinks {
     if(owner&&owner.getAttribute('data-response-annotation-conversation')!==context.threadId)return null;
     if(annotationConsensusThreadId(doc,true)!==context.threadId)return null;
     const path=chatFilePath(anchor.getAttribute(anchor instanceof HTMLAnchorElement?'href':'data-prompt-link-href')??'',context.rootPath);
-    return path===null?null:{element:anchor,path};
+    return path===null?null:{element:anchor,path,native:anchor.matches(FILE_REFERENCE)&&Boolean(this.ports.keepNativeReferences?.())};
   }
   private onClick=(event:MouseEvent):void=>{
     if(event.button!==0)return;
-    const target=this.target(event);if(target)this.open(target.path,event);
+    const target=this.target(event);if(!target)return;
+    if(target.native)this.ports.observeNativeFile?.(target.path);
+    else this.open(target.path,event);
   };
   private onKey=(event:KeyboardEvent):void=>{
     if(event.key!=='Enter'&&event.key!==' ')return;
     const target=this.target(event);if(!target||!target.element.matches(FILE_REFERENCE))return;
+    if(target.native){if(event.type==='keydown'&&!event.repeat)this.ports.observeNativeFile?.(target.path);return;}
     event.preventDefault();event.stopImmediatePropagation();
     if(event.type==='keydown'&&!event.repeat)this.open(target.path,event);
   };

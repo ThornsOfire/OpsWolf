@@ -1,11 +1,11 @@
 # OpsWolf documentation
 
-A file explorer, editor and change review beside your Codex chat. It's still an alpha, but you can try the test ZIP without installing coding tools.
+OpsWolf adds a project explorer, review tools and optional backgrounds around Codex. On modern hosts, Codex owns the right-hand tabs, editor and saves; OpsWolf enhances qualified file panels.
 
-- **[Start here](README.md):** what OpsWolf does, screenshots, rough edges and how to use it. The technical setup is tucked into the agent section.
-- **[Download and launch the test package](docs/editor/portable.md):** where to find it, what to click and what to try. There isn't a public alpha Release yet.
-- **[What you need](README.md#what-you-actually-need):** Codex, our package, and any optional extras you want.
-- **[Code-Codex v0.6.0 release notes](releases/README.md):** what's changed in the project we build on.
-- **[Original README in English](README.upstream.en.md)** or **[Chinese](README.zh-CN.md):** the earlier Code-Codex overview, kept for reference.
+- **[Start here](README.md):** current development status, the native-panel migration, known gaps and setup.
+- **[Migration status](docs/editor/migration-status.md):** implemented behavior, observed results and remaining work.
+- **[Portable guide](docs/editor/portable.md):** the alpha.30 portable package is planned for this publication; use its exact download and checksum.
+- **[User guide](docs/editor/README.md)** and **[known issues](docs/editor/known-issues.md)**.
+- **[Original upstream English README](README.upstream.en.md)** and **[Chinese README](README.zh-CN.md)**, retained for reference.
 
-OpsWolf is based on [Rice-dog/code-codex](https://github.com/Rice-dog/code-codex). For our additions, use the **Start here** guide above. Alpha.18 adds personal Rain presets and saved choices for blending between two looks. The editor also has Refresh and Clear list / Show all. Testing on another PC is still pending; the [agent section](README.md#for-agents-from-an-agent) keeps the exact test details.
+Based on [Rice-dog/code-codex](https://github.com/Rice-dog/code-codex), maintained independently and unaffiliated with OpenAI. The alpha.30 ownership migration is implemented; save controls, native tab conveniences, full Pins integration and remaining transparency surfaces are still unfinished.

@@ -4,6 +4,10 @@ This is the Windows x64 pilot route. The package and its build workflow are read
 
 The idea is simple: you already have Codex, so you should not need a pile of developer tools just to try our editor :3
 
+## Version and migration status
+
+The latest local development checkpoint is alpha.30. A matching alpha.30 portable ZIP is planned alongside the source and homepage update. Packaging, artifact verification and the exact download/checksum remain publication preparation steps. Use the exact version/hash attached to the supplied download; older packages can have the separate editor and E button shown in historical screenshots. Alpha.26 and later use native right-panel ownership. [Current migration and remaining gaps](migration-status.md). Do not infer package availability or recipient acceptance from local regression results.
+
 ## What you need
 
 - Windows x64 on an Intel or AMD PC, with official Codex already installed and working.

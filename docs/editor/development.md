@@ -2,6 +2,8 @@
 
 The [main README](../../README.md#getting-it-running) has the fresh-clone commands. Use `candidate/planned-development`: `main` carries the homepage documentation; `feature/right-editor-pane` is the historical baseline.
 
+Current development status and the modern-versus-legacy boundary are summarized in [the migration status](migration-status.md). The local OpsFlow skill routes the existing development/delivery procedures; it does not replace them or install an automated pipeline in this repository. Publication preparation includes [sensitive-data OPSEC review](publication-opsec.md).
+
 ## Source, builds, installation
 
 There are three separate things to keep straight:

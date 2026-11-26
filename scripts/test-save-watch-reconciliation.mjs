@@ -99,6 +99,7 @@ async function reconnectAndRestore(bootstrap){
  await ev('bindViewer();');
 }
 async function gateIntegrity(name){
+ await check(name+': no removed E header or fallback control',`!document.querySelector('[data-code-codex-editor-control]')&&!q('.editor-pane-toggle')`);
  await check(name+': native composer is unchanged',`document.querySelector('#composer').value==='Unsent fixture chat'`);
  await check(name+': no unhandled application errors','errors.length===0');
 }
@@ -205,7 +206,7 @@ try{
  await gateIntegrity('Root failed conversation Save');
 
  await freshGateHost('changed marker rejected then accepted');
- await ev(`draft('reconnect rejection keeps this draft');q('.editor-pane-toggle').click();window.contextBefore=contextRequests();confirmAnswers.push(false);explorer.reconnectNative(nextBootstrap,true);`);
+ await ev(`draft('reconnect rejection keeps this draft');viewer.hideEditor();window.contextBefore=contextRequests();confirmAnswers.push(false);explorer.reconnectNative(nextBootstrap,true);`);
  await check('Root cancelled changed-marker reconnect preserves draft and does not reconnect',`confirmPrompts.length===1&&confirmPrompts[0].includes('Reconnect')&&contextRequests()===contextBefore&&viewer.state.activePath==='sample.txt'&&viewer.state.editor.draft==='reconnect rejection keeps this draft'&&q('.code-editor').value==='reconnect rejection keeps this draft'&&!viewer.hasAttribute('data-editor-visible')`);
  await check('Root rejected changed-marker gate preserves remembered false',`probeVisible()===false&&probeVisible()===false`);
  await ev('confirmAnswers.push(true);');
@@ -216,7 +217,7 @@ try{
  await freshGateHost('changed marker queued behind save');
  await ev(`draft('queued reconnect verified save');holdSave=true;mode('Save').click();`);
  await until(`saveReplies.length===1&&viewer.state.editor?.saving===true`);
- await ev(`q('.editor-pane-toggle').click();window.contextBefore=contextRequests();explorer.reconnectNative(nextBootstrap,true);`);
+ await ev(`viewer.hideEditor();window.contextBefore=contextRequests();explorer.reconnectNative(nextBootstrap,true);`);
  await check('Root saving gate queues changed-marker reconnect without releasing draft or clearing intent',`contextRequests()===contextBefore&&confirmPrompts.length===0&&viewer.state.editor.saving&&viewer.state.editor.draft==='queued reconnect verified save'&&viewer.state.activePath==='sample.txt'&&!viewer.hasAttribute('data-editor-visible')&&probeVisible()===false`);
  await ev('saveReplies.shift()();');
  await until(`contextRequests()>contextBefore&&document.querySelector(${JSON.stringify(previewSelector)})?.state.tabs.some(t=>t.path==='sample.txt'&&t.kind==='text')`);

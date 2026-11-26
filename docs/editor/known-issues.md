@@ -1,6 +1,23 @@
 # Current limitations and pending work
 
-Updated 2026-11-10. Current source: OpsWolf **0.1.0-alpha.15**, upstream **0.6.0**, Rain plugin **0.1.4**. The combined build passed local qualification and has positive owner observations for Rain smoothness and controls. Exact post-handoff running identity, a further settings restart check and fresh-machine installation are not independently established. [Qualification scope](upstream-integration.md#alpha15-qualification). Earlier owner-accepted header/menu/read-only warning fixes are retained; passing fixtures alone does not close every reported live failure.
+Updated November 25, 2026. Local development build: **OpsWolf 0.1.0-alpha.30**, upstream **0.6.0**. The native-panel ownership migration is implemented; workflow polish and broader native acceptance remain unfinished. Deferred regression checks now pass: 73 freshly executed gates plus two matching build gates reused. These are local results, not a new public release or complete native compatibility certification. [Migration status and evidence limits](migration-status.md).
+
+## Current migration gaps
+
+| Area | Current status |
+| --- | --- |
+| Save and Preview/Edit | Native buffers/saves belong to Codex. Clear visible controls and confirmed save/reopen behavior remain pending; tab-switch persistence is not proof of a disk save. |
+| Native tab overflow and closing | Scrolling, open-tabs navigation and Close all/others/right equivalents are planned with dirty-state protection. |
+| Project Pins | File tools have bookmarks, but native New Tab → Files lacks the Pins bar. Full integration remains pending. |
+| Saved file preview | Auxiliary read-only disk view; may differ from unsaved native text. Reassess once native controls are clearer. |
+| BUG-034: Rain transparency | Owner accepts supported file opacity in alpha.30. New Tab and Changes remain opaque; other themes are deferred. |
+| BUG-036: tree/sidebar ownership | Alpha.27 owner check confirms sidebar toggling no longer loses reservation. Broader browser/toolbar/layout coverage remains bounded. |
+| BUG-017: retained appearance owner | Alpha.28 recovery and modern service discovery enabled Rain again in owner testing. Disable an active background before enabling another. Exact previous native preference restoration and all race combinations remain unverified. |
+| Cleanup | Retained legacy code/tests require caller and behavior review before removal. The documentation pass does not certify all obsolete paths removed. |
+
+## Earlier reports and retained limits
+
+The following entries retain earlier evidence. Their version-specific results do not replace the current migration status. Mixed line-ending/edit-size restrictions below belong to the OpsWolf reader/legacy editor, not a universal contract for Codex's editor.
 
 Mixed CRLF/LF text remains read-only under the existing native save policy. Normalize line endings consistently and reopen to edit; the warning does not bypass that protection. Editing above 512 KiB and unverified versions retain their existing restrictions.
 

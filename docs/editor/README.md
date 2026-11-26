@@ -2,23 +2,19 @@
 
 This is the longer version of the [main README](../../README.md): what the buttons do, what stays saved, and where the edges are.
 
-This describes the editor workflow; [known issues](known-issues.md) distinguish the accepted alpha.3 Rain repair and remaining work. A feature description is not blanket native-version acceptance.
+Current development status: **alpha.30**. Read the [migration status](migration-status.md) for implemented behavior, local checks, owner observations and unfinished work. Older-host editor controls are labelled legacy below. A feature description is not blanket native-version acceptance.
 
 ## Getting around
 
 The **OpsWolf** top menu's **Open GitHub Repository** link targets [our renamed fork](https://github.com/ThornsOfire/OpsWolf). Alpha source uses the canonical URL; older installed builds can use GitHub's redirect from the previous repository name. The OpsWolf labels and header/menu alignment accepted in dev.9 are retained in alpha.3. Custom identity profiles can retain their own labels.
 
-The file explorer, native Codex sidebar, chat, and editor are separate surfaces. **E** in the chat header opens or hides the editor. Hiding it exits fullscreen, so the next E opens it beside chat at its saved width. Open files and the current draft stay in the running session; hiding doesn't save to disk. Selecting the editor's chat tab or using Escape to return to chat also resets fullscreen after the switch is accepted. Cancelling a dirty-file switch leaves the layout intact.
+In alpha.26 and later, chat keeps the main pane. Files and web pages use Codex's native right-hand tabs and divider. OpsWolf reserves space for its left file tree and adds tools inside supported native file tabs. There is no E button. Use Codex's own panel and tab controls.
 
-In the current unreleased source, closing an editor stays closed when its pinned files load again in that same window document. Files can load while the pane is hidden; **E** or an explicit file open brings them back. This temporary open/closed choice is separate from saved pins. It is not shared with other windows or preserved after reload/restart. Actual Dot navigation still needs live acceptance.
-
-Use the editor's fullscreen button to expand the editor, and the same button to restore the right pane. Drag the pane's left edge to resize it. The focused resize separator also supports Left/Right arrow keys. The pane preserves a minimum amount of chat space when the window becomes narrow.
-
-In the supported native shell layout, that divider extends through the tab-header band. Native tabs and their controls stay on the middle pane's side, with controls aligned at its right edge. Browser/file panes fit within that middle space rather than covering editor files or the resize handle. Native tab scrolling remains the host's behavior.
+The native-panel migration is included from alpha.26, with tree remount and Rain follow-ups through alpha.30. Local regression checks have passed; native save/reopen and broader live acceptance remain incomplete. Unknown native layouts keep their original presentation; they do not get an extra OpsWolf editor column.
 
 The native sidebar keeps its normal startup state while you browse projects. After your first chat selection by pointer or keyboard, it waits for that chat to become active and collapses once through the native toggle. Automatically restoring a chat doesn't trigger it. You can reopen it afterward; the extension won't keep snapping it shut. Manually toggling the sidebar before choosing a chat also opts out for that launch. The file explorer has independent controls.
 
-The compact native header is 32 CSS pixels tall; editor tabs and the file-control row are 28 CSS pixels. Display scaling and application zoom change their physical pixel size.
+The compact native header targets 32 CSS pixels on qualified layouts. The legacy editor tab/control rows use 28 CSS pixels; native file controls retain their own layout. Display scaling and application zoom change their physical pixel size.
 
 The owned product-menu logo/name use a horizontal row even when native buttons inherit grid styling. In qualified middle-page layouts, the header reserves the measured end controls separately from chat actions and positions New tab by its actual visible bounds; this avoids overlap during Hide/Show tabs and hosted Changes. These source fixes require their matching reviewed build and live acceptance.
 
@@ -32,35 +28,48 @@ Project display name, linked folder and an existing chat's working directory are
 
 If an editor draft is dirty or saving, the automatic root switch waits. Save or discard the edit, then refresh; the draft stays associated with its original workspace until switching is safe. A failed metadata check preserves the existing root rather than guessing a destination. This behavior requires the matching updated native companion and UI; reloading only the UI cannot fix the older companion’s cached root.
 
-The [middle-page strip](middle-pages.md) keeps the primary chat pinned beside native pages, with one page visible at a time. Qualified standard shells show the actual chat title, with a compact label and the full name on hover, through accessibility and in the dropdown. Blank/ambiguous title text uses Chat; an ambiguous shell keeps native presentation. Eligible local file and PDF tabs have an **↗** action to open or move them into the editor. Native editing state and failed/cancelled transfers keep the original tab available.
+Older hosts without the shared native frame retain the [legacy middle-page adapter](middle-pages.md). It is disabled on the current layout. A legacy transfer keeps the original native tab; OpsWolf does not infer that a native buffer is safe to close.
 
 The explorer footer shows the OpsWolf fork, upstream Code-Codex and attached Codex host package versions. Open Preview Market from the top application menu; the duplicate footer link is removed. The upstream button checks upstream releases and shows available/held or failed-check feedback beside the versions. Review identifies the exact upstream release, while native enforcement blocks its installer from replacing OpsWolf. OpsWolf updates require the reviewed deployment process and separate explicit activation; host/Store updates are outside this control. See [manual updates](manual-updates.md). See [versioning](versioning.md) before staging a replacement build or publishing a release.
 
 Collapsing the docked file explorer leaves a slim 18 CSS-pixel strip. Click its arrow or anywhere along the strip to reopen the tree at its saved width. In supported narrow drawer layouts, the compact arrow follows the content boundary and leaves native Home clickable, including at different zoom levels. When expanded, the narrow drawer fits the qualified content area below the native menu, even in short windows or at different zoom levels. Its visible width can shrink to fit without changing your saved width. Bounds refresh on qualified main-size changes and are released on collapse, wide layout, main replacement or disposal. Unrecognized main layouts keep the legacy fallback; native-version acceptance stays separate.
 
-The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, the header **E**, and our editor controls use rounded bubble tooltips styled after native Codex. Hover briefly or focus a control with the keyboard to show its tooltip; Escape dismisses it. Editor labels follow the current action, such as Expand/Restore and Enable/Disable wrap. Native comparison controls and document links retain their existing tooltips.
+The explorer’s Refresh, Collapse, Hide, and collapsed-strip expand controls, and our editor controls use rounded bubble tooltips styled after native Codex. Hover briefly or focus a control with the keyboard to show its tooltip; Escape dismisses it. Editor labels follow the current action, such as Expand/Restore and Enable/Disable wrap. Native comparison controls and document links retain their existing tooltips.
 
-Click a file in the explorer to open it. **E** can also open an empty editor before you've chosen a file.
+Click a file in the explorer to open it in the native right panel. Supported chat links and citations use that same destination. Files opened by Codex directly also receive tools when the selected file and panel can be identified safely.
 
-In the unreleased session-retention fix, switching chats keeps your unpinned document tabs and drafts. Chats using the same project folder share those files. Switching to another project keeps its tabs separate; return to the first project to pick up its files and unsaved work. Native Changes and response comparisons stay with their original chat. Explicitly closed tabs stay closed. Full app shutdown/reload ends this temporary session; pins still reopen filenames, but never restore unsaved contents. Local alpha.19 acceptance passed regular chat switches, disposable drafts, project separation and the existing document controls.
-
-| Control | Behavior |
+| Control | Behavior on the current native layout |
 | --- | --- |
-| Mouse wheel over tabs | Scrolls through tabs when they overflow |
-| Drag a tab | Moves it before or after another tab |
-| Open-files dropdown | Lists open files; arrow keys navigate and Escape dismisses it |
-| Pin / Unpin | Changes whether this file reopens for the current project |
-| A tab's X | Closes that individual tab, with a warning for a pin or unsaved edit |
-| Editor row's X | Closes unpinned tabs; keeps pinned files open |
-| E | Hides or reopens the editor without closing its tabs |
+| Native tab and panel controls | Codex owns selection, closing, resizing and native editing |
+| Pin / Unpin | Keeps or removes a project file bookmark |
+| Pinned files | Opens a remembered path through the native right-panel route |
+| Saved file preview | Opens a read-only reader inside the file tab; closing it leaves native editing untouched |
+| Wrap preview | Wraps the auxiliary reader without changing native editor settings |
+| View retained OpsWolf draft | Shows an existing legacy session draft read-only, when one is retained |
 
-The tab budget is 64 per active workspace view. At the limit, opening another tab asks you to close one first; existing unpinned tabs are kept. Up to 32 files can be pinned for each project. Pins use the project's normalized absolute root as their key and keep relative file paths in reopening order. Moving the project to another root gives it a different pin identity.
+The native New Tab → Files view does not yet show this Pins bar. Full bookmark integration is unfinished. Native tab scrolling, open-tabs navigation and Close all equivalents are also pending; the old OpsWolf tab behavior does not automatically apply to native tabs.
 
-Recorded and native comparison tabs are read-only and can't be pinned. Ordinary source files opened from those comparisons can be pinned normally.
+Up to 32 file bookmarks are stored per normalized project root. Existing pins survive this migration, but no longer open a second column or automatically change native tab selection. Native tabs keep their own session behavior. Pins contain filenames, not file contents or unsaved drafts.
 
-Closing a pinned tab individually keeps its pin for next session. **Unpin** removes the pin without closing the file. Missing pinned files show a load error and can be unpinned. A pin isn't a backup and doesn't store a draft.
+The legacy editor still retains session tabs and drafts by workspace on older hosts. On the modern host that state cannot reserve space or display a second writer. A retained dirty draft remains available through the in-app recovery view and existing Save/Discard/Cancel guards when explicitly switching files. Restarting the whole app does not preserve this in-memory recovery state.
 
 Dragging an explorer file into chat supplies its absolute local path in the text payload. Internal tree moves keep their separate relative-path payload. The drag operation doesn't automatically give the agent the file's contents.
+
+## Existing native text and Markdown tabs
+
+F58 moved file tools into Codex's native right panel. Codex owns the tabs, native file buffers and split sizing; chat keeps the main pane. A file and a web page should share that native tab strip. The ownership migration is implemented; the convenience controls and full acceptance are still incomplete.
+
+The current source routes explicit tree opens, supported chat/document links and citations into native right tabs, including files that are not already open. It waits for the matching selected native panel before retiring an old OpsWolf writer. Save, Discard and Cancel protect an existing draft; a failed or unqualified native open keeps the current state and reports the problem. It does not silently open another editor column. Native file-reference chips keep their host click and keyboard behavior.
+
+Tools appear automatically in the qualified native file panel. Native editing and saving remain with Codex. The current UI does not yet expose the planned clear Save/Discard and Preview/Edit controls. An edit surviving a tab switch does not prove a disk save; save/reopen acceptance remains pending. **Saved file preview** uses OpsWolf's normal authenticated reader and installed previewers; it is a snapshot of the saved file and may differ from native unsaved changes. It reserves vertical space within that tab, leaving the native editor visible. Close and reopen the preview to read the saved file again. The reader has no Edit or Save action.
+
+Cross-file heading links open their target file in the native right panel and report that heading navigation is not available yet. Citation selection is verified only where the native source exposes contiguous numbered rows; passing a line to the host alone is not proof that it navigated there.
+
+The same contained reader can display a recorded Git comparison. That patch remains read-only and is labelled separately from the current file. A file that no longer exists may have no attachable native surface; opening its comparison then reports unavailability and keeps existing tabs and drafts.
+
+Current source checks cover text-reader composition, retained drafts, deferred reads and native Changes ownership. A bounded actual-host probe verified attachment, space reservation and cleanup on one synthetic text file without changing chat width or native nodes/styles. Alpha.30 is active on the owner's setup. Installed previewers across file types, native save/reopen and the complete mixed browser/file matrix still need live acceptance.
+
+The left file tree reserves its own space; Codex sizes chat and the right panel within the remainder. See [native capability evidence and limits](native-capability-research.md#native-right-panel-ownership-november-24-2026) for what has been verified on the current host.
 
 ## Background settings
 
@@ -77,6 +86,8 @@ Single preset applies or manages personal presets. Position #1 and Position #2 s
 Code Rain also supports the qualified embedded messaging surface used by Dot when the Rain canvas is already in that document. It clears the chat backing while keeping the composer, messages and controls readable. Use the existing Rain enable/disable controls; forced colors and reduced transparency keep opaque native backings. Detached windows and unknown layouts need separate qualification. See [scope and verification limits](dot-background.md).
 
 ## Preview, edit, save
+
+The controls below describe the retained **legacy editor on older hosts**. Current native tabs use Codex editing and save behavior; the auxiliary OpsWolf reader is read-only. Its complete-read limits and installed preview plugins still apply.
 
 **Preview** is read-only. **Edit** enables source editing when the native reader marks the file editable. **Save**, or **Ctrl+S**, writes the complete draft using the loaded file version for conflict detection. Delayed file notifications are checked against that version, so the editor can distinguish its own completed save from a real external change. If verification fails or the file changed elsewhere, your draft stays intact and the conflicting version is not silently accepted for the next save.
 
@@ -104,7 +115,7 @@ Drafts belong to the running session. There is a short, 10-second in-memory reco
 
 Markdown Preview document links are also usable: see [link navigation, warnings and saved choices](links.md). Their tooltips describe the destination and action before clicking. This is separate from the unfinished compact presentation of citation links in the chat composer.
 
-Select source text and **right-click** for **Cite in chat**, **Add to citation group**, or **Copy citation**. This works with every supported complete text file, including code, JSON, TOML, logs, plain text and Markdown. It doesn't add editing support to a format the native reader doesn't allow. References cover whole logical lines, so wrapped screen rows still map to the original file.
+In the saved-file reader or legacy editor, select source text and **right-click** for **Cite in chat**, **Add to citation group**, or **Copy citation**. This works with every supported complete text file, including code, JSON, TOML, logs, plain text and Markdown. It doesn't add editing support to a format the native reader doesn't allow. References cover whole logical lines, so wrapped screen rows still map to the original file.
 
 **Cite in chat** appends a Markdown reference to the current chat draft without replacing your existing text or sending it. The label includes the full path and line range so the agent can find it. If the native composer cannot be identified safely, use Copy citation. You choose when to send.
 
@@ -112,13 +123,13 @@ Select source text and **right-click** for **Cite in chat**, **Add to citation g
 
 For several selections, use **Add to citation group** on each range, across files if needed. A small tray above the composer lets you remove ranges, clear the group, copy it, or insert it. A group supports up to 32 ranges. Inserting creates one group link plus individual range links. The queue is session memory and clears when the chat/project changes or the extension stops; it creates no extra disk archive.
 
-Click a citation in chat to open its source in the editor and highlight it. Group links open the referenced files and focus the first one; individual links go straight to that range. The normal Preview / Edit / Save controls and dirty-file Save and switch / Discard / Cancel choices remain available. **Clear** removes the active highlights.
+Click a citation in chat to open its source in the editor and highlight it. Group links open the referenced files and focus the first one; individual links go straight to that range. Native buffers remain owned by Codex. Retained legacy drafts use their existing Save and switch / Discard / Cancel guard. **Clear** removes the active highlights.
 
 References store a normalized whole-line quote up to 4,096 characters inside the link. If lines move, a unique matching quote relocates the highlight. Missing or ambiguous quotes are reported rather than guessed. Larger selections use explicitly labelled line anchors, which cannot follow moved text. An **unsaved draft** label identifies citations taken from edits that haven't been saved; reopening later may not find that text. Ordinary absolute file links with line anchors also work inside the active project.
 
 Rendered Markdown, CSV and diagram previews don't have reliable source-line positions. Select text and right-click **Show source to cite**, or enter Edit for an editable file. **Rendered preview** returns from that source view. Citation navigation uses source automatically; Clear restores the ordinary preview. The virtual plain reader also supports visible selections and jump-back highlights through the 10 MiB reading limit; it cannot select unmounted rows across an arbitrary offscreen span.
 
-Inserted/copied references contain paths and bounded source quotes. Once sent, they follow the chat's normal retention; the extension keeps no separate permanent citation store. Links are scoped to files inside the current project, so another machine or moved project may need a fresh reference. Existing native file/sensitive-path policy still governs loading.
+Inserted/copied references contain paths and bounded source quotes. Once sent, they follow the chat's normal retention; the extension keeps no separate permanent citation store. Links are scoped to files inside the current project, so another machine or moved project may need a fresh reference. On modern hosts, opening a native tab delegates file access to Codex. OpsWolf checks the active project and relative destination, but does not apply its own reader policy to the native tab. The optional Saved file preview and legacy editor still use the authenticated OpsWolf reader and its sensitive-file and redirected-path restrictions. Equivalent restrictions in the native Codex reader have not been independently verified.
 
 ## Two ways to review changes
 
@@ -126,23 +137,21 @@ Inserted/copied references contain paths and bounded source quotes. Once sent, t
 
 The panel sits above the composer. It reads native patch records for the active chat/project and keeps the latest useful review even after conversational replies. Expand the panel to skim filenames, then use each file's arrow to expand its inline diff independently. Readers are created on expansion and released on collapse.
 
-Click a filename to open its recorded patch in a normal editor diff tab. **Open file** then opens the current source in a separate ordinary tab. That source has its own available Preview / Edit / Save controls, while the recorded patch remains available.
+On the modern layout, clicking a filename expands its recorded patch inline. **Open current file** opens the current source in a native right-hand tab. Deleted-file patches remain readable inline. Older hosts retain the editor diff-tab presentation.
 
 A recorded patch doesn't change when you edit the live file. It describes that response's recorded work. Combined diffs and deleted-file comparisons have no source-file button. If the source has disappeared since the response, its ordinary file tab shows the normal load error; the recorded comparison remains.
 
-Use the recent-review selector to inspect an older cached review and **Refresh** to request native records again. **Undo / Reapply** forwards to the matching mounted native control when available. The extension doesn't implement a separate reversal engine.
+Use the recent-review selector to inspect an older cached review and **Refresh** to request native records again. On the modern layout, use the original native **Undo / Reapply** controls. The legacy panel forwards to the matching mounted control when available. The extension doesn't implement a separate reversal engine.
 
 ### Live files-changed bubble
 
 The native bubble can appear during an active response. Clicking it opens Codex's actual comparison viewer as an editor **Changes** tab. Clicking a file in its hover list lets Codex select the exact file, then focuses that tab. Native comparison modes, file navigation, and other comparison controls stay native.
 
-Switching to another file hides the comparison without closing it. Returning to Changes preserves native viewer state where the host permits it. E hides it with the editor; fullscreen and resizing follow the editor layout. Closing Changes uses the original native close control.
+Switching to another file hides the comparison without closing it. Returning to Changes preserves native viewer state where the host permits it. Panel visibility, fullscreen and resizing use native controls. Closing Changes uses the original native close control.
 
 **Clear list** beside **Clear all unread** hides the currently listed file sections for this running session. New recorded patches reveal those files again; **Show all** restores cleared entries. Clearing a list does not clear unread state, undo edits, discard drafts or delete native history. The filter stays separate for each chat/project and resets on app reload. If history coverage cannot be verified, entries are shown instead of hiding possibly new work. See [Changes coverage and lifetime](native-diff-sections.md).
 
-Use the editor's left edge to resize Changes beside chat. The extension owns that outer boundary while hosting the comparison; Codex's competing outer workspace handle is temporarily hidden and restored when hosting ends. Internal comparison/file-list dividers remain native. Dragging accounts for application zoom.
-
-In Changes, the editor's word-wrap button reflects the native viewer's actual setting and forwards changes to its original Word wrap control. Using either control updates the editor indicator. Ordinary source tabs retain their separate saved wrap preference. If the native wrap control cannot be recognized safely, the editor button is disabled for Changes; native viewer controls remain available.
+On the modern layout, OpsWolf adds file actions and list tools to the existing native comparison. It does not move the comparison, hide its tab or divider, dispatch fullscreen changes, or allocate an OpsWolf Changes pane. Native Word wrap remains the original control. Older hosts retain their qualified legacy comparison adapter.
 
 ### Coverage and retention
 

@@ -22,7 +22,7 @@ import {ASCII_TILES_BACKGROUND_PLUGIN_ID} from '../effects/ascii-tiles/model';
 import {CODE_RAIN_PLUGIN_ID} from '../effects/code-rain/model';
 import {getCodeRainBackgroundController} from '../plugin-host/backgrounds/code-rain-native';
 import {CodeRainSettingsController,codeRainCardMarkup,codeRainPanelMarkup} from '../features/plugin-settings/code-rain';
-import type { WorkspaceBridge } from "../contracts/bridge";
+import type { ExplorerContext, WorkspaceBridge } from "../contracts/bridge";
 import {BackgroundSettingsShortcut,type BackgroundSettingsShortcutInput} from '../features/plugin-settings/background-settings-shortcut';
 import { BackgroundActions } from "../core/appearance/background-actions";
 import { AppearanceCoordinator } from '../core/lifecycle/appearance-coordinator';
@@ -49,6 +49,10 @@ import { PreviewRequestsController } from "../features/workspace/preview-request
 import { PreviewWorkspaceController } from "../features/workspace/preview-workspace";
 import {CitationController} from '../features/workspace/citations';
 import {ChatFileLinks} from '../features/workspace/chat-file-links';
+import {hasNativeFileTabHost,selectedNativeFileTab} from '../host/native-file-tabs';
+import {NativePanelOwner} from '../features/preview/native-panel-owner';
+import {NativeFileTools} from '../features/preview/native-file-tools';
+import type {MainPreviewFileView} from '../file-preview/contracts';
 import {citationRelativePath} from '../features/preview/citation-model';
 import {resolvePreviewLink} from '../features/preview/link-policy';
 import { TreeInteractionController } from "../features/workspace/tree-interaction";
@@ -69,7 +73,7 @@ import { type BackgroundSettingsLanguage,type BlackHoleColorSettingKey,type Blac
 import { asRecord,errorCode,isTransientBootstrapError,normalizeChange,normalizeContext,normalizeHeaderLabel,normalizeList,normalizeSettings } from "../core/bridge/response-validation";
 import { ACTION_NOTICE_DURATION_MS,APPEARANCE_PLUGIN_IDS,APPEARANCE_PLUGIN_SETTINGS_KEY,AURORA_IONOSPHERE_BACKGROUND_PLUGIN_ID,AURORA_IONOSPHERE_NUMERIC_CONTROL_DEFINITIONS,BLACK_HOLE_BACKGROUND_PLUGIN_ID,BLACK_HOLE_BACKGROUND_PRESETS,BLACK_HOLE_NUMERIC_CONTROL_DEFINITIONS,BLINKING_SQUARES_BACKGROUND_PLUGIN_ID,BOOTSTRAP_RETRY_DELAY_MS,CLOUD_TRAIN_BACKGROUND_PLUGIN_ID,DEFAULT_SETTINGS,FORCED_COLORS_QUERY,GLOW_HORIZON_BACKGROUND_PLUGIN_ID,GLOW_HORIZON_NUMERIC_CONTROL_DEFINITIONS,HEAVENLY_CLOUD_BACKGROUND_PLUGIN_ID,HEAVENLY_CLOUD_NUMERIC_CONTROL_DEFINITIONS,MAX_WIDTH,MILKY_WAY_BACKGROUND_PLUGIN_ID,MIN_WIDTH,MOUNTAIN_BACKGROUND_PLUGIN_ID,PAGE_SIZE,PARTICLE_BACKGROUND_PLUGIN_ID,PARTICLE_IMAGE_TRANSFORM_CONTROL_DEFINITIONS,PARTICLE_NUMERIC_CONTROL_DEFINITIONS,PIXEL_SCULPT_BACKGROUND_PLUGIN_ID,PREVIEWER_DEFINITIONS,PREVIEWER_IDS,PREVIEWER_SETTINGS_KEY,REDUCED_TRANSPARENCY_QUERY,SETTINGS_KEY,TRANSPARENT_BACKGROUND_ATTRIBUTE,TRANSPARENT_BACKGROUND_HEALTH_INTERVAL_MS,TRANSPARENT_BACKGROUND_PLUGIN_ID } from "../core/configuration/explorer";
 import { MAIN_PREVIEW_TAG } from "../core/preview/configuration";
-import { prepareParticleThemeTransfer,readParticleThemeLease,transferParticleThemeLease } from "../host/appearance/theme-lease";
+import { prepareParticleThemeTransfer,prepareInactiveParticleRestoration,readParticleThemeLease,transferParticleThemeLease } from "../host/appearance/theme-lease";
 import { WindowTransparencyResult,transparencyActionError,validateTransparencyResult } from "../host/native-surfaces/window-result";
 import { localizeOwnedUi,parameterLanguage,subscribeLanguage } from "../i18n";
 import { isHomeWorkspaceView } from "../home-view";
@@ -137,6 +141,9 @@ export class CodeCodexElement extends HTMLElement {
         get context(){return owner.#workspaceSession.context;},
         get bridge(){return owner.#workspaceSession.bridge;},
         get mainPreviewSurface(){return owner.#mainPreviewSurface;},
+        get nativePanelOwnsLayout(){return owner.#nativePanelOwner.usesNativeLayout();},
+        openNativeComparison:(view,path)=>owner.#openNativeComparison(view,path),
+        openNativeFile:(path,line,current)=>owner.#openExplicitFile(path,line,current),
         get editingPath(){return owner.#previeweditingSettings.drafts.path;},
         get leaveEditing(){return owner.#previeweditingSettings.leaveEditing.bind(owner.#previeweditingSettings);},
         get ensureMainPreview(){return owner.#ensureMainPreview.bind(owner);},
@@ -146,6 +153,7 @@ export class CodeCodexElement extends HTMLElement {
         get generation(){return owner.#workspaceSession.generation;},
         get mainPreview(){return owner.#mainPreview;},
         get requestPreview(){return owner.#previewrequestsSettings.requestPreview.bind(owner.#previewrequestsSettings);},
+        get requestTextPreview(){return owner.#previewrequestsSettings.requestTextPreview.bind(owner.#previewrequestsSettings);},
         get editSaving(){return owner.#previeweditingSettings.drafts.saving;},
         get editError(){return owner.#previeweditingSettings.drafts.error;},
         get detachMainPreview(){return owner.#detachMainPreview.bind(owner);},
@@ -232,6 +240,7 @@ export class CodeCodexElement extends HTMLElement {
             if(this.#enabledAppearancePlugins.has(TRANSPARENT_BACKGROUND_PLUGIN_ID)||document.documentElement.hasAttribute(TRANSPARENT_BACKGROUND_ATTRIBUTE))await this.#nativeWindowBackground.disable();
           },
           reconcileNative:()=>this.#reconcilePersistedWindowTransparency(),
+          prepareInactiveThemeRecovery:id=>id===CODE_RAIN_PLUGIN_ID?prepareInactiveParticleRestoration(CODE_RAIN_PLUGIN_ID):undefined,
           transferTheme:id=>{const target=entries.find(entry=>entry.id===id)?.id;const lease=readParticleThemeLease();if(lease?.owner&&target&&lease.owner!==target)transferParticleThemeLease(lease.owner,target);},
           prepareThemeTransfer:(id,outgoing)=>{
             const target=entries.find(entry=>entry.id===id)?.id;
@@ -274,7 +283,7 @@ export class CodeCodexElement extends HTMLElement {
     #previeweditingSettingsValue: PreviewEditingController | undefined;
     get #previeweditingSettings(): PreviewEditingController { if (!this.#previeweditingSettingsValue) {
         const owner = this;
-        this.#previeweditingSettingsValue = new PreviewEditingController({get connected(){return owner.#connected;},get dismissed(){return owner.#dismissed;},get workspaceSession(){return owner.#workspaceSession;},get activePreviewPath(){return owner.#activePreviewPath;},get editModeButton(){return owner.#editModeButton;},restoreDetachedTab:saved=>owner.#previewWorkspace.restoreDetachedTab(saved),activatePreviewPath:path=>{owner.#activePreviewPath=path;},
+        this.#previeweditingSettingsValue = new PreviewEditingController({get connected(){return owner.#connected;},get dismissed(){return owner.#dismissed;},get workspaceSession(){return owner.#workspaceSession;},get activePreviewPath(){return owner.#activePreviewPath;},get editModeButton(){return owner.#editModeButton;},get nativePanelOwnsLayout(){return owner.#nativePanelOwner.usesNativeLayout();},restoreDetachedTab:saved=>owner.#previewWorkspace.restoreDetachedTab(saved),activatePreviewPath:path=>{owner.#activePreviewPath=path;},
             element: owner, get previewTabs() { return owner.#previewWorkspace.tabStore.items; }, schedulePreview: (...args) => owner.#previewWorkspace.schedulePreview(...args), announce: (...args) => owner.#announce(...args), syncMainPreview: (...args) => owner.#previewWorkspace.syncMainPreview(...args), get threadId() { return owner.#workspaceSession.threadId; }, get nativeReconnectMarker() { return owner.#nativeReconnectMarker; }, ensureMainPreview: (...args) => owner.#ensureMainPreview(...args), renderVisible: (...args) => owner.#treeinteractionSettings.renderVisible(...args), get bridge() { return owner.#workspaceSession.bridge; }, get context() { return owner.#workspaceSession.context; }, get mainPreview() { return owner.#mainPreview; }, get generation() { return owner.#workspaceSession.generation; }, get previewSessionRevision() { return owner.#previewWorkspace.previewSessionRevision; }, flushQueuedMainPreviewReconcile: (...args) => owner.#flushQueuedMainPreviewReconcile(...args), flushQueuedThreadSwitch: (...args) => owner.#flushQueuedThreadSwitch(...args), previewView: (...args) => owner.#previewWorkspace.previewView(...args), flushQueuedNativeReconnect: (...args) => owner.#flushQueuedNativeReconnect(...args)
         });
     } return this.#previeweditingSettingsValue; }
@@ -500,7 +509,6 @@ export class CodeCodexElement extends HTMLElement {
     readonly #particleMorphCurveStartHandle: SVGGElement;
     readonly #particleMorphCurveEndHandle: SVGGElement;
     readonly #particleMorphCurveNodes: SVGGElement;
-    readonly #particleSourceDetails: HTMLDetailsElement;
     readonly #particleLibraryUpload: HTMLInputElement;
     readonly #particleLibraryClear: HTMLButtonElement;
     readonly #particleLibraryGrid: HTMLElement;
@@ -783,7 +791,6 @@ export class CodeCodexElement extends HTMLElement {
         this.#particleMorphCurveNodes = this.#required<SVGGElement>(".particle-morph-curve-nodes");
         this.#particleSettings.particleMorphCurveMode = this.#required<HTMLElement>(".particle-morph-curve-mode");
         this.#particleSettings.particleMorphCurveReset = this.#required<HTMLButtonElement>(".particle-morph-curve-reset");
-        this.#particleSourceDetails = this.#required<HTMLDetailsElement>(".particle-source-details");
         this.#particleSettings.particleSourceCount = this.#required<HTMLElement>(".particle-source-count");
         this.#particleLibraryUpload = this.#required<HTMLInputElement>(".particle-library-upload");
         this.#particleLibraryClear = this.#required<HTMLButtonElement>(".particle-library-clear");
@@ -904,6 +911,10 @@ export class CodeCodexElement extends HTMLElement {
     #citations:CitationController|undefined;
     #chatFileLinks:ChatFileLinks|undefined;
     #nativeDiffHost:NativeDiffHost|undefined;
+    #nativeFileTools:NativeFileTools|undefined;
+    #nativeReader:CodeCodexMainPreviewElement|undefined;
+    #nativeReaderCurrent:(()=>boolean)|undefined;
+    #nativeAuxiliaryView:{context:ExplorerContext;path:string;view:MainPreviewFileView}|undefined;
     #novaRestoreDispose: (() => void) | undefined;
     #nativeMiddlePages:NativeMiddlePages|undefined;
     #backgroundSettingsShortcut:BackgroundSettingsShortcut|undefined;
@@ -930,13 +941,26 @@ export class CodeCodexElement extends HTMLElement {
         const reviewPorts={element:this,
             get bridge(){return owner.#workspaceSession.bridge;},get context(){return owner.#workspaceSession.context;},
             get enabled(){return owner.#connected&&!owner.#dismissed&&owner.#homeViewActive&&(owner.#state==='ready'||owner.#state==='empty');},
+            get nativePanelOwnsLayout(){return owner.#nativePanelOwner.usesNativeLayout();},
+            openSource:(path:string)=>{void owner.#openExplicitFile(path);},
             openDiff:(id:string,path:string,content:string,openSourcePath?:string)=>{
                 const open=()=>owner.#previewWorkspace.openReviewDiff(id,path,content,openSourcePath);
                 const editing=owner.#previeweditingSettings;
-                if(editing.drafts.path&&editing.isEditDirty())void owner.#requestEditorClose(editing.drafts.path,open);
+                if(!owner.#nativePanelOwner.usesNativeLayout()&&editing.drafts.path&&editing.isEditDirty())void owner.#requestEditorClose(editing.drafts.path,open);
                 else open();
             },
         };
+        this.#nativeFileTools??=new NativeFileTools({element:this,
+            get context(){return owner.#workspaceSession.context;},
+            get enabled(){return reviewPorts.enabled;},
+            pinnedPaths:()=>owner.#previewWorkspace.pinnedPaths,
+            togglePin:path=>{owner.#previewWorkspace.togglePin(path);owner.#nativeFileTools?.refresh();},
+            openFile:path=>owner.#openExplicitFile(path),
+            mountPreview:(container,path,current)=>owner.#mountNativeReader(container,path,current),
+            hasRetainedDraft:()=>owner.#previeweditingSettings.isEditDirty(),
+            showRetainedDraft:()=>owner.#showRetainedNativeDraft(),
+        });
+        this.#nativeFileTools.start();
         this.#changeReview??=new ChangeReviewController(reviewPorts);
         this.#changeReview.start();
         this.#nativeDiffHost??=new NativeDiffHost({element:this,
@@ -975,21 +999,25 @@ export class CodeCodexElement extends HTMLElement {
         this.#nativeMiddlePages.start();
         this.#citations??=new CitationController({element:this,
             get context(){return owner.#workspaceSession.context;},get enabled(){return reviewPorts.enabled;},
-            get preview(){return owner.#mainPreview;},
-            get sourcePath(){const view=owner.#previewWorkspace.previewTabs.find(t=>t.path===owner.#activePreviewPath)?.view;return view?.kind==='text'&&!view.truncated?view.path:null;},
+            get preview(){return owner.#nativeReader?(owner.#nativeReaderCurrent?.()&&!owner.#nativeReader.hasAttribute('data-retained-draft')?owner.#nativeReader:undefined):owner.#mainPreview;},
+            get sourcePath(){if(owner.#nativeReader&&!owner.#nativeReaderCurrent?.())return null;const reader=owner.#nativeReader?.state;
+                const view=reader?reader.tabs.find(t=>t.path===reader.activePath):owner.#previewWorkspace.previewTabs.find(t=>t.path===owner.#activePreviewPath)?.view;
+                return view?.kind==='text'&&!view.truncated?view.path:null;},
             clear:()=>owner.#previewWorkspace.clearCitations(),announce:message=>owner.#announce(message),
             open:ranges=>{
                 const context=owner.#workspaceSession.context;if(!context)return;
                 const editing=owner.#previeweditingSettings;
                 const open=()=>owner.#previewWorkspace.openCitations(ranges);
-                if(editing.drafts.path&&editing.isEditDirty()&&ranges.some(c=>citationRelativePath(c.path,context.rootPath)!==editing.drafts.path))void owner.#requestEditorClose(editing.drafts.path,open);
+                if(!owner.#nativePanelOwner.usesNativeLayout()&&editing.drafts.path&&editing.isEditDirty()&&ranges.some(c=>citationRelativePath(c.path,context.rootPath)!==editing.drafts.path))void owner.#requestEditorClose(editing.drafts.path,open);
                 else open();
             },
         });
         this.#citations.start();
         this.#chatFileLinks??=new ChatFileLinks({element:this,
             get context(){return owner.#workspaceSession.context;},get enabled(){return reviewPorts.enabled;},
-            openFile:path=>owner.#openNativeFileInEditor(path),announce:message=>owner.#announce(message),
+            keepNativeReferences:()=>hasNativeFileTabHost(owner,owner.#workspaceSession.context)&&!owner.#previeweditingSettings.isEditDirty()&&!owner.#previeweditingSettings.drafts.saving,
+            observeNativeFile:path=>{void owner.#completeNativeFileSelection(path).catch(error=>recordCaughtRuntimeError("#observeNativeFileSelection",error));},
+            openFile:path=>owner.#openExplicitFile(path),announce:message=>owner.#announce(message),
         });
         this.#chatFileLinks.start();
         const appearanceInitializationGeneration = ++this.#appearanceInitializationGeneration;
@@ -1312,6 +1340,7 @@ export class CodeCodexElement extends HTMLElement {
         this.#changeReview?.dispose();
         this.#nativeDiffHost?.dispose();
         this.#nativeMiddlePages?.dispose();
+        this.#nativeFileTools?.dispose();this.#nativeAuxiliaryView=undefined;
         if (this.#customBackgroundClick)
             this.#shadow.removeEventListener('click', this.#customBackgroundClick, true);
         this.#customBackgroundClick = undefined;
@@ -3035,6 +3064,63 @@ export class CodeCodexElement extends HTMLElement {
         });
         return true;
     }
+    #mountNativeReader(container:HTMLElement,path:string,attached:()=>boolean):{dispose():void} {
+        const {bridge,context,generation}=this.#workspaceSession;
+        let disposed=false;
+        const current=()=>!disposed&&attached()&&this.#connected&&!this.#dismissed&&
+            this.#workspaceSession.bridge===bridge&&this.#workspaceSession.context===context&&this.#workspaceSession.generation===generation;
+        registerMainPreviewElement();
+        const preview=this.ownerDocument.createElement(MAIN_PREVIEW_TAG) as CodeCodexMainPreviewElement;
+        const name=path.split(/[\\/]/).at(-1)??path;
+        const publish=(view:MainPreviewFileView)=>{
+            if(!current())return;
+            preview.setEmbeddedPreview({...(context?{workspace:context}:{}),activePath:view.path,tabs:[view],enabledPreviewers:[...this.#enabledPreviewers]});
+        };
+        const auxiliary=this.#nativeAuxiliaryView;
+        const view=auxiliary&&auxiliary.context===context&&auxiliary.path===path?auxiliary.view:undefined;
+        if(view)this.#nativeAuxiliaryView=undefined;
+        publish(view??{kind:'loading',path,name});
+        this.#mirrorThemeToMainPreview(preview);
+        const onLink=(event:Event)=>{if(current())this.#onMainPreviewOpenLink(event as CustomEvent<unknown>);};
+        preview.addEventListener('cle-main-preview-open-link',onLink);
+        container.append(preview);this.#nativeReader=preview;this.#nativeReaderCurrent=current;
+        if(!view)void (async()=>{
+            if(!context||!bridge?.available||!current())return;
+            try{
+                const route=mediaPreviewRoute(path);
+                if(route&&!this.#enabledPreviewers.has(route.previewerId)){
+                    publish({kind:'unsupported',path,name,sizeBytes:0,reason:'previewer-disabled'});return;
+                }
+                const valid=()=>current()&&(!route||this.#enabledPreviewers.has(route.previewerId));
+                const result=route?await this.#previewrequestsSettings.requestMediaPreview(path,bridge,route,valid):
+                    await this.#previewrequestsSettings.requestTextPreview(path,bridge,valid);
+                if(result&&valid())publish(this.#previewWorkspace.previewView({path,name},result));
+            }catch(error){publish({kind:'error',path,name,code:errorCode(error),message:'The saved file preview could not be loaded. Native editing is unchanged.'});}
+        })();
+        return {dispose:()=>{disposed=true;if(this.#nativeReader===preview){this.#nativeReader=undefined;this.#nativeReaderCurrent=undefined;}
+            preview.removeEventListener('cle-main-preview-open-link',onLink);preview.remove();}};
+    }
+
+    #showRetainedNativeDraft():void {
+        const context=this.#workspaceSession.context,draft=this.#previeweditingSettings.drafts;
+        const selected=selectedNativeFileTab(this,context);
+        if(!context||!selected?.panel||!draft.path||!this.#previeweditingSettings.isEditDirty())return;
+        const path=draft.path,text=draft.text;
+        const pending={context,path:selected.path,view:{kind:'text' as const,path,name:path,text,
+            sizeBytes:new TextEncoder().encode(text).length,truncated:false,editable:false}};
+        this.#nativeAuxiliaryView=pending;
+        try{if(this.#nativeFileTools?.showPreview(selected.path,`Retained OpsWolf draft: ${path}`))this.#nativeReader?.setAttribute('data-retained-draft','');}
+        finally{if(this.#nativeAuxiliaryView===pending)this.#nativeAuxiliaryView=undefined;}
+    }
+
+    async #openNativeComparison(view:MainPreviewFileView,path:string):Promise<boolean> {
+        const context=this.#workspaceSession.context;
+        if(!context||!await this.#openExplicitFile(path)||this.#workspaceSession.context!==context)return false;
+        const pending={context,path,view};this.#nativeAuxiliaryView=pending;
+        try{return this.#nativeFileTools?.showPreview(path,'Recorded changes')??false;}
+        finally{if(this.#nativeAuxiliaryView===pending)this.#nativeAuxiliaryView=undefined;}
+    }
+
     #ensureMainPreview(): CodeCodexMainPreviewElement | undefined {
         const surface = this.#mainPreviewSurface;
         if (!this.#homeViewActive || !surface?.isConnected || this.#dismissed)
@@ -3133,25 +3219,36 @@ export class CodeCodexElement extends HTMLElement {
         this.#treeinteractionSettings.renderVisible();
     };
     #onMainPreviewOpenLink=(event:CustomEvent<unknown>):void=>{
-        if(event.target!==this.#mainPreview)return;
+        if(event.target!==this.#mainPreview&&event.target!==this.#nativeReader)return;
         const detail=asRecord(event.detail),context=this.#workspaceSession.context;
-        if(!context||typeof detail?.href!=='string'||detail.sourcePath!==this.#activePreviewPath)return;
-        const source=this.#previewWorkspace.previewTabs.find(tab=>tab.path===this.#activePreviewPath)?.view;
+        const reader=event.target===this.#nativeReader?this.#nativeReader?.state:undefined;
+        const activePath=reader?.activePath??this.#activePreviewPath;
+        if(!context||typeof detail?.href!=='string'||detail.sourcePath!==activePath)return;
+        const source=reader?reader.tabs.find(tab=>tab.path===activePath):this.#previewWorkspace.previewTabs.find(tab=>tab.path===activePath)?.view;
         if(source?.kind!=='text'||source.truncated)return;
         const link=resolvePreviewLink(detail.href,context.rootPath,source.path);
         if(link.kind!=='file'&&link.kind!=='citation')return;
         const open=()=>{
             if(link.kind==='citation')this.#previewWorkspace.openCitations(link.ranges);
             else{
+                if(this.#nativePanelOwner.usesNativeLayout()){
+                    this.#previewWorkspace.clearCitations();
+                    void this.#openExplicitFile(link.path).then(accepted=>{
+                        if(accepted&&link.fragment&&this.#workspaceSession.context===context)
+                            this.#announce('File opened in the native right panel. Heading navigation is not available for native tabs yet.');
+                    });
+                    return;
+                }
                 this.#previewWorkspace.openPreviewPath(link.path,link.path.split('/').at(-1)??link.path);
                 if(this.#activePreviewPath===link.path&&link.fragment)this.#mainPreview?.revealMarkdownHeading(link.path,link.fragment);
             }
         };
         const editing=this.#previeweditingSettings;
         const switches=link.kind==='file'?link.path!==editing.drafts.path:link.ranges.some(c=>citationRelativePath(c.path,context.rootPath)!==editing.drafts.path);
-        if(switches&&editing.drafts.path&&editing.isEditDirty())void this.#requestEditorClose(editing.drafts.path,open);else open();
+        if(!this.#nativePanelOwner.usesNativeLayout()&&switches&&editing.drafts.path&&editing.isEditDirty())void this.#requestEditorClose(editing.drafts.path,open);else open();
     };
     async #openNativeFileInEditor(path:string):Promise<boolean> {
+        if(this.#nativePanelOwner.usesNativeLayout())return this.#openExplicitFile(path);
         const context=this.#workspaceSession.context,generation=this.#workspaceSession.generation;
         if(!context)return false;
         const current=()=>this.#connected&&this.#workspaceSession.generation===generation&&
@@ -3171,7 +3268,70 @@ export class CodeCodexElement extends HTMLElement {
         }
         return false;
     }
+    async #openExplicitFile(path:string,line?:number,requestCurrent=()=>true):Promise<boolean> {
+        const context=this.#workspaceSession.context,generation=this.#workspaceSession.generation;
+        if(!context)return false;
+        const current=()=>requestCurrent()&&this.#connected&&this.#workspaceSession.context===context&&this.#workspaceSession.generation===generation;
+        const editing=this.#previeweditingSettings;
+        if(!requestCurrent())return false;
+        if(!this.#nativePanelOwner.usesNativeLayout())return this.#openNativeFileInEditor(path);
+        if(!this.#nativePanelOwner.owns(context)){this.#announce('The native right panel is not available for this workspace yet. Your existing tabs and draft have been kept.');return false;}
+        while(this.#nativeFileSelectionPending&&current())await new Promise(resolve=>setTimeout(resolve,40));
+        if(!current()||this.#editorClosePending)return false;
+        let approved=false;
+        const approve=()=>{if(current())approved=true;};
+        if(editing.drafts.path&&(editing.isEditDirty()||editing.drafts.saving))
+            await this.#requestEditorClose(editing.drafts.path,approve,false,true);
+        else approve();
+        if(!approved||!current())return false;
+        return this.#completeNativeFileSelection(path,true,true,line,requestCurrent);
+    }
+    readonly #nativePanelOwner=new NativePanelOwner(this);
+    #nativeFileSelectionAttempt=0;
+    #nativeFileSelectionPending=false;
+    async #completeNativeFileSelection(path:string,select=false,discardApproved=false,line?:number,requestCurrent=()=>true):Promise<boolean> {
+        const context=this.#workspaceSession.context,generation=this.#workspaceSession.generation;
+        const editing=this.#previeweditingSettings;
+        if(!context||this.#editorClosePending||editing.drafts.saving||(!discardApproved&&editing.isEditDirty()))return false;
+        const current=()=>requestCurrent()&&this.#connected&&this.#workspaceSession.context===context&&this.#workspaceSession.generation===generation;
+        const preview=this.#mainPreview,activePath=this.#activePreviewPath;
+        const draftPath=editing.drafts.path,session=editing.drafts.session,revision=editing.drafts.revision;
+        const attempt=++this.#nativeFileSelectionAttempt;
+        const unchanged=()=>attempt===this.#nativeFileSelectionAttempt&&current()&&!this.#dismissed&&this.#mainPreview===preview&&this.#activePreviewPath===activePath&&
+            editing.drafts.path===draftPath&&editing.drafts.session===session&&editing.drafts.revision===revision&&!editing.drafts.saving&&(discardApproved||!editing.isEditDirty());
+        if(select){this.#editorClosePending=true;this.#nativeFileSelectionPending=true;}
+        try {
+            if(!unchanged())return false;
+            const accepted=select
+                ? await this.#nativePanelOwner.openFile(context,path,unchanged,line)
+                : await this.#nativePanelOwner.waitForFile(context,path,unchanged);
+            if(!accepted||!unchanged()) {
+                if(select&&unchanged())this.#announce('Codex did not confirm the file in its right panel. Your existing tabs and draft have been kept.');
+                return false;
+            }
+            if(draftPath)editing.clearEditing(false);
+            // Releasing a draft may flush a queued workspace switch.
+            if(current()&&preview&&this.#mainPreview===preview) {
+                this.#previewWorkspace.syncMainPreview();
+                preview.hideEditor();
+                this.#treeinteractionSettings.renderVisible();
+            }
+            return true;
+        } catch(error) {
+            if(unchanged()) {
+                recordCaughtRuntimeError('openNativePanelFile',error);
+                this.#announce('Codex could not open this file in its right panel. Your existing tabs and draft have been kept.');
+            }
+            return false;
+        } finally {if(select){this.#editorClosePending=false;this.#nativeFileSelectionPending=false;}}
+    }
     #requestTreePreview(row:FlatTreeRow):void {
+        const node=row.node;
+        if(row.kind==='node'&&node?.kind==='file'&&!node.inaccessible&&node.change!=='deleted'&&
+            (this.#state==='ready'||this.#state==='empty')&&this.#workspaceSession.bridge?.available&&
+            this.#nativePanelOwner.usesNativeLayout()) {
+            void this.#openExplicitFile(node.relativePath);return;
+        }
         const editing=this.#previeweditingSettings;
         const open=()=>this.#previewWorkspace.openPreviewTab(row);
         if(row.node?.kind==='file'&&editing.drafts.path&&editing.drafts.path!==row.node.relativePath&&editing.isEditDirty()) {
@@ -3179,7 +3339,7 @@ export class CodeCodexElement extends HTMLElement {
         } else open();
     }
     #editorClosePending=false;
-    async #requestEditorClose(path?:string,switchAction?:()=>void,refreshing=false):Promise<void> {
+    async #requestEditorClose(path?:string,switchAction?:()=>void,refreshing=false,retainDraftUntilSwitch=false):Promise<void> {
         if(this.#editorClosePending)return;
         const editing=this.#previeweditingSettings;
         if(editing.drafts.saving){this.#announce('Wait for the current save to finish');return;}
@@ -3223,9 +3383,10 @@ export class CodeCodexElement extends HTMLElement {
                     if(editing.drafts.path!==draftPath)return false;
                     await editing.saveEditing(false);
                     if(!current()||editing.drafts.path!==draftPath||editing.drafts.saving||editing.drafts.error||editing.isEditDirty())return false;
-                    editing.clearEditing(false);released=true;return true;
+                    if(!retainDraftUntilSwitch){editing.clearEditing(false);released=true;}
+                    return true;
                 },
-                discard:()=>{if(editing.drafts.path===draftPath){editing.clearEditing(false);released=true;}},
+                discard:()=>{if(!retainDraftUntilSwitch&&editing.drafts.path===draftPath){editing.clearEditing(false);released=true;}},
                 close,
             });
         } catch(error) {
@@ -3259,7 +3420,7 @@ export class CodeCodexElement extends HTMLElement {
         if(tab?.view.kind!=='git-diff'||!tab.view.openSourcePath)return;
         const editing=this.#previeweditingSettings;
         const open=()=>this.#previewWorkspace.openDiffSource(tab.path);
-        if(editing.drafts.path&&editing.drafts.path!==tab.view.openSourcePath&&editing.isEditDirty())
+        if(!this.#nativePanelOwner.usesNativeLayout()&&editing.drafts.path&&editing.drafts.path!==tab.view.openSourcePath&&editing.isEditDirty())
             void this.#requestEditorClose(editing.drafts.path,open);
         else open();
     };

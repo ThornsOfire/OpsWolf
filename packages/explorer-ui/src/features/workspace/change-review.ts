@@ -10,6 +10,8 @@ export interface ChangeReviewPorts {
  readonly bridge:WorkspaceBridge|undefined;
  readonly context:ExplorerContext|undefined;
  readonly enabled:boolean;
+ readonly nativePanelOwnsLayout?:boolean;
+ readonly openSource?:(path:string)=>void;
  readonly openDiff:(id:string,path:string,content:string,openSourcePath?:string)=>void;
 }
 interface NativeCard {element:HTMLElement;previousDisplay:string;previousPriority:string;reviewId:string;}
@@ -36,6 +38,7 @@ export class ChangeReviewController {
   const id=annotation.getAttribute('data-response-annotation-target');return this.reviews.find(r=>r.messageIds.includes(id??''));
  }
  private updateCards():void {
+  if(this.ports.nativePanelOwnsLayout){this.restoreCards();return;}
   if(!this.ready||this.key!==this.currentKey()){this.restoreCards();return;}
   const found=new Set<HTMLElement>();
   for(const overlay of this.ports.element.ownerDocument.querySelectorAll<HTMLButtonElement>('button[aria-label="View changed files"]')){
@@ -55,6 +58,7 @@ export class ChangeReviewController {
   return card?[...card.querySelectorAll<HTMLButtonElement>('button')].find(b=>['Undo','Reapply'].includes(b.textContent?.trim()??'')):undefined;
  }
  private onNativeClick=(event:MouseEvent):void=>{
+  if(this.ports.nativePanelOwnsLayout)return;
   if(!this.ready||this.key!==this.currentKey())return;
   const button=event.composedPath().find((n):n is HTMLButtonElement=>n instanceof HTMLButtonElement);
   if(!button||!(button.getAttribute('aria-label')==='View changed files'||button.textContent?.trim()==='View changes'))return;
@@ -64,6 +68,11 @@ export class ChangeReviewController {
  };
  private open(review:NativeReview,file?:NativeReviewFile):void {
   if(this.key!==this.currentKey())return;
+  if(this.ports.nativePanelOwnsLayout){
+   this.selectedId=review.id;this.expanded=true;
+   for(const item of file?[file]:review.files)this.expandedFiles.add(review.id+'\0'+item.relativePath);
+   this.render();return;
+  }
   const content=file?.content??review.files.map(f=>f.content??'').join('\n');
   const source=file??(review.files.length===1?review.files[0]:undefined);
   if(!content)return;this.ports.openDiff(review.id,source?.relativePath??'All changed files',content,source?.kind==='delete'?undefined:source?.relativePath);
@@ -147,6 +156,10 @@ export class ChangeReviewController {
    if(file.content===null){disclosure.textContent='▸';disclosure.setAttribute('aria-expanded','false');disclosure.setAttribute('aria-label',`Diff unavailable for ${file.relativePath}`);kind.textContent+=' · Diff unavailable';continue;}
    const content=file.content;let added=0,removed=0;for(const line of content.split('\n')){if(line.startsWith('+')&&!line.startsWith('+++ '))added++;else if(line.startsWith('-')&&!line.startsWith('--- '))removed++;}kind.textContent+=` · +${added} −${removed}`;
    name.addEventListener('click',()=>{if(review)this.open(review,file);});
+   if(this.ports.nativePanelOwnsLayout&&file.kind!=='delete'&&this.ports.openSource){
+    const source=shadow.ownerDocument.createElement('button');source.type='button';source.textContent='Open current file';
+    source.addEventListener('click',()=>{if(this.key===this.currentKey())this.ports.openSource?.(file.relativePath);});entry.append(source);
+   }
    const area=shadow.ownerDocument.createElement('div');area.className='diff';area.id=`native-file-diff-${index}`;area.setAttribute('role','region');area.setAttribute('aria-label',`${file.relativePath} diff`);entry.append(area);
    disclosure.setAttribute('aria-controls',area.id);
    const key=review!.id+'\0'+file.relativePath;let reader:LargeTextReader|undefined;

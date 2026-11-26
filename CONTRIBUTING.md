@@ -10,6 +10,10 @@ Start with [Everyday execution](AGENTS.md#everyday-execution) and [check selecti
 
 Use the [three-tier testing plan and portable runner](docs/editor/testing.md): a small source profile, the existing post-restart acceptance receipt, and separately planned CI/release qualification. Choose additional [focused checks](docs/editor/development.md#choose-checks-for-what-changed) for the actual boundary. Report required skipped/blocked/untested coverage explicitly; source checks do not accept a running build. Missing dependencies do not authorize automatic installation.
 
+## Publication preparation
+
+Follow the [OPSEC review](docs/editor/publication-opsec.md) before commit and before pushing or uploading artifacts. Review staged content, the full outgoing history and exact distribution bytes; record coverage and findings without exposing sensitive values. GitHub secret scanning complements this local review. Publication still requires the applicable owner authorization.
+
 ## Keeping the changelog useful
 
 [CHANGELOG.md](CHANGELOG.md) is curated alongside the code. Git preserves exact implementation history; the changelog explains notable behavior changes to someone using the editor.

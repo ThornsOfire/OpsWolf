@@ -75,6 +75,14 @@ try{
  await ev(`failure=false;q('.retry').click()`);await until(`q('.toggle')?.textContent.includes('1 file')`);
  await check('Retry recovers native review without losing files or prompt',`document.querySelector('#native-new').style.display==='none'&&document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
  await check('Unsafe paths and invalid turn IDs are rejected',`(()=>{for(const value of [{review:{...latest,files:[{relativePath:'../secret',kind:'add',content:'bad'}]},turnId:latest.id,nextCursor:null},{review:{...latest,id:'bad/id'},turnId:'bad/id',nextCursor:null}]){try{normalizeNativePage(value);return false}catch{}}return true})()`);
+ await ev(`ports.nativePanelOwnsLayout=true;window.sourceOpens=[];ports.openSource=path=>sourceOpens.push(path);window.beforeNative=nativeTabs;window.beforeOpens=openCalls;`);await delay(650);
+ await check('Modern presentation restores original native cards',`document.querySelector('#native-new').style.display!=='none'&&document.querySelector('#native-latest').style.display!=='none'`);
+ await ev(`document.querySelector('#native-new .original-view').click()`);
+ await check('Modern View changes keeps native click owner instead of opening an OpsWolf pane',`nativeTabs===beforeNative+1&&openCalls===beforeOpens`);
+ await ev(`q('.file-name').click()`);
+ await check('Modern recorded patch remains read-only inline without opening a duplicate tab',`q('.toggle').getAttribute('aria-expanded')==='true'&&!q('.diff').hidden&&openCalls===beforeOpens&&!q('.diff').querySelector('textarea,[contenteditable=true]')`);
+ await ev(`[...q('.files').querySelectorAll('button')].find(b=>b.textContent==='Open current file').click()`);
+ await check('Modern recorded patch delegates current-source opening explicitly',`sourceOpens.length===1&&openCalls===beforeOpens&&document.querySelector('#composer textarea').value==='Existing unsent prompt'`);
  await ev('controller.dispose()');
  await check('Disposal restores native cards and removes replacement UI',`!document.querySelector('[data-code-codex-change-review]')&&document.querySelector('#native-new').style.display!=='none'`);
  await check('No unhandled browser errors',`errors.length===0`);

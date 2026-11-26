@@ -22,6 +22,7 @@ export interface PreviewEditingControllerPorts {
  readonly workspaceSession:Readonly<WorkspaceSession<WorkspaceBridge>>;
  readonly activePreviewPath:string | null;
  readonly editModeButton:HTMLButtonElement;
+ readonly nativePanelOwnsLayout?:boolean;
  readonly restoreDetachedTab:(saved:Pick<PreviewTab,"path"|"name"|"view">)=>PreviewTab;
   readonly activatePreviewPath: (path: string | null) => void;
   readonly element: HTMLElement;
@@ -95,6 +96,7 @@ export class PreviewEditingController {
     }
   }
   toggleEditing(): void {
+    if(this.host.nativePanelOwnsLayout)return;
     if(this.drafts.saving) return;
     if(this.drafts.path) {
       if(this.isEditDirty()) void this.saveEditing(true);
@@ -373,9 +375,10 @@ isEditDirty(): boolean {
         return Boolean(tab && this.drafts.text !== normalizeTextareaText(previewText(tab.view)));
     }
 syncEditModeButton(): void {
+        this.host.editModeButton.hidden=!!this.host.nativePanelOwnsLayout;
         const tab = this.activeEditableTab();
         const editing = this.drafts.path !== null;
-        this.host.editModeButton.disabled = this.drafts.saving || (!editing && !tab);
+        this.host.editModeButton.disabled = !!this.host.nativePanelOwnsLayout || this.drafts.saving || (!editing && !tab);
         this.host.editModeButton.textContent = this.drafts.saving ? "Saving" : editing ? "Editing" : "Read only";
         this.host.editModeButton.setAttribute("aria-pressed", String(editing));
         this.host.editModeButton.dataset.dirty = String(this.isEditDirty());

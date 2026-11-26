@@ -32,6 +32,11 @@ export interface BackgroundActionPorts {
   readonly reconcileNative: () => Promise<void>;
   readonly transferTheme: (target: string) => void;
   readonly prepareThemeTransfer: (target: string, outgoing: readonly string[]) => () => void;
+  /** Opt-in for an explicit Enable only; startup never consumes this capability. */
+  readonly prepareInactiveThemeRecovery?: (target:string)=>{
+    readonly owner:string;
+    readonly restore:(cleanup:()=>Promise<unknown>,current:()=>boolean)=>Promise<void>;
+  }|undefined;
   readonly committed: () => void;
   readonly changed: () => void;
   readonly suspendHealth: () => void;
@@ -115,6 +120,8 @@ export class BackgroundActions implements BackgroundCommands, BackgroundStateRea
         if (!current()) return;
         p.enabled.delete(id);
       } else {
+        await this.#recoverInactiveTheme(entry,current);
+        if(!current())return;
         await p.leaveNativeTransparency(id);
         if (!current()) { await p.reconcileNative(); return; }
         if (entry.activationOrder === 'before-exclusion') {
@@ -174,6 +181,19 @@ export class BackgroundActions implements BackgroundCommands, BackgroundStateRea
         p.changed(); p.resumeHealth();
       }
     }
+  }
+  async #recoverInactiveTheme(entry:BackgroundEntry,current:()=>boolean):Promise<void>{
+    const p=this.ports,recovery=p.prepareInactiveThemeRecovery?.(entry.id);
+    if(!recovery)return;
+    const prior=this.#entries.get(recovery.owner);
+    if(!prior||prior===entry)throw Error('The saved Appearance restoration owner is unavailable. It was not changed.');
+    const idle=()=>p.enabled.size===0&&p.entries.every(other=>!other.runtime.enabled&&!other.runtime.pending);
+    if(!idle())throw Error(`Restore ${prior.label} before enabling ${entry.label}. A selected or active background cannot be recovered automatically.`);
+    // Even an inactive controller must acknowledge Disable: it retires any
+    // delayed Enable and uses the owner's normal restore, never a key reset.
+    await recovery.restore(()=>prior.runtime.disable(false),()=>current()&&idle());
+    if(!current())throw new DOMException('Background recovery is no longer current','AbortError');
+    if(!idle()||prior.runtime.error)throw Error(prior.runtime.error||`${prior.label} did not finish restoring its Appearance.`);
   }
   #enable(entry: BackgroundEntry, current: () => boolean, resuming: boolean, outgoing: readonly string[]): Promise<unknown> {
     if (entry.runtime.enableWithAppearanceTransfer) {

@@ -13,7 +13,9 @@ import { recordCaughtRuntimeError } from "../../runtime-operations";
 import { TabStore } from "../preview/tab-store";
 import { PinnedFiles, projectPinKey } from "../preview/pinned-files";
 import type {CitationState,FileCitation} from '../../contracts/citations';
-import {citationRelativePath} from '../preview/citation-model';
+import {citationRelativePath,resolveCitation} from '../preview/citation-model';
+import {revealNativeSourceCitation,selectedNativeFile,showNativeCitationSource} from '../preview/native-file-editor';
+import {existingNativeFileTab} from '../../host/native-file-tabs';
 import type {EditDraftSnapshot} from '../preview/draft-store';
 import {normalizeTextareaText,previewText} from '../preview/responses';
 interface ChatPreviewSession {
@@ -40,6 +42,9 @@ export interface PreviewWorkspaceControllerPorts {
   readonly context: ExplorerContext | undefined;
   readonly bridge: WorkspaceBridge | undefined;
   readonly mainPreviewSurface: HTMLElement | undefined;
+  readonly nativePanelOwnsLayout?: boolean;
+  readonly openNativeComparison?: (view:MainPreviewFileView,path:string)=>Promise<boolean>;
+  readonly openNativeFile?: (path: string, line?: number, current?: () => boolean) => Promise<boolean>;
   readonly editingPath: string | null;
   readonly leaveEditing: (prompt: string) => boolean;
   readonly ensureMainPreview: () => MainPreviewPort | undefined;
@@ -49,6 +54,7 @@ export interface PreviewWorkspaceControllerPorts {
   readonly generation: number;
   readonly mainPreview: MainPreviewPort | undefined;
   readonly requestPreview: (tab: PreviewTab, bridge: WorkspaceBridge, context: ExplorerContext, mainPreview: MainPreviewPort, generation: number, sessionRevision: number, instanceId: number, revision: number) => Promise<void>;
+  readonly requestTextPreview: (path: string, bridge: WorkspaceBridge, current: () => boolean) => Promise<NormalizedPreview | undefined>;
   readonly editSaving: boolean;
   readonly editError: string | undefined;
   readonly detachMainPreview: (forgetSurface?: boolean) => void;
@@ -112,6 +118,7 @@ export class PreviewWorkspaceController {
    }
   }
   roots.set(key,session);
+  this.pendingNativeCitation?.abort();
   this.sessionSuspended=true;
   this.previewSessionRevision+=1;this.pendingViewport=undefined;this.citations=undefined;this.restoredProject=undefined;
   this.host.restoreSessionDraft(undefined);
@@ -144,16 +151,110 @@ export class PreviewWorkspaceController {
 
  private citations:CitationState|undefined;
  private citationRevision=0;
+ private pendingNativeCitation:AbortController|undefined;
  openCitations(ranges:readonly FileCitation[]):void {
   const root=this.host.context?.rootPath;if(!root||!ranges.length||ranges.length>32||!this.host.bridge?.available||!this.host.mainPreviewSurface?.isConnected||(this.host.state!=='ready'&&this.host.state!=='empty'))return;
   const relative=ranges.map(c=>({citation:c,path:citationRelativePath(c.path,root)}));
   if(relative.some(c=>!c.path))return;
+  this.pendingNativeCitation?.abort();
+  if(this.host.nativePanelOwnsLayout) {
+    void this.openNativeCitations(relative.map(item=>({...item.citation,path:item.path!})));
+    return;
+  }
+  if(ranges.length===1 && !this.host.editingPath && this.host.context){
+    const path=relative[0]!.path!;
+    const button=existingNativeFileTab(this.host.mainPreviewSurface,this.host.context,path);
+    const id=button?.closest<HTMLElement>('[data-app-shell-tab-controller="right"]')?.dataset.tabId;
+    if(button && id && /^(?:file|text-editor):local:/.test(id)){
+      this.clearCitations();
+      void this.followNativeCitation(button,ranges[0]!,path,this.host.context,this.host.bridge);
+      return;
+    }
+  }
   this.citations={revision:++this.citationRevision,ranges:relative.map(c=>({...c.citation,path:c.path!}))};
   for(const path of new Set(relative.map(c=>c.path!)))this.openPreviewPath(path,path.split('/').at(-1)??path,false);
   this.activePreviewPath=relative[0]!.path!;this.syncMainPreview();this.host.mainPreview?.showEditor?.();
  }
- clearCitations():void {this.citations=undefined;this.syncMainPreview();}
+ private async openNativeCitations(ranges:readonly FileCitation[]):Promise<void> {
+   const context=this.host.context,bridge=this.host.bridge,generation=this.host.generation;
+   if(!context||!bridge||!this.host.openNativeFile)return;
+   const controller=new AbortController();this.pendingNativeCitation=controller;
+   const current=()=>!controller.signal.aborted&&this.host.context===context&&this.host.bridge===bridge&&this.host.generation===generation;
+   const first=ranges[0]!;
+   try {
+     // Native tabs retain their own buffers. Open distinct files, then finish at
+     // the primary citation. No OpsWolf preview tabs or second writer are made.
+     const paths=[...new Set(ranges.map(item=>item.path))];
+     for(const path of [...paths.slice(1),first.path]) {
+       if(!current())return;
+       const range=ranges.find(item=>item.path===path)!;
+       if(!await this.host.openNativeFile(path,range.startLine,current)||!current())return;
+     }
+     const surface=this.host.mainPreviewSurface;
+     const button=surface&&existingNativeFileTab(surface,context,first.path);
+     if(current()&&button)await this.followNativeCitation(button,first,first.path,context,bridge);
+   } catch(error) {
+     if(current()) {
+       recordCaughtRuntimeError('openNativeCitations',error);
+       this.host.announce('Codex could not open the cited file in its right panel. Your existing tabs and draft have been kept.');
+     }
+   } finally {
+     controller.abort();if(this.pendingNativeCitation===controller)this.pendingNativeCitation=undefined;
+   }
+ }
+ private async followNativeCitation(button:HTMLButtonElement,citation:FileCitation,path:string,context:ExplorerContext,bridge:WorkspaceBridge):Promise<void>{
+   const surface=this.host.mainPreviewSurface!;
+   const generation=this.host.generation,session=this.previewSessionRevision;
+   const controller=new AbortController();
+   this.pendingNativeCitation=controller;
+   const cancel=()=>controller.abort();
+   const options={capture:true,signal:controller.signal};
+   const doc=surface.ownerDocument;
+   const current=()=>!controller.signal.aborted && surface.isConnected &&
+     this.host.mainPreviewSurface===surface && this.host.context===context && this.host.bridge===bridge &&
+     this.host.generation===generation && this.previewSessionRevision===session && !this.host.editingPath;
+   doc.addEventListener('pointerdown',cancel,options);
+   doc.addEventListener('keydown',cancel,options);
+   try {
+     if(!selectedNativeFile(surface,context,path))button.click();
+     let sourceRequested=false, revealed=false;
+     const until=Date.now()+1500;
+     do {
+       if(!current())return;
+       const target=selectedNativeFile(surface,context,path);
+       if(target?.panel){
+         if(!revealed){this.host.mainPreview?.hideEditor?.();revealed=true;}
+         if(revealNativeSourceCitation(target.panel,citation))return;
+         if(!sourceRequested)sourceRequested=showNativeCitationSource(target.panel);
+       }
+       await new Promise<void>(resolve=>setTimeout(resolve,50));
+     }while(Date.now()<until);
+     // A saved quote can move. Establish uniqueness in the complete, authenticated
+     // file, then verify that its new location also matches the native buffer.
+     if(current() && citation.quote && !citation.draft && selectedNativeFile(surface,context,path)){
+       const preview=await this.host.requestTextPreview(path,bridge,current);
+       if(!current())return;
+       const match=preview?.kind==='text' && !preview.truncated && resolveCitation(preview.text,citation);
+       const target=selectedNativeFile(surface,context,path);
+       if(match && target && revealNativeSourceCitation(target.panel,{...citation,startLine:match.startLine,endLine:match.endLine})){
+         if(match.status==='relocated')this.host.announce('Found the cited lines at their new location.');
+         return;
+       }
+     }
+     if(current())this.host.announce('The cited source lines could not be verified in the native tab.');
+   }catch(error){
+     if(current()){
+       recordCaughtRuntimeError('followNativeCitation',error);
+       this.host.announce('The cited source lines could not be verified in the native tab.');
+     }
+   }finally{
+     controller.abort();
+     if(this.pendingNativeCitation===controller)this.pendingNativeCitation=undefined;
+   }
+ }
+ clearCitations():void {this.pendingNativeCitation?.abort();this.citations=undefined;this.syncMainPreview();}
  openNativeDiff():void {
+  if(this.host.nativePanelOwnsLayout)return;
   const threadId=this.host.context?.threadId,preview=this.host.ensureMainPreview();if(!threadId||!preview)return;
   const path=`native-diff://${threadId}`;
   if(!this.previewTabs.some(tab=>tab.path===path)){
@@ -175,6 +276,11 @@ export class PreviewWorkspaceController {
     this.openPreviewPath(view.openSourcePath,view.openSourcePath.split(/[\\/]/).at(-1)??view.openSourcePath);
   }
   openReviewDiff(recordId:string,path:string,content:string,openSourcePath?:string):void {
+    if(this.host.nativePanelOwnsLayout){
+      if(openSourcePath)void this.host.openNativeComparison?.({kind:'git-diff',path:`review-diff://${recordId}/${path}`,
+        name:path,sourcePath:path,openSourcePath,content,truncated:false,shortHash:'Recorded response'},openSourcePath);
+      return;
+    }
     const preview=this.host.ensureMainPreview();if(!preview)return;
     const tabPath=`review-diff://${recordId}/${path}`;
     let tab=this.previewTabs.find(tab=>tab.path===tabPath);
@@ -187,6 +293,19 @@ export class PreviewWorkspaceController {
     this.activePreviewPath=tabPath;this.syncMainPreview();preview.showEditor?.();this.host.renderVisible();
   }
   async openGitDiff(hash: string,path: string): Promise<void> {
+    if(this.host.nativePanelOwnsLayout){
+      const bridge=this.host.bridge,context=this.host.context,generation=this.host.generation;
+      if(!bridge?.available||!context)return;
+      try{
+        const result=normalizeGitDiff(await bridge.request<unknown>('explorer.git.diff',{hash,path}));
+        if(this.host.bridge!==bridge||this.host.context!==context||this.host.generation!==generation)return;
+        const accepted=await this.host.openNativeComparison?.({kind:'git-diff',path:`git-diff://${hash}/${path}`,
+          name:path,sourcePath:result.path||path,openSourcePath:result.path||path,
+          content:result.content,truncated:result.truncated,shortHash:hash.slice(0,7)},result.path||path);
+        if(!accepted)this.host.announce('Recorded changes could not attach to a native file tab. Existing tabs and drafts have been kept.');
+      }catch(error){if(this.host.context===context)this.host.announce(gitHistoryError(error));}
+      return;
+    }
     const normalizedPath=path.replaceAll("\\","/");
     const name=normalizedPath.split("/").at(-1)||normalizedPath;
     const tabPath=`git-diff://${hash}/${normalizedPath}`;
@@ -260,7 +379,7 @@ export class PreviewWorkspaceController {
   }
   get pinnedPaths(): string[] { return this.pins.get(this.host.context?.rootPath ?? ''); }
   togglePin(path: string): void {
-    if (!this.previewTabs.some(tab => tab.path === path)) return;
+    if (!this.host.nativePanelOwnsLayout&&!this.previewTabs.some(tab => tab.path === path)) return;
     if (!this.pins.toggle(this.host.context?.rootPath ?? '', path)) {
       this.host.announce('Could not save this pin. Pins require a local project and allow up to 32 files.'); return;
     }
@@ -276,6 +395,10 @@ export class PreviewWorkspaceController {
     const root = this.host.context?.rootPath;
     if (!root || this.restoredProject === projectPinKey(root) || this.host.editingPath ||
       !this.host.mainPreviewSurface?.isConnected || (this.host.state !== 'ready' && this.host.state !== 'empty')) return;
+    // Native tabs keep their own selection and session. Project bookmarks remain
+    // available in the native tools menu without opening a second pane or
+    // stealing focus from an already selected browser/file tab.
+    if(this.host.nativePanelOwnsLayout){this.restoredProject=projectPinKey(root);return;}
     const paths = this.pins.get(root), active = this.activePreviewPath;
     if (paths.length && !this.host.ensureMainPreview()) return;
     this.restoredProject = projectPinKey(root);
@@ -313,10 +436,15 @@ openPreviewTab(row: FlatTreeRow): void {
         this.openPreviewPath(node.relativePath, node.name);
     }
 openPreviewPath(relativePath: string, name: string, reveal=true): void {
+        if(reveal)this.pendingNativeCitation?.abort();
         if ((this.host.state !== "ready" && this.host.state !== "empty") ||
             !this.host.context ||
             !this.host.bridge?.available ||
             !this.host.mainPreviewSurface?.isConnected) {
+            return;
+        }
+        if(reveal && this.host.nativePanelOwnsLayout) {
+            void this.host.openNativeFile?.(relativePath);
             return;
         }
         if (this.host.editingPath !== null &&
@@ -374,7 +502,7 @@ schedulePreview(tab: PreviewTab, delay = PREVIEW_SELECTION_DELAY_MS): void {
             void this.host.requestPreview(tab, bridge, context, mainPreview, generation, sessionRevision, instanceId, revision);
         }, delay);
     }
-previewView(tab: PreviewTab, preview: NormalizedPreview): MainPreviewFileView {
+previewView(tab: Pick<PreviewTab,'path'|'name'>, preview: NormalizedPreview): MainPreviewFileView {
         if (preview.kind === "unsupported") {
             return {
                 kind: "unsupported",
@@ -509,6 +637,7 @@ closeAllPreviewTabs(): boolean {
         this.host.announce('Unpinned tabs closed; pinned tabs kept open');return true;
     }
 purgePreviewTabs(renderRows = true): void {
+        this.pendingNativeCitation?.abort();
         this.sessionSuspended=true;
         this.pendingViewport=undefined;
         this.citations=undefined;

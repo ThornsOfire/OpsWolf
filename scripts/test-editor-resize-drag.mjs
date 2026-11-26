@@ -124,12 +124,12 @@ try{
   await sample('suspended',`(async()=>{moveBy(90);viewer.setSuspended(true);const start=begin();await frames(10);return {...end(start),hasPane:viewer.hasAttribute('data-editor-pane-open')}})()`);
   await check('Suspension cancels pending drag work without reapplying layout','('+(measurements.suspended.layoutApply||0)+')===0&&!'+measurements.suspended.hasPane);
   await releaseMouse();await ev('viewer.setSuspended(false);frames(10)');
-  for(const [name,selector] of [['hidden','.editor-pane-toggle'],['fullscreen','.editor-fullscreen-toggle']]){
+  for(const [name,leave,restore] of [['hidden','viewer.hideEditor()','viewer.showEditor()'],['fullscreen',"q('.editor-fullscreen-toggle').click()","q('.editor-fullscreen-toggle').click()"]]){
     await startDrag();
-    await sample(name,`(async()=>{moveBy(90);q('${selector}').click();const start=begin();await frames(10);return {...end(start),hasPane:viewer.hasAttribute('data-editor-pane-open')}})()`);
+    await sample(name,`(async()=>{moveBy(90);${leave};const start=begin();await frames(10);return {...end(start),hasPane:viewer.hasAttribute('data-editor-pane-open')}})()`);
     await check(name+' transition cancels a pending docked drag','('+(measurements[name].layoutApply||0)+')===0&&!'+measurements[name].hasPane);
     await check(name+' transition retains draft and caret','preserved()');
-    await releaseMouse();await ev(`q('${selector}').click();frames(10)`);
+    await releaseMouse();await ev(`${restore};frames(10)`);
   }
   await ev(`const other=document.createElement('main');other.id='other';other.className='main-surface';document.body.append(other);frames(8)`);
   await startDrag();

@@ -86,6 +86,22 @@ try{
  await check('Contenteditable insertion preserves existing rich draft and emits native editing events',`document.querySelector('#composer').textContent.startsWith('Existing rich draft')&&document.querySelector('#composer').textContent.includes('C:/Fixture/src/main.ts:1')&&submitted===0`);
  await ev(`window.previous=document.querySelector('#composer').textContent;document.querySelector('[data-codex-composer-root]').append(Object.assign(document.createElement('textarea'),{value:'Ambiguous composer'}));menu(0,5,'Cite in chat')`);
  await check('Ambiguous composer leaves drafts untouched and reports unavailable',`document.querySelector('#composer').textContent===previous&&notices.at(-1).includes('unavailable')`);
+ // The modern controller route must not allocate fallback tabs or swallow a
+ // rejected native capability. Native tab/panel acceptance is tested separately.
+ await ev(`window.nativeOpens=[];window.oldTabs=workspace.previewTabs.slice();host.nativePanelOwnsLayout=true;host.openNativeFile=async(path,line)=>{nativeOpens.push({path,line});return true;};workspace.openCitations([{path:'C:/Fixture/notes.md',startLine:3,endLine:3},{path:'C:/Fixture/config.json',startLine:2,endLine:2},{path:'C:/Fixture/notes.md',startLine:5,endLine:5}])`);
+ await until(`nativeOpens.length===2`);
+ await check('Modern citation groups open distinct native files and finish on the primary location',`nativeOpens[0].path==='config.json'&&nativeOpens[0].line===2&&nativeOpens[1].path==='notes.md'&&nativeOpens[1].line===3&&workspace.previewTabs.length===oldTabs.length&&workspace.previewTabs.every((t,i)=>t===oldTabs[i])`);
+ await ev(`nativeOpens=[];host.openNativeFile=async(path,line)=>{nativeOpens.push({path,line});return false;};workspace.openCitations([{path:'C:/Fixture/notes.md',startLine:3,endLine:3},{path:'C:/Fixture/config.json',startLine:2,endLine:2}])`);await delay(30);
+ await check('Refused native citation selection stops the group without a fallback tab',`nativeOpens.length===1&&workspace.previewTabs.length===oldTabs.length`);
+ await ev(`host.openNativeFile=async()=>{throw Error('Synthetic native rejection');};workspace.openCitations([{path:'C:/Fixture/notes.md',startLine:3,endLine:3}])`);
+ await until(`notices.at(-1).includes('could not open the cited file')`);
+ await check('Native citation rejection is reported without losing tabs or causing an unhandled rejection',`workspace.previewTabs.every((t,i)=>t===oldTabs[i])&&errors.length===0`);
+ await ev(`nativeOpens=[];host.openNativeFile=async(path,line)=>{nativeOpens.push({path,line});await new Promise(r=>window.releaseNative=r);return true;};workspace.openCitations([{path:'C:/Fixture/notes.md',startLine:3,endLine:3},{path:'C:/Fixture/config.json',startLine:2,endLine:2}])`);
+ await until(`!!window.releaseNative`);await ev(`workspace.clearCitations();releaseNative()`);await delay(30);
+ await check('Clearing a pending native citation prevents subsequent group opens',`nativeOpens.length===1&&workspace.previewTabs.length===oldTabs.length`);
+ await ev(`nativeOpens=[];releaseNative=undefined;workspace.openCitations([{path:'C:/Fixture/notes.md',startLine:3,endLine:3},{path:'C:/Fixture/config.json',startLine:2,endLine:2}])`);
+ await until(`!!window.releaseNative`);await ev(`context={...context,threadId:'new-thread'};releaseNative()`);await delay(30);
+ await check('Workspace identity change stops pending native citation navigation',`nativeOpens.length===1&&errors.length===0`);
  await ev(`citations.dispose();viewer.remove()`);
  await check('Dispose clears groups, popovers, highlights and browser errors',`!document.querySelector('[data-code-codex-citation-group]')&&CSS.highlights.size===0&&errors.length===0`);
  console.log(JSON.stringify({passed:true,checks},null,2));
